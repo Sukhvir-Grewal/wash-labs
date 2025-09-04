@@ -20,6 +20,7 @@ export default async function handler(req, res) {
         text: `
           Name: ${name}
           Email: ${email}
+          phone: ${phone}
           Date: ${new Date(date).toDateString()}
           Time: ${time}
         `,
