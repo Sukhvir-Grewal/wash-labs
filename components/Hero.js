@@ -11,6 +11,8 @@ export default function Hero() {
     const subtitleY = useTransform(scrollY, [0, 300], [0, -30]);
     const buttonY = useTransform(scrollY, [0, 300], [0, -20]);
 
+    const text = "Wash Labs".split("");
+
     return (
         <section
             id="hero"
@@ -21,8 +23,8 @@ export default function Hero() {
                 <Image
                     src="/images/hero/car-detailing.jpg"
                     alt="Car Detailing"
-                    fill={true} // replaces legacy layout="fill"
-                    style={{ objectFit: "cover" }} // replaces legacy objectFit
+                    fill={true}
+                    style={{ objectFit: "cover" }}
                     className="opacity-40"
                 />
             </motion.div>
@@ -31,14 +33,28 @@ export default function Hero() {
             <div className="relative z-10 text-center px-6">
                 <motion.h1
                     style={{ y: titleY }}
-                    className="text-5xl md:text-6xl font-extrabold text-orange-400 mb-4" // reduced bottom margin to move it higher
+                    className="text-5xl md:text-6xl font-extrabold text-orange-400 mb-4 flex justify-center gap-1"
                 >
-                    Wash Labs
+                    {text.map((letter, i) => (
+                        <motion.span
+                            key={i}
+                            animate={{ y: [0, -8, 0, 6, 0] }} // wiggle up/down
+                            transition={{
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: "easeInOut",
+                                delay: i * 0.15, // stagger per letter
+                            }}
+                            className="inline-block"
+                        >
+                            {letter === " " ? "\u00A0" : letter}
+                        </motion.span>
+                    ))}
                 </motion.h1>
 
                 <motion.p
                     style={{ y: subtitleY }}
-                    className="text-lg md:text-xl mb-8 text-gray-200" // smaller text
+                    className="text-lg md:text-xl mb-8 text-gray-200"
                 >
                     Mobile Car Detailing. Premium Service at Your Doorstep.
                 </motion.p>

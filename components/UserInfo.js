@@ -137,7 +137,10 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
                         value={userInfo.phone}
                         onChange={(e) => {
                             const formatted = formatPhoneNumber(e.target.value);
-                            setUserInfo((prev) => ({ ...prev, phone: formatted }));
+                            setUserInfo((prev) => ({
+                                ...prev,
+                                phone: formatted,
+                            }));
                         }}
                         className="flex-1 px-4 py-3 rounded-lg bg-black/30 border border-gray-600 
                         focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
