@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import Navigation from "@/components/Navigation";
 import About from "@/components/About";
 import Contact from "@/components/Contact";
+import Footer from "@/components/Footer";
 
 // Use dynamic import for Gallery (disable SSR)
 const Gallery = dynamic(() => import("@/components/Gallery"), { ssr: false });
@@ -26,6 +27,7 @@ export default function Home() {
             <Gallery />
             <About />
             <Contact />
+            <Footer />
         </div>
     );
 }

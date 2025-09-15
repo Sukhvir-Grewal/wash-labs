@@ -3,11 +3,19 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 0,
+            "activePatchIndex": 2,
             "patches": [
                 {
                     "date": 1757955580780,
                     "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1757957896503,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -0,0 +1,67 @@\n+import nodemailer from \"nodemailer\";\r\n+\r\n+export default async function handler(req, res) {\r\n+    if (req.method !== \"POST\") {\r\n+        return res.status(405).json({ message: \"Method not allowed\" });\r\n+    }\r\n+\r\n+    const { service, vehicle, dateTime, userInfo } = req.body;\r\n+\r\n+    if (!service || !vehicle || !dateTime || !userInfo) {\r\n+        return res.status(400).json({ message: \"Missing booking details\" });\r\n+    }\r\n+\r\n+    try {\r\n+        const transporter = nodemailer.createTransport({\r\n+            service: \"gmail\",\r\n+            auth: {\r\n+                user: process.env.EMAIL_USER,\r\n+                pass: process.env.EMAIL_PASS,\r\n+            },\r\n+        });\r\n+\r\n+        // Compose the booking email\r\n+        const mailOptions = {\r\n+            from: `\"WashLabs Booking\" <no-reply@washlabs.ca>`,\r\n+            to: \"washlabs.ca@gmail.com\",\r\n+            subject: `✅ New Booking Request - ${service.title}`,\r\n+            html: `\r\n+        <h2 style=\"color:#22c55e;\">New Booking Request</h2>\r\n+        \r\n+        <h3 style=\"color:#f97316;\">Service</h3>\r\n+        <p><strong>${service.title}</strong></p>\r\n+        <p>${service.price ? \"Price: $\" + service.price : \"\"}</p>\r\n+\r\n+        <h3 style=\"color:#f97316;\">Vehicle</h3>\r\n+        <p>${vehicle.year} ${vehicle.name}</p>\r\n+\r\n+        <h3 style=\"color:#f97316;\">Date & Time</h3>\r\n+        <p>${dateTime.date || \"N/A\"} at ${dateTime.time || \"N/A\"}</p>\r\n+\r\n+        <h3 style=\"color:#f97316;\">Client Information</h3>\r\n+        <p><strong>Name:</strong> ${userInfo.name}</p>\r\n+        <p><strong>Email:</strong> ${userInfo.email}</p>\r\n+        <p><strong>Phone:</strong> ${userInfo.countryCode || \"\"} ${\r\n+                userInfo.phone\r\n+            }</p>\r\n+        ${\r\n+            userInfo.message\r\n+                ? `<p><strong>Notes:</strong><br/>${userInfo.message}</p>`\r\n+                : \"\"\r\n+        }\r\n+\r\n+        <hr />\r\n+        <p style=\"font-size:0.9rem;color:gray;\">\r\n+          This booking was submitted from the WashLabs website booking form.\r\n+        </p>\r\n+      `,\r\n+        };\r\n+\r\n+        await transporter.sendMail(mailOptions);\r\n+\r\n+        return res.status(200).json({ message: \"Booking sent successfully\" });\r\n+    } catch (error) {\r\n+        console.error(\"Error sending booking email:\", error);\r\n+        return res.status(500).json({ message: \"Failed to send booking\" });\r\n+    }\r\n+}\r\n"
+                },
+                {
+                    "date": 1757957913572,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -21,9 +21,9 @@\n         });\r\n \r\n         // Compose the booking email\r\n         const mailOptions = {\r\n-            from: `\"WashLabs Booking\" <no-reply@washlabs.ca>`,\r\n+            from: `\"WashLabs Booking\" <${process.env.EMAIL_USER}>`,\r\n             to: \"washlabs.ca@gmail.com\",\r\n             subject: `✅ New Booking Request - ${service.title}`,\r\n             html: `\r\n         <h2 style=\"color:#22c55e;\">New Booking Request</h2>\r\n"
                 }
             ],
             "date": 1757955580780,
