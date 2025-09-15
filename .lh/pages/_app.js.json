@@ -1,0 +1,18 @@
+{
+    "sourceFile": "pages/_app.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1757882470496,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1757882470496,
+            "name": "Commit-0",
+            "content": "import '@/styles/globals.css'\nimport { useEffect } from 'react'\nimport AOS from 'aos'\nimport 'aos/dist/aos.css'\n\nexport default function App({ Component, pageProps }) {\n  useEffect(() => {\n    AOS.init({ duration: 800, once: true }) // smooth animations\n  }, [])\n\n  return <Component {...pageProps} />\n}\n"
+        }
+    ]
+}
