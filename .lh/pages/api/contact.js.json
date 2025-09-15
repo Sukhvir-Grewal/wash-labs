@@ -1,0 +1,22 @@
+{
+    "sourceFile": "pages/api/contact.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 1,
+            "patches": [
+                {
+                    "date": 1757907084559,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1757907319354,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -11,27 +11,38 @@\n     return res.status(400).json({ message: \"All fields are required\" });\n   }\n \n   try {\n-    // create transporter (use Gmail SMTP)\n+    // Configure your transporter (use your Gmail credentials or environment variables)\n     const transporter = nodemailer.createTransport({\n       service: \"gmail\",\n       auth: {\n-        user: process.env.EMAIL_USER, // your washlabs.ca@gmail.com\n-        pass: process.env.EMAIL_PASS, // app password from Gmail\n+        user: process.env.EMAIL_USER, // e.g., washlabs.ca@gmail.com\n+        pass: process.env.EMAIL_PASS, // Gmail app password\n       },\n     });\n \n-    await transporter.sendMail({\n-      from: email,\n-      to: \"washlabs.ca@gmail.com\",\n-      subject: `New message from ${name}`,\n-      text: message,\n-      html: `<p>${message}</p><p>From: ${name} (${email})</p>`,\n-    });\n+    // Compose the email\n+    const mailOptions = {\n+      from: `\"WashLabs Contact Form\" <${process.env.EMAIL_USER}>`,\n+      to: \"washlabs.ca@gmail.com\", // your inbox\n+      subject: `📩 New Contact Message from ${name}`, // clear subject\n+      html: `\n+        <h2 style=\"color:#f97316;\">New Contact Form Submission</h2>\n+        <p><strong>Name:</strong> ${name}</p>\n+        <p><strong>Email:</strong> ${email}</p>\n+        <p><strong>Message:</strong></p>\n+        <p style=\"white-space: pre-line;\">${message}</p>\n+        <hr />\n+        <p style=\"font-size:0.9rem;color:gray;\">This message was sent from the WashLabs website contact form.</p>\n+      `,\n+    };\n \n-    return res.status(200).json({ message: \"Email sent successfully\" });\n+    // Send the email\n+    await transporter.sendMail(mailOptions);\n+\n+    return res.status(200).json({ message: \"Message sent successfully\" });\n   } catch (error) {\n-    console.error(error);\n-    return res.status(500).json({ message: \"Something went wrong\" });\n+    console.error(\"Error sending email:\", error);\n+    return res.status(500).json({ message: \"Failed to send message\" });\n   }\n }\n"
+                }
+            ],
+            "date": 1757907084559,
+            "name": "Commit-0",
+            "content": "import nodemailer from \"nodemailer\";\n\nexport default async function handler(req, res) {\n  if (req.method !== \"POST\") {\n    return res.status(405).json({ message: \"Method not allowed\" });\n  }\n\n  const { name, email, message } = req.body;\n\n  if (!name || !email || !message) {\n    return res.status(400).json({ message: \"All fields are required\" });\n  }\n\n  try {\n    // create transporter (use Gmail SMTP)\n    const transporter = nodemailer.createTransport({\n      service: \"gmail\",\n      auth: {\n        user: process.env.EMAIL_USER, // your washlabs.ca@gmail.com\n        pass: process.env.EMAIL_PASS, // app password from Gmail\n      },\n    });\n\n    await transporter.sendMail({\n      from: email,\n      to: \"washlabs.ca@gmail.com\",\n      subject: `New message from ${name}`,\n      text: message,\n      html: `<p>${message}</p><p>From: ${name} (${email})</p>`,\n    });\n\n    return res.status(200).json({ message: \"Email sent successfully\" });\n  } catch (error) {\n    console.error(error);\n    return res.status(500).json({ message: \"Something went wrong\" });\n  }\n}\n"
+        }
+    ]
+}

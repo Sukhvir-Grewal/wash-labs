@@ -1,0 +1,193 @@
+"use client";
+import { motion } from "framer-motion";
+import { useState } from "react";
+
+export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
+    const [touched, setTouched] = useState({
+        name: false,
+        email: false,
+        phone: false,
+    });
+
+    const isValidEmail =
+        /^[^\s@]+@(gmail\.com|yahoo\.com|outlook\.com|hotmail\.com)$/.test(
+            userInfo.email
+        );
+
+    const isValidPhone =
+        /^\(\d{3}\) \d{3}-\d{4}$/.test(userInfo.phone) &&
+        !!userInfo.countryCode;
+
+    const isValidName = userInfo.name.trim().length > 1;
+
+    const isFormValid = isValidEmail && isValidPhone && isValidName;
+
+    function formatPhoneNumber(value) {
+        if (!value) return value;
+        const phoneNumber = value.replace(/\D/g, "");
+        const phoneNumberLength = phoneNumber.length;
+
+        if (phoneNumberLength < 4) return phoneNumber;
+        if (phoneNumberLength < 7) {
+            return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+        }
+        return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(
+            3,
+            6
+        )}-${phoneNumber.slice(6, 10)}`;
+    }
+
+    return (
+        <motion.div
+            key="user-step"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.4 }}
+            className="space-y-4"
+        >
+            {/* Name */}
+            <div>
+                <label className="block text-sm mb-1">Name</label>
+                <input
+                    type="text"
+                    placeholder="Your Name"
+                    value={userInfo.name}
+                    onChange={(e) =>
+                        setUserInfo((prev) => ({
+                            ...prev,
+                            name: e.target.value,
+                        }))
+                    }
+                    onBlur={() =>
+                        setTouched((prev) => ({ ...prev, name: true }))
+                    }
+                    className={`w-full px-4 py-3 rounded-lg bg-black/30 border 
+                        ${
+                            !isValidName && touched.name
+                                ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                                : "border-gray-600 focus:border-orange-500 focus:ring-orange-500"
+                        }
+                        focus:ring-2 outline-none`}
+                    required
+                />
+                {!isValidName && touched.name && (
+                    <p className="text-red-500 text-sm mt-1">
+                        Enter a valid name
+                    </p>
+                )}
+            </div>
+
+            {/* Email */}
+            <div>
+                <label className="block text-sm mb-1">Email</label>
+                <input
+                    type="email"
+                    placeholder="Your Email"
+                    value={userInfo.email}
+                    onChange={(e) =>
+                        setUserInfo((prev) => ({
+                            ...prev,
+                            email: e.target.value,
+                        }))
+                    }
+                    onBlur={() =>
+                        setTouched((prev) => ({ ...prev, email: true }))
+                    }
+                    className={`w-full px-4 py-3 rounded-lg bg-black/30 border 
+                        ${
+                            !isValidEmail && touched.email
+                                ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                                : "border-gray-600 focus:border-orange-500 focus:ring-orange-500"
+                        }
+                        focus:ring-2 outline-none`}
+                    required
+                />
+                {!isValidEmail && touched.email && (
+                    <p className="text-red-500 text-sm mt-1">
+                        Enter a valid email
+                    </p>
+                )}
+            </div>
+
+            {/* Phone */}
+            <div>
+                <label className="block text-sm mb-1">Phone</label>
+                <div className="flex gap-2">
+                    <select
+                        value={userInfo.countryCode || "+1"}
+                        onChange={(e) =>
+                            setUserInfo((prev) => ({
+                                ...prev,
+                                countryCode: e.target.value,
+                            }))
+                        }
+                        className="px-3 py-3 rounded-lg bg-black/30 border border-gray-600 
+                        focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
+                    >
+                        <option value="+1">+1 (CA/US)</option>
+                        <option value="+44">+44 (UK)</option>
+                        <option value="+61">+61 (AU)</option>
+                        <option value="+91">+91 (IN)</option>
+                    </select>
+
+                    <input
+                        type="tel"
+                        placeholder="(123) 456-7890"
+                        value={userInfo.phone}
+                        onChange={(e) => {
+                            const formatted = formatPhoneNumber(e.target.value);
+                            setUserInfo((prev) => ({ ...prev, phone: formatted }));
+                        }}
+                        className="flex-1 px-4 py-3 rounded-lg bg-black/30 border border-gray-600 
+                        focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
+                        required
+                    />
+                </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+                <label className="block text-sm mb-1">Additional Notes</label>
+                <textarea
+                    rows="3"
+                    placeholder="Any extra info..."
+                    value={userInfo.message}
+                    onChange={(e) =>
+                        setUserInfo((prev) => ({
+                            ...prev,
+                            message: e.target.value,
+                        }))
+                    }
+                    className="w-full px-4 py-3 rounded-lg bg-black/30 border border-gray-600 
+                    focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
+                ></textarea>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex justify-between">
+                <button
+                    type="button"
+                    onClick={onBack}
+                    className="py-3 px-6 rounded-lg bg-gray-700 hover:bg-gray-600 font-semibold transition"
+                >
+                    Back
+                </button>
+
+                <button
+                    type="button"
+                    onClick={onNext}
+                    disabled={!isFormValid}
+                    className={`py-3 px-6 rounded-lg font-semibold transition 
+                        ${
+                            isFormValid
+                                ? "bg-orange-500 hover:bg-orange-600"
+                                : "bg-gray-600 cursor-not-allowed"
+                        }`}
+                >
+                    Review Booking
+                </button>
+            </div>
+        </motion.div>
+    );
+}

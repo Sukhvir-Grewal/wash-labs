@@ -1,30 +1,48 @@
 import nodemailer from "nodemailer";
 
 export default async function handler(req, res) {
-  if (req.method === "POST") {
-    const { name, email, message } = req.body;
+  if (req.method !== "POST") {
+    return res.status(405).json({ message: "Method not allowed" });
+  }
 
-    try {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
+  const { name, email, message } = req.body;
 
-      await transporter.sendMail({
-        from: email,
-        to: process.env.EMAIL_USER,
-        subject: `New Contact Form Submission from ${name}`,
-        text: message,
-      });
+  if (!name || !email || !message) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
 
-      res.status(200).json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  } else {
-    res.status(405).json({ message: "Method not allowed" });
+  try {
+    // Configure your transporter (use your Gmail credentials or environment variables)
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER, // e.g., washlabs.ca@gmail.com
+        pass: process.env.EMAIL_PASS, // Gmail app password
+      },
+    });
+
+    // Compose the email
+    const mailOptions = {
+      from: `"WashLabs Contact Form" <${process.env.EMAIL_USER}>`,
+      to: "washlabs.ca@gmail.com", // your inbox
+      subject: `📩 New Contact Message from ${name}`, // clear subject
+      html: `
+        <h2 style="color:#f97316;">New Contact Form Submission</h2>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Message:</strong></p>
+        <p style="white-space: pre-line;">${message}</p>
+        <hr />
+        <p style="font-size:0.9rem;color:gray;">This message was sent from the WashLabs website contact form.</p>
+      `,
+    };
+
+    // Send the email
+    await transporter.sendMail(mailOptions);
+
+    return res.status(200).json({ message: "Message sent successfully" });
+  } catch (error) {
+    console.error("Error sending email:", error);
+    return res.status(500).json({ message: "Failed to send message" });
   }
 }

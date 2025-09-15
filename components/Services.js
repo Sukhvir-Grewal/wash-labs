@@ -1,11 +1,11 @@
-// components/Services.js
-import { motion, useViewportScroll, useTransform } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence, useViewportScroll, useTransform } from "framer-motion";
+import Booking from "./Booking";
 
 export default function Services() {
     const { scrollY } = useViewportScroll();
-    const yMove = useTransform(scrollY, [0, 500], [0, -30]); // subtle scroll up
+    const yMove = useTransform(scrollY, [0, 500], [0, -30]);
 
-    // Service data
     const services = [
         {
             title: "Premium Exterior Wash",
@@ -49,6 +49,18 @@ export default function Services() {
         },
     ];
 
+    const [selectedService, setSelectedService] = useState(null);
+
+    const handleSelect = (service) => {
+        setSelectedService(service);
+        document.body.style.overflow = "hidden"; // lock scroll when modal is open
+    };
+
+    const handleClose = () => {
+        setSelectedService(null);
+        document.body.style.overflow = "auto"; // unlock scroll
+    };
+
     return (
         <section
             id="services"
@@ -66,27 +78,42 @@ export default function Services() {
                             style={{ y: yMove }}
                             className="bg-white/10 rounded-2xl shadow-lg p-8 flex flex-col justify-between
               transform transition-transform duration-500 ease-in-out
-              hover:scale-105 hover:shadow-2xl hover:bg-white/20"
+              hover:scale-105 hover:shadow-2xl hover:bg-white/20
+              cursor-pointer"
+                            onClick={() => handleSelect(service)}
                         >
                             <div>
                                 <h3 className="text-2xl font-bold text-orange-400 mb-4">
                                     {service.title}
                                 </h3>
-                                <p className="text-gray-300 mb-2">
-                                    {service.price}
-                                </p>
+                                <p className="text-gray-300 mb-2">{service.price}</p>
                                 <ul className="text-left text-gray-200 mb-6 space-y-2">
                                     {service.features.map((feature, i) => (
                                         <li key={i}>✔ {feature}</li>
                                     ))}
                                 </ul>
                             </div>
-                            <p className="text-gray-400 mt-auto">
-                                {service.time}
-                            </p>
+                            <p className="text-gray-400 mt-auto">{service.time}</p>
                         </motion.div>
                     ))}
                 </div>
+
+                {/* Booking Modal */}
+                <AnimatePresence>
+                    {selectedService && (
+                        <motion.div
+                            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                        >
+                            <Booking
+                                service={selectedService}
+                                onClose={handleClose}
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </section>
     );
