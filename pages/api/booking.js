@@ -20,8 +20,8 @@ export default async function handler(req, res) {
             },
         });
 
-        // Compose the booking email
-        const mailOptions = {
+        // 📩 Admin notification email
+        const adminMail = {
             from: `"WashLabs Booking" <${process.env.EMAIL_USER}>`,
             to: "washlabs.ca@gmail.com",
             subject: `✅ New Booking Request - ${service.title}`,
@@ -55,11 +55,54 @@ export default async function handler(req, res) {
           This booking was submitted from the WashLabs website booking form.
         </p>
       `,
+            replyTo: userInfo.email, // ✅ lets you reply directly to client
         };
 
-        await transporter.sendMail(mailOptions);
+        await transporter.sendMail(adminMail);
 
-        return res.status(200).json({ message: "Booking sent successfully" });
+        // 📩 Confirmation email to applicant (No Reply)
+        const confirmationMail = {
+            from: `"WashLabs (No Reply)" <no-reply@washlabs.ca>`, // ✅ noreply
+            to: userInfo.email,
+            subject: `🧽 Booking Confirmation - ${service.title}`,
+            html: `
+        <div style="font-family:Arial, sans-serif; line-height:1.6; color:#333;">
+          <h2 style="color:#22c55e;">Thank you for your booking, ${
+              userInfo.name
+          }! 🎉</h2>
+          <p>We’ve received your request and our team will contact you if any additional details are needed.</p>
+
+          <h3 style="color:#f97316;">Booking Summary</h3>
+          <p><strong>Service:</strong> ${service.title} ${
+                service.price ? `- $${service.price}` : ""
+            }</p>
+          <p><strong>Vehicle:</strong> ${vehicle.year} ${vehicle.name}</p>
+          <p><strong>Date & Time:</strong> ${dateTime.date || "N/A"} at ${
+                dateTime.time || "N/A"
+            }</p>
+
+          ${
+              userInfo.message
+                  ? `<p><strong>Your Notes:</strong><br/>${userInfo.message}</p>`
+                  : ""
+          }
+
+          <hr/>
+          <p style="font-size:0.9rem; color:gray;">
+            WashLabs Team<br/>
+            📍 Halifax / Dartmouth / Bedford<br/>
+            ✉️ washlabs.ca@gmail.com<br/>
+            ⚠️ This is an automated message from a no-reply address. Please do not reply directly.
+          </p>
+        </div>
+      `,
+        };
+
+        await transporter.sendMail(confirmationMail);
+
+        return res
+            .status(200)
+            .json({ message: "Booking and confirmation sent successfully" });
     } catch (error) {
         console.error("Error sending booking email:", error);
         return res.status(500).json({ message: "Failed to send booking" });
