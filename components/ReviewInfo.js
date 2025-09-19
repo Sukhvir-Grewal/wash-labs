@@ -67,7 +67,7 @@ export default function ReviewInfo({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
-            className="w-full flex flex-col bg-gray-900 rounded-2xl shadow-2xl overflow-hidden h-[70vh]"
+            className="w-full flex flex-col bg-[#333333] rounded-2xl overflow-hidden h-[70vh]"
         >
             <h4 className="text-lg sm:text-xl font-bold text-orange-400 mb-4 text-center mt-4">
                 Review Your Booking
@@ -110,7 +110,7 @@ export default function ReviewInfo({
             </div>
 
             {/* Sticky Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:justify-between bg-gray-900 p-4 border-t border-gray-700">
+            <div className="flex flex-col sm:flex-row gap-3 sm:justify-between bg-[#333333] p-4 border-t border-gray-700">
                 <button
                     type="button"
                     onClick={onBack}

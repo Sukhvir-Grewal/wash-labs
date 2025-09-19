@@ -84,7 +84,7 @@ export default function DateTimePicker({
                 <select
                     value={selectedTime}
                     onChange={(e) => setSelectedTime(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg bg-black/30 border border-gray-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
+                    className="w-full px-4 py-3 rounded-lg bg-[#333333] border border-gray-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
                 >
                     <option value="">-- Select Time --</option>
                     {times.map((t) => (

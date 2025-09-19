@@ -57,7 +57,9 @@ export default function Booking({ service, onClose }) {
 
     return (
         <motion.div
-            className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 p-4"
+            className="fixed inset-0 flex items-center justify-center 
+             bg-white/10 backdrop-blur-md 
+             z-50 p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -65,7 +67,7 @@ export default function Booking({ service, onClose }) {
             <AnimatePresence mode="wait">
                 <motion.div
                     key={service.title + step}
-                    className="relative bg-gray-900 rounded-2xl p-8 max-w-lg w-full shadow-2xl"
+                    className="relative bg-[#333333] rounded-2xl p-8 max-w-lg w-full shadow-2xl"
                     initial={{ y: 50, opacity: 0, scale: 0.95 }}
                     animate={{ y: 0, opacity: 1, scale: 1 }}
                     exit={{ y: 50, opacity: 0, scale: 0.95 }}

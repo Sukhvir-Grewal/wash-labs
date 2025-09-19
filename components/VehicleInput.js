@@ -76,7 +76,7 @@ export default function VehicleInput({ onNext }) {
                     value={brand}
                     onChange={handleBrandChange}
                     placeholder="Enter Car Brand"
-                    className="w-full px-4 py-3 rounded-lg bg-black/30 border border-gray-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
+                    className="w-full px-4 py-3 rounded-lg bg-[$333333] border border-gray-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
                 />
                 <AnimatePresence>
                     {brandSuggestions.length > 0 && !model && (
@@ -85,7 +85,7 @@ export default function VehicleInput({ onNext }) {
                             animate={{ opacity: 1, height: "auto" }}
                             exit={{ opacity: 0, height: 0 }}
                             transition={{ duration: 0.3, ease: "easeInOut" }}
-                            className="absolute left-0 right-0 mt-1 bg-gray-800 rounded-lg overflow-hidden z-50"
+                            className="absolute left-0 right-0 mt-1 bg-[#222222] rounded-lg overflow-hidden z-50"
                         >
                             {brandSuggestions.map((s, i) => (
                                 <li
@@ -112,7 +112,7 @@ export default function VehicleInput({ onNext }) {
                     onChange={handleModelChange}
                     placeholder={brand ? "Enter Model" : "Select Brand First"}
                     disabled={!brand}
-                    className="w-full px-4 py-3 rounded-lg bg-black/30 border border-gray-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none disabled:bg-gray-700"
+                    className="w-full px-4 py-3 rounded-lg bg-[#333333] border border-gray-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none disabled:bg-gray-700"
                 />
                 <AnimatePresence>
                     {modelSuggestions.length > 0 && model && (
@@ -121,7 +121,7 @@ export default function VehicleInput({ onNext }) {
                             animate={{ opacity: 1, height: "auto" }}
                             exit={{ opacity: 0, height: 0 }}
                             transition={{ duration: 0.3, ease: "easeInOut" }}
-                            className="absolute left-0 right-0 mt-1 bg-gray-800 rounded-lg overflow-hidden z-50"
+                            className="absolute left-0 right-0 mt-1 bg-[#222222] rounded-lg overflow-hidden z-50"
                         >
                             {modelSuggestions.map((s, i) => (
                                 <li
@@ -145,7 +145,7 @@ export default function VehicleInput({ onNext }) {
                 <select
                     value={year}
                     onChange={(e) => setYear(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg bg-black/30 border border-gray-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
+                    className="w-full px-4 py-3 rounded-lg bg-[#333333] border border-gray-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
                 >
                     <option value="">Select Year</option>
                     {years

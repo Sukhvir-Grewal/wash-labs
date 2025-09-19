@@ -62,7 +62,7 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
                     onBlur={() =>
                         setTouched((prev) => ({ ...prev, name: true }))
                     }
-                    className={`w-full px-4 py-3 rounded-lg bg-black/30 border 
+                    className={`w-full px-4 py-3 rounded-lg bg-[#333333] border 
                         ${
                             !isValidName && touched.name
                                 ? "border-red-500 focus:border-red-500 focus:ring-red-500"
@@ -94,7 +94,7 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
                     onBlur={() =>
                         setTouched((prev) => ({ ...prev, email: true }))
                     }
-                    className={`w-full px-4 py-3 rounded-lg bg-black/30 border 
+                    className={`w-full px-4 py-3 rounded-lg bg-[#333333] border 
                         ${
                             !isValidEmail && touched.email
                                 ? "border-red-500 focus:border-red-500 focus:ring-red-500"
@@ -111,43 +111,53 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
             </div>
 
             {/* Phone */}
-            <div>
-                <label className="block text-sm mb-1">Phone</label>
-                <div className="flex gap-2">
-                    <select
-                        value={userInfo.countryCode || "+1"}
-                        onChange={(e) =>
-                            setUserInfo((prev) => ({
-                                ...prev,
-                                countryCode: e.target.value,
-                            }))
-                        }
-                        className="px-3 py-3 rounded-lg bg-black/30 border border-gray-600 
-                        focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
-                    >
-                        <option value="+1">+1 (CA/US)</option>
-                        <option value="+44">+44 (UK)</option>
-                        <option value="+61">+61 (AU)</option>
-                        <option value="+91">+91 (IN)</option>
-                    </select>
+<div>
+  <label className="block text-sm mb-1">Phone</label>
+  <div className="flex gap-2">
+    <select
+      value={userInfo.countryCode || "+1"}
+      onChange={(e) =>
+        setUserInfo((prev) => ({
+          ...prev,
+          countryCode: e.target.value,
+        }))
+      }
+      className="px-3 py-3 rounded-lg bg-[#222222] border border-gray-600 
+      focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
+    >
+      <option value="+1">+1 (CA/US)</option>
+      <option value="+44">+44 (UK)</option>
+      <option value="+61">+61 (AU)</option>
+      <option value="+91">+91 (IN)</option>
+    </select>
 
-                    <input
-                        type="tel"
-                        placeholder="(123) 456-7890"
-                        value={userInfo.phone}
-                        onChange={(e) => {
-                            const formatted = formatPhoneNumber(e.target.value);
-                            setUserInfo((prev) => ({
-                                ...prev,
-                                phone: formatted,
-                            }));
-                        }}
-                        className="flex-1 px-4 py-3 rounded-lg bg-black/30 border border-gray-600 
-                        focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
-                        required
-                    />
-                </div>
-            </div>
+    <input
+      type="tel"
+      placeholder="(123) 456-7890"
+      value={userInfo.phone}
+      onChange={(e) => {
+        const formatted = formatPhoneNumber(e.target.value);
+        setUserInfo((prev) => ({
+          ...prev,
+          phone: formatted,
+        }));
+      }}
+      onBlur={() => setTouched((prev) => ({ ...prev, phone: true }))}
+      className={`flex-1 px-4 py-3 rounded-lg bg-[#222222] border 
+        ${
+          !isValidPhone && touched.phone
+            ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+            : "border-gray-600 focus:border-orange-500 focus:ring-orange-500"
+        }
+        focus:ring-2 outline-none`}
+      required
+    />
+  </div>
+  {!isValidPhone && touched.phone && (
+    <p className="text-red-500 text-sm mt-1">Enter a valid phone number</p>
+  )}
+</div>
+
 
             {/* Notes */}
             <div>
@@ -162,7 +172,7 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
                             message: e.target.value,
                         }))
                     }
-                    className="w-full px-4 py-3 rounded-lg bg-black/30 border border-gray-600 
+                    className="w-full px-4 py-3 rounded-lg bg-[#333333] border border-gray-600 
                     focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
                 ></textarea>
             </div>

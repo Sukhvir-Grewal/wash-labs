@@ -12,7 +12,7 @@ export default function Navigation() {
     };
 
     return (
-        <header className="bg-black/90 sticky top-0 z-50 shadow-md">
+        <header className="bg-gradient-to-r from-[#333333] to-[#1a1a1a] sticky top-0 z-50 shadow-md">
             <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
                 {/* Logo */}
                 <button

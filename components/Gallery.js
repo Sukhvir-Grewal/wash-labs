@@ -22,7 +22,7 @@ export default function Gallery() {
     if (!isClient) return null;
 
     return (
-        <section id="gallery" className="py-20 bg-gray-900">
+        <section id="gallery" className="py-20 bg-gradient-to-r from-[#333333] to-[#1a1a1a]">
             <div className="max-w-7xl mx-auto px-6 text-center">
                 <h2 className="text-4xl font-extrabold text-orange-400 mb-12">
                     Gallery
