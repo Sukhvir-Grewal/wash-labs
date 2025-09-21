@@ -9,7 +9,7 @@ export default function Services() {
     const services = [
         {
             title: "Premium Exterior Wash",
-            price: "Sedans: $80 | SUVs: $90 | Large: $100",
+            price: "$50",
             features: [
                 "Full Exterior Foam Bath",
                 "Ceramic Sealant (6mo protection)",
@@ -21,7 +21,7 @@ export default function Services() {
         },
         {
             title: "Interior Detail",
-            price: "Sedans: $110 | SUVs: $115 | Large: $130",
+            price: "$100",
             features: [
                 "Vacuum & Wipe Cracks + Crevices",
                 "UV Protection Applied",
@@ -33,7 +33,7 @@ export default function Services() {
         },
         {
             title: "Full Detail",
-            price: "Sedans: $190 | SUVs: $200 | Large: $210",
+            price: "$140",
             features: [
                 "Full Exterior Foam Bath",
                 "Ceramic Sealant Applied",
