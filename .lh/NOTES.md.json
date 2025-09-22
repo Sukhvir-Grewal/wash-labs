@@ -1,0 +1,18 @@
+{
+    "sourceFile": "NOTES.md",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1758558895573,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1758558895573,
+            "name": "Commit-0",
+            "content": "# Wash Labs – Developer Notes\r\n\r\n### SEO & Business Info\r\n- ✅ If phone number changes → update in `components/SEOJsonLd.js`\r\n- ✅ If address or postal code changes → update in `components/SEOJsonLd.js`\r\n- ✅ If pricing changes → update in `SEOJsonLd.js` (`priceRange`) AND `components/About.js`\r\n- ✅ If new services added → update text in `components/Services.js` and keywords in `next-seo.config.js`\r\n\r\n### Deployment\r\n- `npm run build` → generates sitemap.xml + robots.txt\r\n- Always check `https://www.washlabs.ca/sitemap.xml` after deploy\r\n- If sitemap fails in Google Console → resubmit in Search Console\r\n\r\n### Future Ideas\r\n- Add Google Analytics / Plausible\r\n- Add blog section for SEO boost\r\n- Register/maintain Google Business Profile\r\n"
+        }
+    ]
+}

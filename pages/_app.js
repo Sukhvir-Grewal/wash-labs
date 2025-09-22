@@ -6,6 +6,7 @@ import "aos/dist/aos.css";
 
 import { DefaultSeo } from "next-seo";
 import SEO from "../next-seo.config";
+import { Analytics } from "@vercel/analytics/react";
 
 export default function App({ Component, pageProps }) {
   useEffect(() => {
@@ -19,6 +20,9 @@ export default function App({ Component, pageProps }) {
 
       {/* Page content */}
       <Component {...pageProps} />
+
+      {/* ✅ Vercel Analytics */}
+      <Analytics />
     </>
   );
 }
