@@ -3,11 +3,15 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 0,
+            "activePatchIndex": 1,
             "patches": [
                 {
                     "date": 1757882470496,
                     "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1758556025278,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,12 +1,24 @@\n-import '@/styles/globals.css'\n-import { useEffect } from 'react'\n-import AOS from 'aos'\n-import 'aos/dist/aos.css'\n+// pages/_app.js\n+import \"@/styles/globals.css\";\n+import { useEffect } from \"react\";\n+import AOS from \"aos\";\n+import \"aos/dist/aos.css\";\n \n+import { DefaultSeo } from \"next-seo\";\n+import SEO from \"../next-seo.config\";\n+\n export default function App({ Component, pageProps }) {\n   useEffect(() => {\n-    AOS.init({ duration: 800, once: true }) // smooth animations\n-  }, [])\n+    AOS.init({ duration: 800, once: true }); // smooth animations\n+  }, []);\n \n-  return <Component {...pageProps} />\n+  return (\n+    <>\n+      {/* ✅ Global SEO config */}\n+      <DefaultSeo {...SEO} />\n+\n+      {/* Page content */}\n+      <Component {...pageProps} />\n+    </>\n+  );\n }\n"
                 }
             ],
             "date": 1757882470496,

@@ -1,0 +1,22 @@
+{
+    "sourceFile": "pages/_document.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 1,
+            "patches": [
+                {
+                    "date": 1758555875125,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1758555917670,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -6,9 +6,8 @@\n     <Html lang=\"en\">\n       <Head>\n         {/* Default SEO setup for every page */}\n         <meta charSet=\"UTF-8\" />\n-        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n         <meta httpEquiv=\"X-UA-Compatible\" content=\"IE=edge\" />\n \n         {/* Favicon */}\n         <link rel=\"icon\" href=\"/favicon.ico\" />\n"
+                }
+            ],
+            "date": 1758555875125,
+            "name": "Commit-0",
+            "content": "// pages/_document.js\nimport { Html, Head, Main, NextScript } from \"next/document\";\n\nexport default function Document() {\n  return (\n    <Html lang=\"en\">\n      <Head>\n        {/* Default SEO setup for every page */}\n        <meta charSet=\"UTF-8\" />\n        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n        <meta httpEquiv=\"X-UA-Compatible\" content=\"IE=edge\" />\n\n        {/* Favicon */}\n        <link rel=\"icon\" href=\"/favicon.ico\" />\n\n        {/* Theme Color (browser address bar color on mobile) */}\n        <meta name=\"theme-color\" content=\"#1a1a1a\" />\n      </Head>\n      <body>\n        <Main />\n        <NextScript />\n      </body>\n    </Html>\n  );\n}\n"
+        }
+    ]
+}

@@ -1,12 +1,24 @@
-import '@/styles/globals.css'
-import { useEffect } from 'react'
-import AOS from 'aos'
-import 'aos/dist/aos.css'
+// pages/_app.js
+import "@/styles/globals.css";
+import { useEffect } from "react";
+import AOS from "aos";
+import "aos/dist/aos.css";
+
+import { DefaultSeo } from "next-seo";
+import SEO from "../next-seo.config";
 
 export default function App({ Component, pageProps }) {
   useEffect(() => {
-    AOS.init({ duration: 800, once: true }) // smooth animations
-  }, [])
+    AOS.init({ duration: 800, once: true }); // smooth animations
+  }, []);
 
-  return <Component {...pageProps} />
+  return (
+    <>
+      {/* ✅ Global SEO config */}
+      <DefaultSeo {...SEO} />
+
+      {/* Page content */}
+      <Component {...pageProps} />
+    </>
+  );
 }

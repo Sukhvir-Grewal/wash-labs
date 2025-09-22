@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Image from "next/image";
 
 export default function Navigation() {
     const [menuOpen, setMenuOpen] = useState(false);
@@ -19,10 +20,12 @@ export default function Navigation() {
                     onClick={() => scrollTo("hero")}
                     className="flex items-center"
                 >
-                    <img
+                    <Image
                         src="/images/logo.png"
                         alt="Wash Labs Logo"
-                        className="w-[120px] h-[120px] cursor-pointer"
+                        width={120}
+                        height={120}
+                        className="cursor-pointer"
                     />
                 </button>
 
