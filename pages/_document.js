@@ -9,8 +9,24 @@ export default function Document() {
         <meta charSet="UTF-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
 
-        {/* Favicon */}
-        <link rel="icon" href="/favicon.ico" />
+        {/* Light mode favicon */}
+        <link
+          rel="icon"
+          href="/favicon-light.png"
+          type="image/png"
+          media="(prefers-color-scheme: light)"
+        />
+
+        {/* Dark mode favicon */}
+        <link
+          rel="icon"
+          href="/favicon-dark.png"
+          type="image/png"
+          media="(prefers-color-scheme: dark)"
+        />
+
+        {/* Fallback favicon */}
+        <link rel="icon" href="/favicon.png" type="image/png" />
 
         {/* Theme Color (browser address bar color on mobile) */}
         <meta name="theme-color" content="#1a1a1a" />

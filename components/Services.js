@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { motion, AnimatePresence, useViewportScroll, useTransform } from "framer-motion";
+import {
+    motion,
+    AnimatePresence,
+    useViewportScroll,
+    useTransform,
+} from "framer-motion";
 import Booking from "./Booking";
 
 export default function Services() {
@@ -16,11 +21,11 @@ export default function Services() {
                 "Wheels & Tires Deep Cleaned",
                 "Tire Shine Applied",
             ],
-            time: "~1-2 hrs",
+            time: "1 hr",
             animation: "fade-right",
         },
         {
-            title: "Interior Detail",
+            title: "Complete Interior Detail",
             price: "$100",
             features: [
                 "Vacuum & Wipe Cracks + Crevices",
@@ -28,11 +33,11 @@ export default function Services() {
                 "Leather Cleaned",
                 "Streak-Free Glass",
             ],
-            time: "~1.5-2.5 hrs",
+            time: "2 hrs",
             animation: "fade-up",
         },
         {
-            title: "Full Detail",
+            title: "Ultimate Full Detail",
             price: "$140",
             features: [
                 "Full Exterior Foam Bath",
@@ -44,9 +49,15 @@ export default function Services() {
                 "Leather Cleaned",
                 "Streak-Free Glass",
             ],
-            time: "~2.5-4 hrs",
+            time: "3 hrs",
             animation: "fade-left",
         },
+    ];
+
+    const addons = [
+        { title: "Decontamination Treatment", price: "Free (Limited Time)" },
+        { title: "Clay Bar Service", price: "Free (Limited Time)" },
+        { title: "Pet Hair Removal", price: "Free (Limited Time)" },
     ];
 
     const [selectedService, setSelectedService] = useState(null);
@@ -86,16 +97,48 @@ export default function Services() {
                                 <h3 className="text-2xl font-bold text-orange-400 mb-4">
                                     {service.title}
                                 </h3>
-                                <p className="text-gray-300 mb-2">{service.price}</p>
+                                <p className="text-green-400 font-semibold mb-2">
+                                    {service.price}
+                                </p>
                                 <ul className="text-left text-gray-200 mb-6 space-y-2">
                                     {service.features.map((feature, i) => (
                                         <li key={i}>✔ {feature}</li>
                                     ))}
                                 </ul>
                             </div>
-                            <p className="text-gray-400 mt-auto">{service.time}</p>
+                            <p className="text-gray-400 mt-auto font-medium">
+                                Time: {service.time}
+                            </p>
                         </motion.div>
                     ))}
+                </div>
+
+                {/* ✅ Add-ons Section */}
+                <div className="mt-16">
+                    <h3 className="text-3xl font-extrabold text-orange-400 mb-6">
+                        Add-Ons (Affordable Upgrades)
+                    </h3>
+                    <div className="grid gap-6 md:grid-cols-3">
+                        {addons.map((addon, i) => (
+                            <div
+                                key={i}
+                                className="bg-white/10 rounded-xl p-6 shadow-md hover:shadow-lg transition"
+                            >
+                                <h4 className="text-xl font-bold text-orange-300 mb-2">
+                                    {addon.title}
+                                </h4>
+                                <p
+                                    className={`${
+                                        addon.price.includes("Free")
+                                            ? "text-green-400 font-semibold"
+                                            : "text-green-400"
+                                    }`}
+                                >
+                                    {addon.price}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Booking Modal */}
