@@ -42,14 +42,14 @@ export default function Footer() {
                     >
                         <FaTwitter />
                     </a> */}
-                    <a
+                    {/* <a
                         href="https://www.tiktok.com/@wash_labs?is_from_webapp=1&sender_device=pc"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:text-orange-500 transition"
                     >
                         <FaTiktok />
-                    </a>
+                    </a> */}
                 </div>
             </div>
         </footer>
