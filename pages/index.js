@@ -22,7 +22,8 @@ export default function Home() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-r from-[#333333] to-[#1a1a1a] text-white">
+        <div className="min-h-screen bg-transparent text-white relative">
+
             {/* ✅ Local Business JSON-LD */}
             <SEOJsonLd />
 

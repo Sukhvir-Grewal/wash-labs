@@ -1,19 +1,219 @@
 @import "tailwindcss";
+html, body { background-color: transparent !important; }
 
+
+/* ================================
+   THEME VARIABLES
+================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+    /* Brand */
+    --color-primary: #0076ff; /* WL Blue */
+    --color-accent: #33cfff; /* Light accent blue */
+
+    /* Surfaces */
+    --color-bg-dark: #0a0a0a;
+    --color-bg-light: #ffffff;
+    --color-surface: #111214; /* cards / sections */
+    --color-border: #1f1f1f;
+
+    /* Text */
+    --color-text-main: #f9f9f9;
+    --color-text-secondary: #d6d6d6;
+
+    --color-text-muted: #8a8a8a;
+
+    /* Gradients (opt-in) */
+    --gradient-primary: linear-gradient(90deg, #0076ff 0%, #33cfff 100%);
+
+    /* Typography */
+    --font-heading: "Poppins", sans-serif;
+    --font-body: "Inter", sans-serif;
+
+    /* Radius & shadow */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Optional: light scheme support if you ever switch */
+@media (prefers-color-scheme: light) {
+    :root {
+        --color-bg-light: #ffffff;
+        --color-text-main: #171717;
+        --color-text-secondary: #4a4a4a;
+        --color-text-muted: #6b6b6b;
+    }
+}
+
+/* ================================
+   BASE
+================================ */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+    background-color: var(--color-bg-dark);
+    color: var(--color-text-main);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Transparent images stay transparent */
+img {
+    background-color: transparent !important;
+    mix-blend-mode: normal;
+}
+
+/* Typography */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-heading);
+    color: var(--color-text-main);
+    line-height: 1.2;
+}
+
+p {
+    color: var(--color-text-secondary);
+}
+
+a {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+a:hover {
+    color: var(--color-accent);
+}
+
+/* Utility helpers */
+.no-bg {
+    background: transparent !important;
+}
+.text-muted {
+    color: var(--color-text-muted);
+}
+.border-default {
+    border: 1px solid var(--color-border);
+}
+
+/* ================================
+   COMPONENT PRIMITIVES (opt-in)
+   Use these classes explicitly.
+================================ */
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease,
+        color 0.2s ease;
+}
+
+.btn-primary {
+    background: var(--gradient-primary);
+    color: #ffffff;
+}
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 12px rgba(51, 207, 255, 0.5);
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+}
+.btn-outline:hover {
+    background: rgba(0, 118, 255, 0.08);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--color-text-secondary);
+}
+.btn-ghost:hover {
+    color: var(--color-primary);
+}
+
+/* Cards / surfaces */
+.card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Nav links (optional helper if you want consistent nav styling) */
+.nav-link {
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    transition: color 0.2s ease, opacity 0.2s ease;
+}
+.nav-link:hover {
+    color: var(--color-primary);
+}
+
+/* Inputs (optional baseline) */
+.input {
+    background: #0f0f10;
+    color: var(--color-text-main);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 0.8rem;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(0, 118, 255, 0.25);
+}
+
+/* Badges / chips */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    background: #0f1720;
+    color: var(--color-accent);
+    border: 1px solid rgba(51, 207, 255, 0.25);
+}
+
+/* ================================
+   ACCESSIBILITY
+================================ */
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
 }

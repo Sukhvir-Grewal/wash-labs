@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 4,
+            "activePatchIndex": 6,
             "patches": [
                 {
                     "date": 1758555875125,
@@ -24,6 +24,14 @@
                 {
                     "date": 1758561644019,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -8,11 +8,27 @@\n         {/* Default SEO setup for every page */}\n         <meta charSet=\"UTF-8\" />\n         <meta httpEquiv=\"X-UA-Compatible\" content=\"IE=edge\" />\n \n-        {/* Favicon */}\n-        <link rel=\"icon\" href=\"/favicon.png\" type=\"image/png\"/>\n+        {/* Light mode favicon */}\n+        <link\n+          rel=\"icon\"\n+          href=\"/favicon-light.png\"\n+          type=\"image/png\"\n+          media=\"(prefers-color-scheme: light)\"\n+        />\n \n+        {/* Dark mode favicon */}\n+        <link\n+          rel=\"icon\"\n+          href=\"/favicon-dark.png\"\n+          type=\"image/png\"\n+          media=\"(prefers-color-scheme: dark)\"\n+        />\n+\n+        {/* Fallback favicon */}\n+        <link rel=\"icon\" href=\"/favicon.png\" type=\"image/png\" />\n+\n         {/* Theme Color (browser address bar color on mobile) */}\n         <meta name=\"theme-color\" content=\"#1a1a1a\" />\n       </Head>\n       <body>\n"
+                },
+                {
+                    "date": 1759774117219,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -7,25 +7,8 @@\n       <Head>\n         {/* Default SEO setup for every page */}\n         <meta charSet=\"UTF-8\" />\n         <meta httpEquiv=\"X-UA-Compatible\" content=\"IE=edge\" />\n-\n-        {/* Light mode favicon */}\n-        <link\n-          rel=\"icon\"\n-          href=\"/favicon-light.png\"\n-          type=\"image/png\"\n-          media=\"(prefers-color-scheme: light)\"\n-        />\n-\n-        {/* Dark mode favicon */}\n-        <link\n-          rel=\"icon\"\n-          href=\"/favicon-dark.png\"\n-          type=\"image/png\"\n-          media=\"(prefers-color-scheme: dark)\"\n-        />\n-\n         {/* Fallback favicon */}\n         <link rel=\"icon\" href=\"/favicon.png\" type=\"image/png\" />\n \n         {/* Theme Color (browser address bar color on mobile) */}\n"
+                },
+                {
+                    "date": 1759774212307,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -7,8 +7,9 @@\n       <Head>\n         {/* Default SEO setup for every page */}\n         <meta charSet=\"UTF-8\" />\n         <meta httpEquiv=\"X-UA-Compatible\" content=\"IE=edge\" />\n+        \n         {/* Fallback favicon */}\n         <link rel=\"icon\" href=\"/favicon.png\" type=\"image/png\" />\n \n         {/* Theme Color (browser address bar color on mobile) */}\n"
                 }
             ],
             "date": 1758555875125,

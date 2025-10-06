@@ -5,89 +5,128 @@ export default function Navigation() {
     const [menuOpen, setMenuOpen] = useState(false);
 
     const scrollTo = (id) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.scrollIntoView({ behavior: "smooth" });
-            setMenuOpen(false); // close menu after click
+        const el = document.getElementById(id);
+        if (el) {
+            el.scrollIntoView({ behavior: "smooth" });
+            setMenuOpen(false);
         }
     };
 
     return (
-        <header className="bg-gradient-to-r from-[#333333] to-[#1a1a1a] sticky top-0 z-50 shadow-md">
-            <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
-                {/* Logo */}
+        <header className="sticky top-0 z-50 bg-[var(--color-bg-dark)] border-b border-[var(--color-border)] shadow-md">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+                {/* Logo (transparent stays transparent) */}
                 <button
                     onClick={() => scrollTo("hero")}
-                    className="flex items-center"
+                    aria-label="Go to top"
+                    className="flex items-center bg-transparent p-0"
                 >
                     <Image
                         src="/images/logo.png"
                         alt="Wash Labs Logo"
                         width={120}
                         height={120}
-                        className="cursor-pointer"
+                        priority
+                        className="cursor-pointer bg-transparent mix-blend-normal pointer-events-none select-none"
+                        style={{
+                            backgroundColor: "transparent",
+                            filter: "none",
+                        }}
                     />
                 </button>
 
                 {/* Desktop Menu */}
-                <nav className="hidden md:flex space-x-8 text-white font-semibold">
+                <nav className="hidden md:flex items-center gap-8 font-semibold">
                     {["services", "gallery", "about", "contact"].map((id) => (
                         <button
                             key={id}
                             onClick={() => scrollTo(id)}
-                            className="hover:text-orange-500 transition"
+                            className="text-[var(--color-text-main)] hover:text-[var(--color-primary)] transition-colors"
                         >
-                            {id.charAt(0).toUpperCase() + id.slice(1)}
+                            <span className="capitalize">
+                                {id.charAt(0).toUpperCase() + id.slice(1)}
+                            </span>
                         </button>
                     ))}
                 </nav>
 
-                {/* Mobile Hamburger */}
+                {/* Mobile Hamburger (bars perfectly parallel; crisp X) */}
                 <div className="md:hidden">
                     <button
                         onClick={() => setMenuOpen(!menuOpen)}
-                        className="relative w-8 h-8 flex flex-col justify-between items-center focus:outline-none"
+                        aria-label="Toggle menu"
+                        className="relative w-10 h-10"
                     >
+                        {/* Base geometry: all bars share same center; closed => offset by ±8px */}
                         <span
-                            className={`absolute w-8 h-0.5 transition-transform duration-300 ease-in-out ${
+                            className={[
+                                "absolute left-1/2 top-1/2 -translate-x-1/2 rounded",
+                                "w-7 h-[3px] transition-transform transition-colors duration-300 ease-out",
                                 menuOpen
-                                    ? "bg-orange-500 rotate-45 top-3.5"
-                                    : "bg-white top-0"
-                            }`}
-                        ></span>
+                                    ? "rotate-45 bg-[var(--color-primary)]"
+                                    : "-translate-y-[8px] bg-white",
+                            ].join(" ")}
+                        />
                         <span
-                            className={`absolute w-8 h-0.5 transition-opacity duration-300 ease-in-out ${
-                                menuOpen ? "opacity-0" : "bg-white top-3.5"
-                            }`}
-                        ></span>
-                        <span
-                            className={`absolute w-8 h-0.5 transition-transform duration-300 ease-in-out ${
+                            className={[
+                                "absolute left-1/2 top-1/2 -translate-x-1/2 rounded",
+                                "w-7 h-[3px] transition-all duration-300 ease-out",
                                 menuOpen
-                                    ? "bg-orange-500 -rotate-45 top-3.5"
-                                    : "bg-white top-7"
-                            }`}
-                        ></span>
+                                    ? "opacity-0 bg-[var(--color-primary)]"
+                                    : "opacity-100 bg-white",
+                            ].join(" ")}
+                        />
+                        <span
+                            className={[
+                                "absolute left-1/2 top-1/2 -translate-x-1/2 rounded",
+                                "w-7 h-[3px] transition-transform transition-colors duration-300 ease-out",
+                                menuOpen
+                                    ? "-rotate-45 bg-[var(--color-primary)]"
+                                    : "translate-y-[8px] bg-white",
+                            ].join(" ")}
+                        />
                     </button>
                 </div>
             </div>
 
-            {/* Mobile Menu */}
+            {/* Mobile Menu (solid background for contrast; darker link color) */}
             <div
-                className={`md:hidden bg-black/95 text-white absolute w-full left-0 transition-all duration-300 overflow-hidden ${
-                    menuOpen ? "max-h-96 py-4" : "max-h-0"
+                className={`md:hidden w-full overflow-hidden transition-[max-height] duration-300 bg-[var(--color-bg-dark)] ${
+                    menuOpen ? "max-h-96" : "max-h-0"
                 }`}
             >
-                <div className="flex flex-col items-center space-y-4">
-                    {["services", "gallery", "about", "contact"].map((id) => (
-                        <button
-                            key={id}
-                            onClick={() => scrollTo(id)}
-                            className="text-xl font-semibold hover:text-orange-500 transition"
-                        >
-                            {id.charAt(0).toUpperCase() + id.slice(1)}
-                        </button>
-                    ))}
-                </div>
+                <nav className="px-4 py-2">
+                    <ul className="flex flex-col">
+                        {["services", "gallery", "about", "contact"].map(
+                            (id) => (
+                                <li
+                                    key={id}
+                                    className="border-b border-[var(--color-border)] last:border-b-0"
+                                >
+                                    <button
+                                        onClick={() => scrollTo(id)}
+                                        className="
+                    w-full text-left py-4 text-[17px] font-semibold
+                    text-white /* high contrast */
+                    hover:text-[var(--color-primary)]
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/40
+                  "
+                                    >
+                                        <span className="capitalize">
+                                            {id.charAt(0).toUpperCase() +
+                                                id.slice(1)}
+                                        </span>
+                                    </button>
+                                </li>
+                            )
+                        )}
+
+                        {/* Example CTA (optional) */}
+                        {/* <li className="pt-2">
+              <a href="#contact" className="btn btn-primary w-full">Book Now</a>
+            </li> */}
+                    </ul>
+                </nav>
             </div>
         </header>
     );
