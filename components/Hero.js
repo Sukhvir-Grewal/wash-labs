@@ -27,7 +27,7 @@ export default function Hero() {
           alt="Car Detailing"
           fill
           priority
-          className="object-cover brightness-[0.9]"
+          className="object-cover brightness-[0.65]"
         />
       </div>
 
@@ -45,14 +45,14 @@ export default function Hero() {
                      text-transparent bg-clip-text bg-[var(--gradient-primary)]
                      drop-shadow-[0_2px_12px_rgba(0,0,0,0.35)]"
         >
-          Wash Labs
+         <span className="text-white">Wash</span> <span className="text-[#33CFFF]">Labs</span>
         </motion.h1>
 
         <motion.p
           style={{ y: subtitleY, opacity: subtitleOpacity }}
           className="text-base sm:text-lg md:text-xl mb-8 text-[var(--color-text-main)]/95"
         >
-          Mobile Car Detailing — premium results at your doorstep.
+           <span className="text-[#D1D1D1]">Mobile Car Detailing — premium results at your doorstep.</span>
         </motion.p>
 
         <motion.a
