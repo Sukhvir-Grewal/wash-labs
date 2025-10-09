@@ -52,7 +52,7 @@ export default function DateTimePicker({
         >
             {/* Calendar */}
             <div>
-                <label className="block text-sm mb-2 text-gray-300">
+                <label className="block text-sm mb-2 text-gray-700">
                     Select Date
                 </label>
                 <DayPicker
@@ -60,31 +60,30 @@ export default function DateTimePicker({
                     selected={selectedDay}
                     onSelect={setSelectedDay}
                     disabled={(date) =>
-                        !isWeekend(date) ||
                         (!isAfter(date, today) &&
                             date.toDateString() !== today.toDateString())
                     }
-                    modifiers={{
-                        weekend: (date) => isWeekend(date),
-                    }}
+                    modifiers={{}}
                     modifiersClassNames={{
-                        weekend: "text-orange-500 font-bold",
-                        selected:
-                            "bg-orange-500 text-white font-bold rounded-full",
+                        selected: "bg-blue-600 text-white font-bold rounded-full",
+                    }}
+                    className="bg-white rounded-lg p-2 border border-blue-100"
+                    style={{
+                        color: "#222",
                     }}
                 />
             </div>
 
             {/* Time Picker */}
             <div>
-                <label className="block text-sm mb-2 text-gray-300">
+                <label className="block text-sm mb-2 text-gray-700">
                     Select Time
                 </label>
 
                 <select
                     value={selectedTime}
                     onChange={(e) => setSelectedTime(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg bg-[#333333] border border-gray-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
+                    className="w-full px-4 py-3 rounded-lg bg-white border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
                 >
                     <option value="">-- Select Time --</option>
                     {times.map((t) => (
@@ -96,11 +95,11 @@ export default function DateTimePicker({
             </div>
 
             {/* Buttons */}
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-4">
                 <button
                     type="button"
                     onClick={onBack}
-                    className="py-3 px-6 rounded-lg bg-gray-700 hover:bg-gray-600 font-semibold transition"
+                    className="py-3 px-6 rounded-lg bg-gray-200 hover:bg-gray-300 text-blue-700 font-semibold transition border border-blue-200"
                 >
                     Back
                 </button>
@@ -109,10 +108,10 @@ export default function DateTimePicker({
                     type="button"
                     disabled={!isValid}
                     onClick={handleNext}
-                    className={`py-3 px-6 rounded-lg font-semibold transition ${
+                    className={`py-3 px-6 rounded-lg font-semibold transition border ${
                         isValid
-                            ? "bg-orange-500 hover:bg-orange-600"
-                            : "bg-gray-600 cursor-not-allowed"
+                            ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+                            : "bg-gray-200 cursor-not-allowed text-gray-400 border-blue-100"
                     }`}
                 >
                     Next

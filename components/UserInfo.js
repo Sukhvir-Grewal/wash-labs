@@ -48,7 +48,7 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
         >
             {/* Name */}
             <div>
-                <label className="block text-sm mb-1">Name</label>
+                <label className="block text-sm mb-1 text-gray-700">Name</label>
                 <input
                     type="text"
                     placeholder="Your Name"
@@ -62,13 +62,13 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
                     onBlur={() =>
                         setTouched((prev) => ({ ...prev, name: true }))
                     }
-                    className={`w-full px-4 py-3 rounded-lg bg-[#333333] border 
+                    className={`w-full px-4 py-3 rounded-lg bg-white border 
                         ${
                             !isValidName && touched.name
                                 ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                                : "border-gray-600 focus:border-orange-500 focus:ring-orange-500"
+                                : "border-blue-200 focus:border-blue-500 focus:ring-blue-500"
                         }
-                        focus:ring-2 outline-none`}
+                        focus:ring-2 outline-none text-gray-900`}
                     required
                 />
                 {!isValidName && touched.name && (
@@ -80,7 +80,7 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
 
             {/* Email */}
             <div>
-                <label className="block text-sm mb-1">Email</label>
+                <label className="block text-sm mb-1 text-gray-700">Email</label>
                 <input
                     type="email"
                     placeholder="Your Email"
@@ -94,13 +94,13 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
                     onBlur={() =>
                         setTouched((prev) => ({ ...prev, email: true }))
                     }
-                    className={`w-full px-4 py-3 rounded-lg bg-[#333333] border 
+                    className={`w-full px-4 py-3 rounded-lg bg-white border 
                         ${
                             !isValidEmail && touched.email
                                 ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                                : "border-gray-600 focus:border-orange-500 focus:ring-orange-500"
+                                : "border-blue-200 focus:border-blue-500 focus:ring-blue-500"
                         }
-                        focus:ring-2 outline-none`}
+                        focus:ring-2 outline-none text-gray-900`}
                     required
                 />
                 {!isValidEmail && touched.email && (
@@ -111,57 +111,56 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
             </div>
 
             {/* Phone */}
-<div>
-  <label className="block text-sm mb-1">Phone</label>
-  <div className="flex gap-2">
-    <select
-      value={userInfo.countryCode || "+1"}
-      onChange={(e) =>
-        setUserInfo((prev) => ({
-          ...prev,
-          countryCode: e.target.value,
-        }))
-      }
-      className="px-3 py-3 rounded-lg bg-[#222222] border border-gray-600 
-      focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
-    >
-      <option value="+1">+1 (CA/US)</option>
-      <option value="+44">+44 (UK)</option>
-      <option value="+61">+61 (AU)</option>
-      <option value="+91">+91 (IN)</option>
-    </select>
+            <div>
+                <label className="block text-sm mb-1 text-gray-700">Phone</label>
+                <div className="flex gap-2">
+                    <select
+                        value={userInfo.countryCode || "+1"}
+                        onChange={(e) =>
+                            setUserInfo((prev) => ({
+                                ...prev,
+                                countryCode: e.target.value,
+                            }))
+                        }
+                        className="px-3 py-3 rounded-lg bg-white border border-blue-200 
+                        focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
+                    >
+                        <option value="+1">+1 (CA/US)</option>
+                        <option value="+44">+44 (UK)</option>
+                        <option value="+61">+61 (AU)</option>
+                        <option value="+91">+91 (IN)</option>
+                    </select>
 
-    <input
-      type="tel"
-      placeholder="(123) 456-7890"
-      value={userInfo.phone}
-      onChange={(e) => {
-        const formatted = formatPhoneNumber(e.target.value);
-        setUserInfo((prev) => ({
-          ...prev,
-          phone: formatted,
-        }));
-      }}
-      onBlur={() => setTouched((prev) => ({ ...prev, phone: true }))}
-      className={`flex-1 px-4 py-3 rounded-lg bg-[#222222] border 
-        ${
-          !isValidPhone && touched.phone
-            ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-            : "border-gray-600 focus:border-orange-500 focus:ring-orange-500"
-        }
-        focus:ring-2 outline-none`}
-      required
-    />
-  </div>
-  {!isValidPhone && touched.phone && (
-    <p className="text-red-500 text-sm mt-1">Enter a valid phone number</p>
-  )}
-</div>
-
+                    <input
+                        type="tel"
+                        placeholder="(123) 456-7890"
+                        value={userInfo.phone}
+                        onChange={(e) => {
+                            const formatted = formatPhoneNumber(e.target.value);
+                            setUserInfo((prev) => ({
+                                ...prev,
+                                phone: formatted,
+                            }));
+                        }}
+                        onBlur={() => setTouched((prev) => ({ ...prev, phone: true }))}
+                        className={`flex-1 px-4 py-3 rounded-lg bg-white border 
+                            ${
+                                !isValidPhone && touched.phone
+                                    ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                                    : "border-blue-200 focus:border-blue-500 focus:ring-blue-500"
+                            }
+                            focus:ring-2 outline-none text-gray-900`}
+                        required
+                    />
+                </div>
+                {!isValidPhone && touched.phone && (
+                    <p className="text-red-500 text-sm mt-1">Enter a valid phone number</p>
+                )}
+            </div>
 
             {/* Notes */}
             <div>
-                <label className="block text-sm mb-1">Additional Notes</label>
+                <label className="block text-sm mb-1 text-gray-700">Additional Notes</label>
                 <textarea
                     rows="3"
                     placeholder="Any extra info..."
@@ -172,17 +171,17 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
                             message: e.target.value,
                         }))
                     }
-                    className="w-full px-4 py-3 rounded-lg bg-[#333333] border border-gray-600 
-                    focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
+                    className="w-full px-4 py-3 rounded-lg bg-white border border-blue-200 
+                    focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
                 ></textarea>
             </div>
 
             {/* Buttons */}
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-4">
                 <button
                     type="button"
                     onClick={onBack}
-                    className="py-3 px-6 rounded-lg bg-gray-700 hover:bg-gray-600 font-semibold transition"
+                    className="py-3 px-6 rounded-lg bg-gray-200 hover:bg-gray-300 text-blue-700 font-semibold transition border border-blue-200"
                 >
                     Back
                 </button>
@@ -191,11 +190,11 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
                     type="button"
                     onClick={onNext}
                     disabled={!isFormValid}
-                    className={`py-3 px-6 rounded-lg font-semibold transition 
+                    className={`py-3 px-6 rounded-lg font-semibold transition border 
                         ${
                             isFormValid
-                                ? "bg-orange-500 hover:bg-orange-600"
-                                : "bg-gray-600 cursor-not-allowed"
+                                ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+                                : "bg-gray-200 cursor-not-allowed text-gray-400 border-blue-100"
                         }`}
                 >
                     Review Booking

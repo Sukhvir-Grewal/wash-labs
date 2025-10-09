@@ -42,7 +42,7 @@ export default function SEOJsonLd() {
     sameAs: [
       "https://www.facebook.com/profile.php?id=61581204412596", // replace with your real socials
       "https://www.instagram.com/wash_labs/",
-      "https://www.tiktok.com/@wash_labs?is_from_webapp=1&sender_device=pc",
+      "https://www.tiktok.com/@wash__labs?is_from_webapp=1&sender_device=pc",
     ],
   };
 

@@ -9,12 +9,19 @@ export default function ReviewInfo({
     dateTime,
     onBack,
     onSubmit,
+    totalPrice, // <-- add this prop
 }) {
     const [loading, setLoading] = useState(false);
 
     // Price formatting
     let priceContent;
-    if (service?.prices) {
+    if (typeof totalPrice === "number") {
+        priceContent = (
+            <span className="font-bold text-lg sm:text-xl text-blue-600">
+                ${totalPrice}
+            </span>
+        );
+    } else if (service?.prices) {
         priceContent = (
             <div className="flex flex-col items-end space-y-1">
                 {Object.entries(service.prices).map(([type, price], i) => (
@@ -67,14 +74,14 @@ export default function ReviewInfo({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
-            className="w-full flex flex-col bg-[#333333] rounded-2xl overflow-hidden h-[70vh]"
+            className="w-full"
         >
-            <h4 className="text-lg sm:text-xl font-bold text-orange-400 mb-4 text-center mt-4">
+            <h4 className="text-lg sm:text-xl font-bold text-blue-700 mb-6 text-center mt-2 tracking-tight">
                 Review Your Booking
             </h4>
 
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-4">
+            {/* Info List */}
+            <div className="flex flex-col gap-4 mb-8">
                 {[
                     { label: "Service", value: service.title },
                     { label: "Price", value: priceContent, isPrice: true },
@@ -87,20 +94,25 @@ export default function ReviewInfo({
                         label: "Phone",
                         value: `${userInfo.countryCode || ""} ${userInfo.phone}`,
                     },
-                    userInfo.message && { label: "Notes", value: userInfo.message },
+                    userInfo.message && {
+                        label: "Notes",
+                        value: userInfo.message,
+                    },
                 ]
                     .filter(Boolean)
                     .map((item, idx) => (
                         <div
                             key={idx}
-                            className="flex justify-between items-start border-b border-gray-700 pb-2 last:border-b-0"
+                            className="flex justify-between items-start border-b border-blue-100 pb-2 last:border-b-0"
                         >
-                            <span className="font-medium text-gray-300">
+                            <span className="font-medium text-blue-700">
                                 {item.label}
                             </span>
                             <span
                                 className={`text-right ${
-                                    item.isPrice ? "" : "text-gray-100"
+                                    item.isPrice
+                                        ? "text-blue-600 font-bold"
+                                        : "text-gray-800"
                                 }`}
                             >
                                 {item.value}
@@ -110,15 +122,15 @@ export default function ReviewInfo({
             </div>
 
             {/* Sticky Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:justify-between bg-[#333333] p-4 border-t border-gray-700">
+            <div className="flex flex-col sm:flex-row gap-3 sm:justify-between p-4 border-t border-blue-100 bg-white">
                 <button
                     type="button"
                     onClick={onBack}
                     disabled={loading}
                     className={`py-3 px-6 rounded-lg font-semibold transition w-full sm:w-auto ${
                         loading
-                            ? "bg-gray-600 cursor-not-allowed"
-                            : "bg-gray-700 hover:bg-gray-600"
+                            ? "bg-gray-200 cursor-not-allowed text-gray-400 border border-blue-100"
+                            : "bg-white hover:bg-blue-100 text-blue-700 border border-blue-200"
                     }`}
                 >
                     Back
@@ -130,8 +142,8 @@ export default function ReviewInfo({
                     disabled={loading}
                     className={`py-3 px-6 rounded-lg font-bold transition w-full sm:w-auto flex items-center justify-center ${
                         loading
-                            ? "bg-gray-600 cursor-not-allowed"
-                            : "bg-orange-500 hover:bg-orange-600"
+                            ? "bg-blue-200 cursor-not-allowed text-blue-400 border border-blue-100"
+                            : "bg-blue-600 hover:bg-blue-700 text-white border border-blue-600"
                     }`}
                 >
                     {loading ? (

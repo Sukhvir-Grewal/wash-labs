@@ -11,9 +11,6 @@ import Head from "next/head";
 import SEOJsonLd from "@/components/SEOJsonLd";
 
 
-// Use dynamic import for Gallery (disable SSR)
-const Gallery = dynamic(() => import("@/components/Gallery"), { ssr: false });
-
 export default function Home() {
     useEffect(() => {
         if (window.location.hash) {
@@ -79,7 +76,7 @@ export default function Home() {
             <Navigation />
             <Hero />
             <Services />
-            <Gallery />
+            {/* <Gallery /> */}
             <About />
             <Contact />
             <Footer />

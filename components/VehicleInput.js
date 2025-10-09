@@ -18,15 +18,15 @@ export default function VehicleInput({ onNext }) {
 
     // Brand input handler
     const handleBrandChange = (e) => {
-        const input = e.target.value.trim();
-        setBrand(e.target.value);
+        const input = e.target.value;
+        setBrand(input);
         setModel(""); // reset model when brand changes
         setModelSuggestions([]);
 
-        if (input.length > 0) {
+        if (input.trim().length > 0) {
             const filtered = carList
                 .filter((c) =>
-                    c.name.toLowerCase().includes(input.toLowerCase())
+                    c.name.toLowerCase().startsWith(input.toLowerCase())
                 )
                 .slice(0, 5)
                 .map((c) => c.name);
@@ -36,7 +36,19 @@ export default function VehicleInput({ onNext }) {
         }
     };
 
-    const handleBrandSelect = (name) => {
+    // Handle suggestion fill on Tab or click/tap
+    const handleBrandInputKeyDown = (e) => {
+        if (
+            brandSuggestions.length > 0 &&
+            (e.key === "Tab" || e.key === "ArrowRight")
+        ) {
+            e.preventDefault();
+            setBrand(brandSuggestions[0]);
+            setBrandSuggestions([]);
+        }
+    };
+
+    const handleBrandSuggestionClick = (name) => {
         setBrand(name);
         setBrandSuggestions([]);
     };
@@ -68,84 +80,99 @@ export default function VehicleInput({ onNext }) {
         <div className="relative space-y-4">
             {/* Brand Input */}
             <div>
-                <label className="block text-sm mb-1 text-gray-200">
+                <label className="block text-sm mb-1 text-gray-700">
                     Car Brand
                 </label>
-                <input
-                    type="text"
-                    value={brand}
-                    onChange={handleBrandChange}
-                    placeholder="Enter Car Brand"
-                    className="w-full px-4 py-3 rounded-lg bg-[$333333] border border-gray-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
-                />
-                <AnimatePresence>
-                    {brandSuggestions.length > 0 && !model && (
-                        <motion.ul
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                            className="absolute left-0 right-0 mt-1 bg-[#222222] rounded-lg overflow-hidden z-50"
-                        >
-                            {brandSuggestions.map((s, i) => (
-                                <li
-                                    key={i}
-                                    onClick={() => handleBrandSelect(s)}
-                                    className="px-4 py-2 cursor-pointer hover:bg-orange-500 hover:text-black transition"
-                                >
-                                    {s}
-                                </li>
-                            ))}
-                        </motion.ul>
-                    )}
-                </AnimatePresence>
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={brand}
+                        onChange={handleBrandChange}
+                        onKeyDown={handleBrandInputKeyDown}
+                        placeholder="Enter Car Brand"
+                        className="w-full px-4 py-3 rounded-lg bg-white border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
+                        autoComplete="off"
+                    />
+                    <AnimatePresence>
+                        {brandSuggestions.length > 0 && !model && (
+                            <motion.ul
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.3, ease: "easeInOut" }}
+                                className="absolute left-0 right-0 mt-1 bg-white rounded-lg overflow-hidden z-50 border border-blue-200"
+                            >
+                                {brandSuggestions.map((s, i) => (
+                                    <li
+                                        key={i}
+                                        onMouseDown={() => handleBrandSuggestionClick(s)}
+                                        onTouchStart={() => handleBrandSuggestionClick(s)}
+                                        className="px-4 py-2 cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition text-black"
+                                    >
+                                        {/* Show the full suggestion, highlight the rest */}
+                                        <span className="font-semibold text-black">{brand}</span>
+                                        <span className="text-blue-600">
+                                            {s.slice(brand.length)}
+                                        </span>
+                                    </li>
+                                ))}
+                            </motion.ul>
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
 
             {/* Model Input */}
             <div>
-                <label className="block text-sm mb-1 text-gray-200">
+                <label className="block text-sm mb-1 text-gray-700">
                     Car Model
                 </label>
-                <input
-                    type="text"
-                    value={model}
-                    onChange={handleModelChange}
-                    placeholder={brand ? "Enter Model" : "Select Brand First"}
-                    disabled={!brand}
-                    className="w-full px-4 py-3 rounded-lg bg-[#333333] border border-gray-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none disabled:bg-gray-700"
-                />
-                <AnimatePresence>
-                    {modelSuggestions.length > 0 && model && (
-                        <motion.ul
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                            className="absolute left-0 right-0 mt-1 bg-[#222222] rounded-lg overflow-hidden z-50"
-                        >
-                            {modelSuggestions.map((s, i) => (
-                                <li
-                                    key={i}
-                                    onClick={() => handleModelSelect(s)}
-                                    className="px-4 py-2 cursor-pointer hover:bg-orange-500 hover:text-black transition"
-                                >
-                                    {s}
-                                </li>
-                            ))}
-                        </motion.ul>
-                    )}
-                </AnimatePresence>
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={model}
+                        onChange={handleModelChange}
+                        placeholder={brand ? "Enter Model" : "Select Brand First"}
+                        disabled={!brand}
+                        className="w-full px-4 py-3 rounded-lg bg-white border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 disabled:bg-gray-100"
+                    />
+                    <AnimatePresence>
+                        {modelSuggestions.length > 0 && model && (
+                            <motion.ul
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.3, ease: "easeInOut" }}
+                                className="absolute left-0 right-0 mt-1 bg-white rounded-lg overflow-hidden z-50 border border-blue-200"
+                            >
+                                {modelSuggestions.map((s, i) => (
+                                    <li
+                                        key={i}
+                                        onMouseDown={() => handleModelSelect(s)}
+                                        onTouchStart={() => handleModelSelect(s)}
+                                        className="px-4 py-2 cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition text-black"
+                                    >
+                                        <span className="font-semibold text-black">{model}</span>
+                                        <span className="text-blue-600">
+                                            {s.slice(model.length)}
+                                        </span>
+                                    </li>
+                                ))}
+                            </motion.ul>
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
 
             {/* Year Input */}
             <div>
-                <label className="block text-sm mb-1 text-gray-200">
+                <label className="block text-sm mb-1 text-gray-700">
                     Car Year
                 </label>
                 <select
                     value={year}
                     onChange={(e) => setYear(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg bg-[#333333] border border-gray-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none"
+                    className="w-full px-4 py-3 rounded-lg bg-white border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
                 >
                     <option value="">Select Year</option>
                     {years
@@ -167,8 +194,8 @@ export default function VehicleInput({ onNext }) {
                 disabled={!canProceed}
                 className={`w-full py-3 rounded-lg font-semibold transition ${
                     canProceed
-                        ? "bg-orange-500 hover:bg-orange-600 text-black"
-                        : "bg-gray-600 cursor-not-allowed text-gray-300"
+                        ? "bg-blue-600 hover:bg-blue-700 text-white"
+                        : "bg-gray-200 cursor-not-allowed text-gray-400"
                 }`}
             >
                 Next

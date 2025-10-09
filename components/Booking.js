@@ -58,7 +58,7 @@ export default function Booking({ service, onClose }) {
     return (
         <motion.div
             className="fixed inset-0 flex items-center justify-center 
-             bg-white/10 backdrop-blur-md 
+             bg-black/20 backdrop-blur-md 
              z-50 p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -67,7 +67,7 @@ export default function Booking({ service, onClose }) {
             <AnimatePresence mode="wait">
                 <motion.div
                     key={service.title + step}
-                    className="relative bg-[#333333] rounded-2xl p-8 max-w-lg w-full shadow-2xl"
+                    className="relative bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl border border-blue-100"
                     initial={{ y: 50, opacity: 0, scale: 0.95 }}
                     animate={{ y: 0, opacity: 1, scale: 1 }}
                     exit={{ y: 50, opacity: 0, scale: 0.95 }}
@@ -76,14 +76,17 @@ export default function Booking({ service, onClose }) {
                     {/* Close Button */}
                     <button
                         onClick={onClose}
-                        className="absolute top-4 right-4 text-orange-500 text-xl font-bold hover:text-orange-400"
+                        className="absolute top-4 right-4 text-blue-600 text-xl font-bold hover:text-blue-500"
                     >
                         ✕
                     </button>
 
-                    <h3 className="text-2xl font-semibold mb-6 text-orange-400">
-                        Book: {service.title}
-                    </h3>
+                    {/* Only show heading for steps except review */}
+                    {step !== 4 && (
+                        <h3 className="text-2xl font-semibold mb-6 text-blue-600">
+                            {service.title}
+                        </h3>
+                    )}
 
                     {/* Step 1: Vehicle */}
                     {step === 1 && <VehicleInput onNext={handleNextVehicle} />}
@@ -117,23 +120,24 @@ export default function Booking({ service, onClose }) {
                             dateTime={dateTime}
                             onBack={handleBack}
                             onSubmit={handleSubmit}
+                            totalPrice={service.totalPrice}
                         />
                     )}
 
                     {/* Step 5: Confirmation */}
                     {step === 5 && (
                         <div className="flex flex-col items-center justify-center text-center space-y-4 py-10">
-                            <h4 className="text-2xl font-bold text-green-400">
+                            <h4 className="text-2xl font-bold text-blue-600">
                                 Booking Confirmed!
                             </h4>
-                            <p className="text-gray-200 text-lg">
+                            <p className="text-gray-700 text-lg">
                                 Thank you, {userInfo.name}. <br />
                                 You will receive a call soon to confirm your
                                 booking details.
                             </p>
                             <button
                                 onClick={onClose}
-                                className="mt-6 py-3 px-6 rounded-lg bg-orange-500 hover:bg-orange-600 font-bold transition"
+                                className="mt-6 py-3 px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition"
                             >
                                 Close
                             </button>
