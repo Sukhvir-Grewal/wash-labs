@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 35,
+            "activePatchIndex": 36,
             "patches": [
                 {
                     "date": 1757004594541,
@@ -148,6 +148,10 @@
                 {
                     "date": 1760031784401,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -217,11 +217,4 @@\n     white-space: nowrap !important;\n     border: 0 !important;\n }\n \n-@keyframes pulse-slow {\n-  0%, 100% { opacity: 1; }\n-  50% { opacity: 0.7; }\n-}\n-.animate-pulse-slow {\n-  animation: pulse-slow 2.5s cubic-bezier(0.4,0,0.6,1) infinite;\n-}\n\\ No newline at end of file\n"
+                },
+                {
+                    "date": 1760053918844,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -215,6 +215,5 @@\n     overflow: hidden !important;\n     clip: rect(0, 0, 0, 0) !important;\n     white-space: nowrap !important;\n     border: 0 !important;\n-}\n-\n+}\n\\ No newline at end of file\n"
                 }
             ],
             "date": 1757004594541,

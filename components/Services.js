@@ -10,12 +10,18 @@ import Booking from "./Booking";
 const shineOptions = [
     { label: "Wax", price: 0 },
     { label: "Ceramic Sealant", price: 10 },
-    { label: "Ceramic Coating", price: 20 },
+    // { label: "Ceramic Coating", price: 20 }, // Removed for now
 ];
 
 const deconOptions = [
-    { label: "Clay Bar", price: 10 },
-    { label: "Iron Remover", price: 20 },
+    { label: "Iron Remover", price: 10 },
+    { label: "Clay Bar", price: 15 },
+];
+
+const carTypeOptions = [
+    { label: "Sedan", price: 0 },
+    { label: "SUV", price: 10 },
+    { label: "Truck", price: 20 },
 ];
 
 export default function Services() {
@@ -29,9 +35,17 @@ export default function Services() {
     });
 
     // State for decontamination selection per service (by index)
+    // Now supports multiple selections per service (array of selected options)
     const [deconSelections, setDeconSelections] = useState({
-        0: null, // Premium Exterior Wash
-        2: null, // Ultimate Full Detail
+        0: [],
+        2: [],
+    });
+
+    // State for car type selection per service (by index)
+    const [carTypeSelections, setCarTypeSelections] = useState({
+        0: carTypeOptions[0],
+        1: carTypeOptions[0],
+        2: carTypeOptions[0],
     });
 
     const services = [
@@ -88,21 +102,36 @@ export default function Services() {
 
     // Handle shine selection for a card
     const handleShineChange = (serviceIdx, option) => {
+        // if (option.label === "Ceramic Coating") {
+        //     // Any special logic for Ceramic Coating can be commented here
+        // }
         setShineSelections((prev) => ({
             ...prev,
             [serviceIdx]: option,
         }));
     };
 
-    // Handle decon selection for a card
+    // Handle decon selection for a card (multi-select, toggle)
     const handleDeconChange = (serviceIdx, option) => {
         setDeconSelections((prev) => {
-            // Deselect if already selected
-            if (prev[serviceIdx]?.label === option.label) {
-                return { ...prev, [serviceIdx]: null };
+            const selected = prev[serviceIdx] || [];
+            const exists = selected.find((o) => o.label === option.label);
+            let updated;
+            if (exists) {
+                updated = selected.filter((o) => o.label !== option.label);
+            } else {
+                updated = [...selected, option];
             }
-            return { ...prev, [serviceIdx]: option };
+            return { ...prev, [serviceIdx]: updated };
         });
+    };
+
+    // Handle car type selection for a card
+    const handleCarTypeChange = (serviceIdx, option) => {
+        setCarTypeSelections((prev) => ({
+            ...prev,
+            [serviceIdx]: option,
+        }));
     };
 
     return (
@@ -118,13 +147,18 @@ export default function Services() {
                         const shine = service.hasShine
                             ? shineSelections[index] || shineOptions[0]
                             : null;
-                        const decon = service.hasShine
-                            ? deconSelections[index]
-                            : null;
+                        const deconArr = service.hasShine
+                            ? deconSelections[index] || []
+                            : [];
+                        // Calculate decon total, apply -5 if both selected
+                        let deconTotal = deconArr.reduce((sum, o) => sum + o.price, 0);
+                        if (deconArr.length === 2) deconTotal -= 5;
+                        const carType = carTypeSelections[index] || carTypeOptions[0];
                         const totalPrice =
                             service.basePrice +
                             (shine ? shine.price : 0) +
-                            (decon ? decon.price : 0);
+                            deconTotal +
+                            (carType ? carType.price : 0);
 
                         return (
                             <motion.div
@@ -145,6 +179,33 @@ export default function Services() {
                                     <p className="font-semibold mb-2 text-xl text-blue-600">
                                         ${totalPrice}
                                     </p>
+                                    {/* Car Type Selection */}
+                                    <div className="mb-5">
+                                        <div className="text-base font-semibold text-gray-700 mb-2 text-left">
+                                            Car Type
+                                        </div>
+                                        <div className="flex flex-wrap gap-3">
+                                            {carTypeOptions.map((opt) => (
+                                                <button
+                                                    key={opt.label}
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleCarTypeChange(index, opt);
+                                                    }}
+                                                    className={`px-5 py-2 rounded-full border font-medium transition-all
+                                                        ${
+                                                            (carTypeSelections[index]?.label ?? "Sedan") === opt.label
+                                                                ? "bg-blue-600 text-white border-blue-600 shadow"
+                                                                : "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
+                                                        }
+                                                    `}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                     <ul className="text-left mb-6 space-y-2">
                                         {service.features.map((feature, i) => (
                                             <li key={i}>
@@ -165,6 +226,7 @@ export default function Services() {
                                             </div>
                                             <div className="flex flex-wrap gap-3">
                                                 {shineOptions.map((opt) => (
+                                                    // if (opt.label === "Ceramic Coating") return null; // Not needed, already removed from array
                                                     <button
                                                         key={opt.label}
                                                         type="button"
@@ -200,33 +262,34 @@ export default function Services() {
                                                 Decontamination
                                             </div>
                                             <div className="flex flex-wrap gap-3">
-                                                {deconOptions.map((opt) => (
-                                                    <button
-                                                        key={opt.label}
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDeconChange(
-                                                                index,
-                                                                opt
-                                                            );
-                                                        }}
-                                                        className={`px-5 py-2 rounded-full border font-medium transition-all
-                                                            ${
-                                                                (deconSelections[
-                                                                    index
-                                                                ]?.label ??
-                                                                    null) ===
-                                                                opt.label
-                                                                    ? "bg-blue-600 text-white border-blue-600 shadow"
-                                                                    : "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
-                                                            }
-                                                        `}
-                                                    >
-                                                        {opt.label}
-                                                    </button>
-                                                ))}
+                                                {deconOptions.map((opt) => {
+                                                    const selected = !!(deconArr.find((o) => o.label === opt.label));
+                                                    return (
+                                                        <button
+                                                            key={opt.label}
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeconChange(index, opt);
+                                                            }}
+                                                            className={`px-5 py-2 rounded-full border font-medium transition-all
+                                                                ${
+                                                                    selected
+                                                                        ? "bg-blue-600 text-white border-blue-600 shadow"
+                                                                        : "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
+                                                                }
+                                                            `}
+                                                        >
+                                                            {opt.label}
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
+                                            {deconArr.length === 2 && (
+                                                <div className="text-xs text-blue-600 mt-2 font-semibold">
+                                                    Combo discount applied (-$5)
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
