@@ -1,8 +1,43 @@
 import nodemailer from "nodemailer";
 
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 5;
+const contactRequestLog = new Map();
+
+const getClientIdentifier = (req) => {
+    const forwarded = req.headers["x-forwarded-for"];
+    if (typeof forwarded === "string" && forwarded.length > 0) {
+        return forwarded.split(",")[0].trim();
+    }
+    return req.socket?.remoteAddress || "unknown";
+};
+
+const isRateLimited = (identifier) => {
+    const now = Date.now();
+    const windowStart = now - RATE_LIMIT_WINDOW_MS;
+    const timestamps = contactRequestLog.get(identifier) || [];
+    const recent = timestamps.filter((timestamp) => timestamp > windowStart);
+
+    if (recent.length >= RATE_LIMIT_MAX_REQUESTS) {
+        contactRequestLog.set(identifier, recent);
+        return true;
+    }
+
+    recent.push(now);
+    contactRequestLog.set(identifier, recent);
+    return false;
+};
+
 export default async function handler(req, res) {
     if (req.method !== "POST") {
         return res.status(405).json({ message: "Method not allowed" });
+    }
+
+    const clientId = getClientIdentifier(req);
+    if (isRateLimited(clientId)) {
+        return res
+            .status(429)
+            .json({ message: "Too many messages received. Please try again soon." });
     }
 
     const { name, email, message } = req.body;
@@ -11,12 +46,28 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: "All fields are required" });
     }
 
+    const { EMAIL_USER, EMAIL_PASS } = process.env;
+    if (!EMAIL_USER || !EMAIL_PASS) {
+        console.error("[contact] Missing email credentials", {
+            hasUser: Boolean(EMAIL_USER),
+            hasPass: Boolean(EMAIL_PASS),
+        });
+        return res.status(500).json({
+            message:
+                "Our contact inbox is temporarily unavailable. Please reach out via phone or social in the meantime.",
+        });
+    }
+
     try {
+        console.info("[contact] Configuring email transporter", {
+            hasUser: true,
+        });
+
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
-                user: process.env.EMAIL_USER, // e.g., washlabs.ca@gmail.com
-                pass: process.env.EMAIL_PASS, // Gmail app password
+                user: EMAIL_USER, // e.g., washlabs.ca@gmail.com
+                pass: EMAIL_PASS, // Gmail app password
             },
         });
 
@@ -73,7 +124,10 @@ export default async function handler(req, res) {
             .status(200)
             .json({ message: "Message and confirmation sent successfully" });
     } catch (error) {
-        console.error("Error sending email:", error);
+        console.error("[contact] Error sending email", {
+            error: error instanceof Error ? error.message : error,
+            client: clientId,
+        });
         return res.status(500).json({ message: "Failed to send message" });
     }
 }

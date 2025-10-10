@@ -164,14 +164,23 @@ export default function Services() {
                         return (
                             <motion.div
                                 key={index}
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`View booking options for ${service.title}`}
                                 data-aos={service.animation}
                                 style={{ y: yMove }}
                                 className="rounded-2xl shadow-xl p-8 flex flex-col justify-between border border-gray-200
               bg-gray-50
               transition-transform duration-500 ease-in-out
               hover:shadow-2xl hover:bg-gray-100
-              cursor-pointer"
+              cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                 onClick={() => handleSelect(service, totalPrice)}
+                                onKeyDown={(event) => {
+                                    if (event.key === "Enter" || event.key === " ") {
+                                        event.preventDefault();
+                                        handleSelect(service, totalPrice);
+                                    }
+                                }}
                             >
                                 <div>
                                     <h3

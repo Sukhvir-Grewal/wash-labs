@@ -9,19 +9,19 @@ export default function SEOJsonLd() {
     image: "https://www.washlabs.ca/cover.jpg",
     "@id": "https://www.washlabs.ca/",
     url: "https://www.washlabs.ca/",
-    telephone: "+1-647-914-3066", // replace with your number
+    telephone: "+1-782-827-5010",
     priceRange: "CA$50 - CA$140",
     address: {
       "@type": "PostalAddress",
-      streetAddress: "Halifax, Nova Scotia",
+      streetAddress: "53 Vitalia Ct",
       addressLocality: "Halifax",
       addressRegion: "NS",
-      postalCode: "B3P 2J8", // replace with real postal code
+      postalCode: "B3S 0H4",
       addressCountry: "CA",
     },
     geo: {
       "@type": "GeoCoordinates",
-      latitude: "44.6488", // Halifax approx
+      latitude: "44.6488",
       longitude: "-63.5752",
     },
     openingHoursSpecification: [
@@ -40,7 +40,7 @@ export default function SEOJsonLd() {
       },
     ],
     sameAs: [
-      "https://www.facebook.com/profile.php?id=61581204412596", // replace with your real socials
+      "https://www.facebook.com/profile.php?id=61581204412596",
       "https://www.instagram.com/wash_labs/",
       "https://www.tiktok.com/@wash__labs?is_from_webapp=1&sender_device=pc",
     ],

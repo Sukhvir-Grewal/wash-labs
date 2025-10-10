@@ -1,5 +1,5 @@
 // next-seo.config.js
-export default {
+const SEO_CONFIG = {
   title: "Wash Labs | Affordable Car Detailing Halifax",
   description:
     "Affordable car detailing in Halifax, Dartmouth & Bedford. Full washes from $50, interior from $100, and full detail at $140.",
@@ -21,8 +21,10 @@ export default {
     site_name: "Wash Labs",
   },
   twitter: {
-    handle: "@yourhandle", // (if you don’t have Twitter, leave as "")
-    site: "@yourhandle",
+    handle: "",
+    site: "",
     cardType: "summary_large_image",
   },
 };
+
+export default SEO_CONFIG;

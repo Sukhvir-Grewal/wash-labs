@@ -2,7 +2,7 @@
 import { motion } from "framer-motion";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
-import { isAfter, startOfToday, isWeekend } from "date-fns";
+import { isBefore, startOfToday } from "date-fns";
 import { useState } from "react";
 
 export default function DateTimePicker({
@@ -16,6 +16,7 @@ export default function DateTimePicker({
         dateTime.date ? new Date(dateTime.date) : undefined
     );
     const [selectedTime, setSelectedTime] = useState(dateTime.time || "");
+    const [showValidation, setShowValidation] = useState(false);
 
     // Generate times between 7 AM - 7 PM
     const times = [];
@@ -29,16 +30,21 @@ export default function DateTimePicker({
     const isValid = selectedDay && selectedTime;
 
     const handleNext = () => {
-        if (isValid) {
-            setDateTime({
-                date: selectedDay.toISOString().split("T")[0],
-                time: selectedTime,
-            });
-            onNext({
-                date: selectedDay.toISOString().split("T")[0],
-                time: selectedTime,
-            });
+        if (!isValid) {
+            setShowValidation(true);
+            return;
         }
+
+        const formattedDate = selectedDay.toISOString().split("T")[0];
+        setShowValidation(false);
+        setDateTime({
+            date: formattedDate,
+            time: selectedTime,
+        });
+        onNext({
+            date: formattedDate,
+            time: selectedTime,
+        });
     };
 
     return (
@@ -58,11 +64,13 @@ export default function DateTimePicker({
                 <DayPicker
                     mode="single"
                     selected={selectedDay}
-                    onSelect={setSelectedDay}
-                    disabled={(date) =>
-                        (!isAfter(date, today) &&
-                            date.toDateString() !== today.toDateString())
-                    }
+                    onSelect={(day) => {
+                        setSelectedDay(day);
+                        if (day && selectedTime) {
+                            setShowValidation(false);
+                        }
+                    }}
+                    disabled={(date) => isBefore(date, today)}
                     modifiers={{}}
                     modifiersClassNames={{
                         selected: "bg-blue-600 text-white font-bold rounded-full",
@@ -72,6 +80,15 @@ export default function DateTimePicker({
                         color: "#222",
                     }}
                 />
+                <p className="text-xs text-gray-500 mt-2">
+                    Bookings start from today onward. We&apos;ll confirm any same-day
+                    requests as soon as possible.
+                </p>
+                {showValidation && !selectedDay && (
+                    <p className="text-sm text-red-600 mt-2">
+                        Please choose a future appointment date.
+                    </p>
+                )}
             </div>
 
             {/* Time Picker */}
@@ -82,7 +99,13 @@ export default function DateTimePicker({
 
                 <select
                     value={selectedTime}
-                    onChange={(e) => setSelectedTime(e.target.value)}
+                    onChange={(e) => {
+                        const value = e.target.value;
+                        setSelectedTime(value);
+                        if (value && selectedDay) {
+                            setShowValidation(false);
+                        }
+                    }}
                     className="w-full px-4 py-3 rounded-lg bg-white border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
                 >
                     <option value="">-- Select Time --</option>
@@ -92,6 +115,15 @@ export default function DateTimePicker({
                         </option>
                     ))}
                 </select>
+                <p className="text-xs text-gray-500 mt-2">
+                    Times are available in 30-minute intervals between 7:00 AM and
+                    7:00 PM.
+                </p>
+                {showValidation && !selectedTime && (
+                    <p className="text-sm text-red-600 mt-2">
+                        Please pick a time slot to continue.
+                    </p>
+                )}
             </div>
 
             {/* Buttons */}
@@ -106,8 +138,8 @@ export default function DateTimePicker({
 
                 <button
                     type="button"
-                    disabled={!isValid}
                     onClick={handleNext}
+                    aria-disabled={!isValid}
                     className={`py-3 px-6 rounded-lg font-semibold transition border ${
                         isValid
                             ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
@@ -119,26 +151,4 @@ export default function DateTimePicker({
             </div>
         </motion.div>
     );
-}
-
-// Helpers to handle iPhone time input conversion
-function convertTo12Hour(time24) {
-    let [hour, minute] = time24.split(":");
-    hour = parseInt(hour, 10);
-    const ampm = hour >= 12 ? "PM" : "AM";
-    hour = hour % 12 || 12;
-    return `${hour}:${minute} ${ampm}`;
-}
-
-function convertTo24Hour(time12) {
-    if (!time12) return "";
-    const [time, modifier] = time12.split(" ");
-    let [hours, minutes] = time.split(":");
-    if (modifier === "PM" && hours !== "12") {
-        hours = String(parseInt(hours, 10) + 12);
-    }
-    if (modifier === "AM" && hours === "12") {
-        hours = "00";
-    }
-    return `${hours.padStart(2, "0")}:${minutes}`;
 }

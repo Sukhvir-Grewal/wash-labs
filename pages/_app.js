@@ -14,24 +14,35 @@ export default function App({ Component, pageProps }) {
     AOS.init({ duration: 800, once: true }); // smooth animations
   }, []);
 
+  const measurementId =
+    process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ||
+    process.env.NEXT_PUBLIC_GA_ID ||
+    "G-HP96DXQWLF";
+
   return (
     <>
       {/* ✅ Global SEO config */}
       <DefaultSeo {...SEO} />
 
-      {/* ✅ Google Analytics (replace G-XXXXXXXXXX with your Measurement ID) */}
-      <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX`}
-        strategy="afterInteractive"
-      />
-      <Script id="ga-init" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-HP96DXQWLF');
-        `}
-      </Script>
+      {/* ✅ Google Analytics */}
+      {measurementId ? (
+        <>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}
+            strategy="afterInteractive"
+          />
+          <Script id="ga-init" strategy="afterInteractive">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${measurementId}', {
+                page_path: window.location.pathname,
+              });
+            `}
+          </Script>
+        </>
+      ) : null}
 
       {/* Page content */}
       <Component {...pageProps} />
