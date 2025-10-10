@@ -137,11 +137,12 @@ export default function Services() {
     return (
         <section id="services" className="py-20 min-h-screen bg-blue-50">
             <div className="max-w-7xl mx-auto px-4 text-center">
-                <h2 className="text-4xl font-extrabold mb-12 text-gray-900 font-heading tracking-tight">
+                <h2 className="text-4xl font-extrabold mb-12 font-heading tracking-tight"
+                    style={{ color: "#000" }}>
                     <span className="text-black">Our </span>
                     <span className="text-blue-600">Services</span>
                 </h2>
-                <div className="grid gap-10 md:grid-cols-3">
+                <div className="grid gap-10 md:grid-cols-3" >
                     {services.map((service, index) => {
                         // Calculate price with shine and decon add-on if applicable
                         const shine = service.hasShine
@@ -173,10 +174,13 @@ export default function Services() {
                                 onClick={() => handleSelect(service, totalPrice)}
                             >
                                 <div>
-                                    <h3 className="text-2xl font-bold mb-4 text-gray-900 font-heading">
+                                    <h3
+                                        className="text-2xl font-bold mb-4 font-heading"
+                                        style={{ color: "#000" }}
+                                    >
                                         {service.title}
                                     </h3>
-                                    <p className="font-semibold mb-2 text-xl text-blue-600">
+                                    <p className="font-semibold mb-2 text-xl" style={{ color: "#000" }}>
                                         ${totalPrice}
                                     </p>
                                     {/* Car Type Selection */}
@@ -293,7 +297,7 @@ export default function Services() {
                                         </div>
                                     )}
                                 </div>
-                                <p className="mt-auto font-medium text-gray-500">
+                                <p className="mt-auto font-medium text-gray-500" style={{ color: "#000" }}>
                                     Time: {service.time}
                                 </p>
                             </motion.div>

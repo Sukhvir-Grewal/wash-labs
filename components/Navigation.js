@@ -29,7 +29,11 @@ export default function Navigation() {
                         aria-label="Go to top"
                         className="flex items-center bg-transparent p-0"
                     >
-                        <Image
+                        <span className="text-2xl font-bold select-none" style={{ color: "#0076ff", fontFamily: "Poppins, sans-serif" }}>
+                            Wash Labs
+                        </span>
+                        {/* If you want to keep the image logo, comment out the above and uncomment below */}
+                        {/* <Image
                             src="/images/logo.png"
                             alt="Wash Labs Logo"
                             width={120}
@@ -40,17 +44,16 @@ export default function Navigation() {
                                 backgroundColor: "transparent",
                                 filter: "none",
                             }}
-                        />
+                        /> */}
                     </button>
                 </div>
-
                 {/* Desktop Menu (flush right) */}
                 <nav className="hidden md:flex items-center gap-8 font-semibold flex-1 justify-end">
                     {["services", "gallery", "about", "contact"].map((id) => (
                         <button
                             key={id}
                             onClick={() => scrollTo(id)}
-                            className="text-gray-900 hover:text-blue-600 transition-colors"
+                            className="text-black hover:text-blue-600 transition-colors"
                         >
                             <span className="capitalize">
                                 {id.charAt(0).toUpperCase() + id.slice(1)}
@@ -58,7 +61,6 @@ export default function Navigation() {
                         </button>
                     ))}
                 </nav>
-
                 {/* Mobile Hamburger (right edge) */}
                 <div className="md:hidden flex-1 flex justify-end">
                     <button
@@ -73,7 +75,7 @@ export default function Navigation() {
                                 "w-7 h-[3px] transition-transform transition-colors duration-300 ease-out",
                                 menuOpen
                                     ? "rotate-45 bg-blue-600"
-                                    : "-translate-y-[8px] bg-gray-900",
+                                    : "-translate-y-[8px] bg-black",
                             ].join(" ")}
                         />
                         <span
@@ -82,7 +84,7 @@ export default function Navigation() {
                                 "w-7 h-[3px] transition-all duration-300 ease-out",
                                 menuOpen
                                     ? "opacity-0 bg-blue-600"
-                                    : "opacity-100 bg-gray-900",
+                                    : "opacity-100 bg-black",
                             ].join(" ")}
                         />
                         <span
@@ -91,13 +93,12 @@ export default function Navigation() {
                                 "w-7 h-[3px] transition-transform transition-colors duration-300 ease-out",
                                 menuOpen
                                     ? "-rotate-45 bg-blue-600"
-                                    : "translate-y-[8px] bg-gray-900",
+                                    : "translate-y-[8px] bg-black",
                             ].join(" ")}
                         />
                     </button>
                 </div>
             </div>
-
             {/* Mobile Menu (smooth fade & slide, light theme) */}
             <div
                 className={`md:hidden w-full overflow-hidden bg-blue-50 
@@ -123,7 +124,7 @@ export default function Navigation() {
                                         onClick={() => scrollTo(id)}
                                         className="
                     w-full text-left py-4 text-[17px] font-semibold
-                    text-gray-900
+                    text-black
                     hover:text-blue-600
                     focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40
                   "

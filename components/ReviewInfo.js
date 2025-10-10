@@ -76,7 +76,7 @@ export default function ReviewInfo({
             transition={{ duration: 0.4, ease: "easeInOut" }}
             className="w-full"
         >
-            <h4 className="text-lg sm:text-xl font-bold text-blue-700 mb-6 text-center mt-2 tracking-tight">
+            <h4 className="text-lg sm:text-xl font-bold mb-6 text-center mt-2 tracking-tight" style={{ color: "#000" }}>
                 Review Your Booking
             </h4>
 
@@ -122,7 +122,7 @@ export default function ReviewInfo({
             </div>
 
             {/* Sticky Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:justify-between p-4 border-t border-blue-100 bg-white">
+            <div className="flex flex-col sm:flex-row gap-3 sm:justify-between bg-white p-4 border-t border-blue-100">
                 <button
                     type="button"
                     onClick={onBack}

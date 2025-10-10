@@ -49,10 +49,10 @@ export default function Contact() {
             <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12">
                 {/* Contact Info */}
                 <div>
-                    <h2 className="text-4xl font-bold mb-6 text-[#0076ff]">
-                        Get in  <span className="text-[#0076ff]">Touch</span>
+                    <h2 className="text-4xl font-bold mb-6" style={{ color: "#000" }}>
+                        Get in <span className="text-[#0076ff]">Touch</span>
                     </h2>
-                    <p className="text-blue-800 mb-8">
+                    <p className="mb-8" style={{ color: "#000" }}>
                         Have questions or want to book a wash? Reach out to us — we’re always happy to help.
                     </p>
 
