@@ -1,11 +1,18 @@
 import { useState } from "react";
-import {
-    motion,
-    AnimatePresence,
-    useViewportScroll,
-    useTransform,
-} from "framer-motion";
-import Booking from "./Booking";
+import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
+
+// Lazy-load the Booking modal to keep the main bundle small
+const Booking = dynamic(() => import("./Booking"), {
+    ssr: false,
+    loading: () => (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+            <div className="bg-white text-blue-700 px-4 py-3 rounded-lg shadow border border-blue-100">
+                Loading booking…
+            </div>
+        </div>
+    ),
+});
 
 const shineOptions = [
     { label: "Wax", price: 0 },
@@ -25,8 +32,6 @@ const carTypeOptions = [
 ];
 
 export default function Services() {
-    const { scrollY } = useViewportScroll();
-    const yMove = useTransform(scrollY, [0, 500], [0, -30]);
 
     // State for shine selection per service (by index)
     const [shineSelections, setShineSelections] = useState({
@@ -168,7 +173,6 @@ export default function Services() {
                                 tabIndex={0}
                                 aria-label={`View booking options for ${service.title}`}
                                 data-aos={service.animation}
-                                style={{ y: yMove }}
                                 className="rounded-2xl shadow-xl p-8 flex flex-col justify-between border border-gray-200
               bg-gray-50
               transition-transform duration-500 ease-in-out

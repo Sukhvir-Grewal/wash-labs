@@ -1,7 +1,8 @@
 // components/About.js
 import Image from "next/image";
+import { memo } from "react";
 
-export default function About() {
+function About() {
     return (
         <section
             id="about"
@@ -138,3 +139,5 @@ export default function About() {
         </section>
     );
 }
+
+export default memo(About);

@@ -29,11 +29,11 @@ export default function Navigation() {
                         aria-label="Go to top"
                         className="flex items-center bg-transparent p-0"
                     >
-                        <span className="text-2xl font-bold select-none" style={{ color: "#0076ff", fontFamily: "Poppins, sans-serif" }}>
+                        {/* If you want to keep the text logo, comment out the image below and uncomment this */}
+                        {/* <span className="text-2xl font-bold select-none" style={{ color: "#0076ff", fontFamily: "Poppins, sans-serif" }}>
                             Wash Labs
-                        </span>
-                        {/* If you want to keep the image logo, comment out the above and uncomment below */}
-                        {/* <Image
+                        </span> */}
+                        <Image
                             src="/images/logo.png"
                             alt="Wash Labs Logo"
                             width={120}
@@ -44,7 +44,7 @@ export default function Navigation() {
                                 backgroundColor: "transparent",
                                 filter: "none",
                             }}
-                        /> */}
+                        />
                     </button>
                 </div>
                 {/* Desktop Menu (flush right) */}

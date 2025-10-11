@@ -1,7 +1,8 @@
 // components/Footer.js
-import { FaInstagram, FaFacebook, FaTwitter, FaTiktok } from "react-icons/fa";
+import { FaInstagram, FaFacebook, FaTiktok } from "react-icons/fa";
+import { memo } from "react";
 
-export default function Footer() {
+function Footer() {
     const year = new Date().getFullYear();
 
     return (
@@ -55,3 +56,5 @@ export default function Footer() {
         </footer>
     );
 }
+
+export default memo(Footer);
