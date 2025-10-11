@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 6,
+            "activePatchIndex": 7,
             "patches": [
                 {
                     "date": 1758555875125,
@@ -32,6 +32,10 @@
                 {
                     "date": 1759774212307,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -7,8 +7,9 @@\n       <Head>\n         {/* Default SEO setup for every page */}\n         <meta charSet=\"UTF-8\" />\n         <meta httpEquiv=\"X-UA-Compatible\" content=\"IE=edge\" />\n+        \n         {/* Fallback favicon */}\n         <link rel=\"icon\" href=\"/favicon.png\" type=\"image/png\" />\n \n         {/* Theme Color (browser address bar color on mobile) */}\n"
+                },
+                {
+                    "date": 1760157917381,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -0,0 +1,30 @@\n+// pages/_document.js\n+import { Html, Head, Main, NextScript } from \"next/document\";\n+\n+export default function Document() {\n+  return (\n+    <Html lang=\"en\">\n+      <Head>\n+        {/* Default SEO setup for every page */}\n+        <meta charSet=\"UTF-8\" />\n+        <meta httpEquiv=\"X-UA-Compatible\" content=\"IE=edge\" />\n+\n+        {/* App/Theme */}\n+        <meta name=\"application-name\" content=\"Wash Labs\" />\n+        <meta name=\"theme-color\" content=\"#0076ff\" />\n+        <meta name=\"color-scheme\" content=\"light\" />\n+\n+        {/* Icons */}\n+        <link rel=\"icon\" href=\"/favicon.png\" type=\"image/png\" />\n+        <link rel=\"apple-touch-icon\" href=\"/images/logo.png\" />\n+\n+        {/* Manifest */}\n+        <link rel=\"manifest\" href=\"/site.webmanifest\" />\n+      </Head>\n+      <body>\n+        <Main />\n+        <NextScript />\n+      </body>\n+    </Html>\n+  );\n+}\n"
                 }
             ],
             "date": 1758555875125,

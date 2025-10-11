@@ -45,8 +45,11 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
         >
             {/* Name */}
             <div>
-                <label className="block text-sm mb-1 text-gray-700">Name</label>
+                <label htmlFor="name" className="block text-sm mb-1 text-gray-700">
+                    Name
+                </label>
                 <input
+                    id="name"
                     type="text"
                     placeholder="Your Name"
                     value={userInfo.name}
@@ -67,6 +70,7 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
                         }
                         focus:ring-2 outline-none text-gray-900`}
                     required
+                    aria-required="true"
                 />
                 {!isValidName && touched.name && (
                     <p className="text-red-500 text-sm mt-1">
@@ -77,8 +81,11 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
 
             {/* Email */}
             <div>
-                <label className="block text-sm mb-1 text-gray-700">Email</label>
+                <label htmlFor="email" className="block text-sm mb-1 text-gray-700">
+                    Email
+                </label>
                 <input
+                    id="email"
                     type="email"
                     placeholder="Your Email"
                     value={userInfo.email}
@@ -99,6 +106,7 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
                         }
                         focus:ring-2 outline-none text-gray-900`}
                     required
+                    aria-required="true"
                 />
                 {!isValidEmail && touched.email && (
                     <p className="text-red-500 text-sm mt-1">
@@ -109,7 +117,9 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
 
             {/* Phone */}
             <div>
-                <label className="block text-sm mb-1 text-gray-700">Phone</label>
+                <label htmlFor="phone" className="block text-sm mb-1 text-gray-700">
+                    Phone
+                </label>
                 <div className="flex gap-2">
                     <select
                         value={userInfo.countryCode || "+1"}
@@ -121,6 +131,7 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
                         }
                         className="px-3 py-3 rounded-lg bg-white border border-blue-200 
                         focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
+                        aria-label="Country code"
                     >
                         <option value="+1">+1 (CA/US)</option>
                         <option value="+44">+44 (UK)</option>
@@ -129,6 +140,7 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
                     </select>
 
                     <input
+                        id="phone"
                         type="tel"
                         placeholder="(123) 456-7890"
                         value={userInfo.phone}
@@ -148,6 +160,7 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
                             }
                             focus:ring-2 outline-none text-gray-900`}
                         required
+                        aria-required="true"
                     />
                 </div>
                 {!isValidPhone && touched.phone && (
@@ -157,8 +170,11 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
 
             {/* Notes */}
             <div>
-                <label className="block text-sm mb-1 text-gray-700">Additional Notes</label>
+                <label htmlFor="notes" className="block text-sm mb-1 text-gray-700">
+                    Additional Notes
+                </label>
                 <textarea
+                    id="notes"
                     rows="3"
                     placeholder="Any extra info..."
                     value={userInfo.message}

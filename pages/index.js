@@ -17,7 +17,7 @@ export default function Home() {
     }, []);
 
     return (
-        <main className="min-h-screen bg-transparent text-white relative">
+        <main id="main" className="min-h-screen bg-transparent text-white relative">
             <SEOJsonLd />
             <Navigation />
             <Hero />

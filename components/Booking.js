@@ -130,7 +130,10 @@ export default function Booking({ service, onClose }) {
 
                     {/* Only show heading for steps except review */}
                     {step !== 4 && (
-                        <h3 className="text-2xl font-semibold mb-6 text-blue-600">
+                        <h3
+                            className="text-2xl font-semibold mb-6 text-neutral-950"
+                            style={{ color: "#000" }}
+                        >
                             {service.title}
                         </h3>
                     )}
@@ -145,6 +148,7 @@ export default function Booking({ service, onClose }) {
                             setDateTime={setDateTime}
                             onNext={handleNextDateTime}
                             onBack={handleBack}
+                            durationMinutes={service?.durationMinutes ?? 60}
                         />
                     )}
 

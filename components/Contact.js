@@ -1,5 +1,9 @@
 "use client";
 import { useState } from "react";
+import { motion } from "framer-motion";
+
+const fadeUp = { hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } };
+const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.12 } } };
 
 export default function Contact() {
     const [formData, setFormData] = useState({
@@ -43,24 +47,37 @@ export default function Contact() {
     return (
         <section
             id="contact"
-            className="py-20 bg-blue-50 text-blue-900 min-h-screen w-full"
-            style={{ minHeight: "100dvh" }}
+            className="py-20 bg-blue-50 text-blue-900"
         >
             <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12">
                 {/* Contact Info */}
-                <div>
-                    <h2 className="text-4xl font-bold mb-6" style={{ color: "#000" }}>
+                <motion.div
+                    initial="hidden"
+                    whileInView="visible"
+                    variants={fadeUp}
+                    viewport={{ once: true, amount: 0.25 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                >
+                    <motion.h2
+                        className="text-4xl font-bold mb-6"
+                        style={{ color: "#000" }}
+                        variants={fadeUp}
+                    >
                         Get in <span className="text-[#0076ff]">Touch</span>
-                    </h2>
-                    <p className="mb-8" style={{ color: "#000" }}>
+                    </motion.h2>
+                    <motion.p className="mb-8" style={{ color: "#000" }} variants={fadeUp}>
                         Have questions or want to book a wash? Reach out to us — we’re always happy to help.
-                    </p>
+                    </motion.p>
 
-                    <ul className="space-y-6">
-                        <li className="flex items-center space-x-4">
-                            <span className="w-10 h-10 flex items-center justify-center  rounded-full text-white text-xl">
-                                📞
-                            </span>
+                    <motion.ul
+                        className="space-y-6"
+                        initial="hidden"
+                        whileInView="visible"
+                        variants={stagger}
+                        viewport={{ once: true, amount: 0.2 }}
+                    >
+                        <motion.li className="flex items-center space-x-4" variants={fadeUp}>
+                            <span className="w-10 h-10 flex items-center justify-center  rounded-full text-white text-xl">📞</span>
                             <div className="flex flex-col">
                                 <a
                                     href="tel:+17828275010"
@@ -69,22 +86,20 @@ export default function Contact() {
                                     +1 (782) 827-5010
                                 </a>
                             </div>
-                        </li>
-                        <li className="flex items-center space-x-4">
-                            <span className="w-10 h-10 flex items-center justify-center  rounded-full text-white text-xl">
-                                ✉️
-                            </span>
+                        </motion.li>
+
+                        <motion.li className="flex items-center space-x-4" variants={fadeUp}>
+                            <span className="w-10 h-10 flex items-center justify-center  rounded-full text-white text-xl">✉️</span>
                             <a
                                 href="mailto:washlabs.ca@gmail.com"
                                 className="text-lg text-blue-900 hover:text-[#0076ff] underline underline-offset-2"
                             >
                                 washlabs.ca@gmail.com
                             </a>
-                        </li>
-                        <li className="flex items-center space-x-4">
-                            <span className="w-10 h-10 flex items-center justify-center rounded-full text-white text-xl">
-                                📍
-                            </span>
+                        </motion.li>
+
+                        <motion.li className="flex items-center space-x-4" variants={fadeUp}>
+                            <span className="w-10 h-10 flex items-center justify-center rounded-full text-white text-xl">📍</span>
                             <a
                                 href="https://maps.app.goo.gl/5oipyqCoU83Zq6hy9"
                                 target="_blank"
@@ -93,13 +108,23 @@ export default function Contact() {
                             >
                                 53 Vitalia Ct, Halifax, NS B3S 0H4
                             </a>
-                        </li>
-                    </ul>
-                </div>
+                        </motion.li>
+                    </motion.ul>
+                </motion.div>
 
                 {/* Contact Form */}
-                <div className="bg-white p-8 rounded-2xl shadow-lg border border-blue-100">
-                    <h3 className="text-2xl font-semibold mb-6 text-[#0076ff]">
+                <motion.div
+                    className="bg-white p-8 rounded-2xl shadow-lg border border-blue-100"
+                    initial="hidden"
+                    whileInView="visible"
+                    variants={fadeUp}
+                    viewport={{ once: true, amount: 0.25 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                >
+                    <h3
+                        className="text-2xl font-semibold mb-6 text-neutral-950"
+                        style={{ color: "#000" }}
+                    >
                         Send us a Message
                     </h3>
                     <form className="space-y-6" onSubmit={handleSubmit}>
@@ -152,7 +177,7 @@ export default function Contact() {
                         </button>
                     </form>
                     {status && <p className="mt-4 text-center text-blue-700">{status}</p>}
-                </div>
+                </motion.div>
             </div>
         </section>
     );

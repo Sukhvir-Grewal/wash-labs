@@ -72,25 +72,30 @@ export default function ReviewInfo({
 
             {/* Info List */}
             <div className="flex flex-col gap-4 mb-8">
-                {[
-                    { label: "Service", value: service.title },
-                    { label: "Price", value: priceContent, isPrice: true },
-                    { label: "Vehicle", value: `${vehicle.year} ${vehicle.name}` },
-                    { label: "Date", value: dateTime?.date || "N/A" },
-                    { label: "Time", value: dateTime?.time || "N/A" },
-                    { label: "Name", value: userInfo.name },
-                    { label: "Email", value: userInfo.email },
-                    {
-                        label: "Phone",
-                        value: `${userInfo.countryCode || ""} ${userInfo.phone}`,
-                    },
-                    userInfo.message && {
-                        label: "Notes",
-                        value: userInfo.message,
-                    },
-                ]
-                    .filter(Boolean)
-                    .map((item, idx) => (
+                {(() => {
+                    const vehicleDisplay = [
+                        userInfo?.vehicleYear || (vehicle?.year && vehicle.year !== "NA" ? vehicle.year : null),
+                        vehicle?.name
+                    ].filter(Boolean).join(" ");
+                    const items = [
+                        { label: "Service", value: service.title },
+                        { label: "Price", value: priceContent, isPrice: true },
+                        { label: "Vehicle", value: vehicleDisplay },
+                        { label: "Date", value: dateTime?.date || "N/A" },
+                        { label: "Time", value: dateTime?.time || "N/A" },
+                        { label: "Name", value: userInfo.name },
+                        { label: "Email", value: userInfo.email },
+                        {
+                            label: "Phone",
+                            value: `${userInfo.countryCode || ""} ${userInfo.phone}`,
+                        },
+                        userInfo.message && {
+                            label: "Notes",
+                            value: userInfo.message,
+                        },
+                    ].filter(Boolean);
+
+                    return items.map((item, idx) => (
                         <div
                             key={idx}
                             className="flex justify-between items-start border-b border-blue-100 pb-2 last:border-b-0"
@@ -108,7 +113,8 @@ export default function ReviewInfo({
                                 {item.value}
                             </span>
                         </div>
-                    ))}
+                    ));
+                })()}
             </div>
 
             {/* Sticky Buttons */}

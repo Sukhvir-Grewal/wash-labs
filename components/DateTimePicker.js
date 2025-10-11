@@ -10,6 +10,7 @@ export default function DateTimePicker({
     setDateTime,
     onNext,
     onBack,
+    durationMinutes = 60, // added
 }) {
     const today = startOfToday();
     const [selectedDay, setSelectedDay] = useState(
@@ -26,6 +27,29 @@ export default function DateTimePicker({
         times.push(`${hour}:00 ${ampm}`);
         times.push(`${hour}:30 ${ampm}`);
     }
+
+    // Filter times that cannot accommodate the full duration before 7:00 PM
+    const baseDate = selectedDay || today;
+    const endOfDay = new Date(baseDate);
+    endOfDay.setHours(19, 0, 0, 0);
+
+    const timeStringToDate = (timeStr, base) => {
+        const [time, meridiem] = timeStr.split(" ");
+        const [hh, mm] = time.split(":");
+        let h = parseInt(hh, 10);
+        const m = parseInt(mm, 10);
+        if (meridiem === "PM" && h !== 12) h += 12;
+        if (meridiem === "AM" && h === 12) h = 0;
+        const d = new Date(base);
+        d.setHours(h, m, 0, 0);
+        return d;
+    };
+
+    const filteredTimes = times.filter((t) => {
+        const start = timeStringToDate(t, baseDate);
+        const finish = new Date(start.getTime() + durationMinutes * 60000);
+        return finish <= endOfDay;
+    });
 
     const isValid = selectedDay && selectedTime;
 
@@ -46,6 +70,11 @@ export default function DateTimePicker({
             time: selectedTime,
         });
     };
+
+    const durationHoursText =
+        Number.isInteger(durationMinutes / 60)
+            ? durationMinutes / 60
+            : (durationMinutes / 60).toFixed(1);
 
     return (
         <motion.div
@@ -93,11 +122,12 @@ export default function DateTimePicker({
 
             {/* Time Picker */}
             <div>
-                <label className="block text-sm mb-2 text-gray-700">
+                <label htmlFor="time" className="block text-sm mb-2 text-gray-700">
                     Select Time
                 </label>
 
                 <select
+                    id="time"
                     value={selectedTime}
                     onChange={(e) => {
                         const value = e.target.value;
@@ -107,9 +137,11 @@ export default function DateTimePicker({
                         }
                     }}
                     className="w-full px-4 py-3 rounded-lg bg-white border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
+                    required
+                    aria-required="true"
                 >
                     <option value="">-- Select Time --</option>
-                    {times.map((t) => (
+                    {filteredTimes.map((t) => (
                         <option key={t} value={t}>
                             {t}
                         </option>
@@ -118,6 +150,9 @@ export default function DateTimePicker({
                 <p className="text-xs text-gray-500 mt-2">
                     Times are available in 30-minute intervals between 7:00 AM and
                     7:00 PM.
+                </p>
+                <p className="text-xs text-gray-600">
+                    This service takes {durationHoursText} hours.
                 </p>
                 {showValidation && !selectedTime && (
                     <p className="text-sm text-red-600 mt-2">

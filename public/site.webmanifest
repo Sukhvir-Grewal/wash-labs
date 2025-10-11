@@ -1,0 +1,49 @@
+{
+  "name": "Wash Labs — Premium Mobile Car Detailing in Halifax & Dartmouth",
+  "short_name": "Wash Labs",
+  "description": "Wash Labs offers top-quality mobile car detailing across Halifax and Dartmouth. From full interior cleaning to exterior shine — we come to you, 7 days a week from 7 AM – 7 PM.",
+  "start_url": "/?utm_source=homescreen",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f0f6ff",
+  "theme_color": "#0076ff",
+  "categories": ["automotive", "business", "services"],
+  "icons": [
+    {
+      "src": "/images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/hero/car-detailing.jpg",
+      "sizes": "1200x630",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Wash Labs homepage"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Book a Detail",
+      "short_name": "Book",
+      "description": "Choose a service and book now",
+      "url": "/#services"
+    },
+    {
+      "name": "Contact Wash Labs",
+      "short_name": "Contact",
+      "url": "/#contact"
+    }
+  ],
+  "dir": "ltr",
+  "lang": "en-CA"
+}

@@ -1,0 +1,18 @@
+{
+    "sourceFile": "public/site.webmanifest",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1760157917700,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1760157917700,
+            "name": "Commit-0",
+            "content": "{\r\n  \"name\": \"Wash Labs — Premium Mobile Car Detailing in Halifax & Dartmouth\",\r\n  \"short_name\": \"Wash Labs\",\r\n  \"description\": \"Wash Labs offers top-quality mobile car detailing across Halifax and Dartmouth. From full interior cleaning to exterior shine — we come to you, 7 days a week from 7 AM – 7 PM.\",\r\n  \"start_url\": \"/?utm_source=homescreen\",\r\n  \"scope\": \"/\",\r\n  \"display\": \"standalone\",\r\n  \"background_color\": \"#f0f6ff\",\r\n  \"theme_color\": \"#0076ff\",\r\n  \"categories\": [\"automotive\", \"business\", \"services\"],\r\n  \"icons\": [\r\n    {\r\n      \"src\": \"/images/logo.png\",\r\n      \"sizes\": \"192x192\",\r\n      \"type\": \"image/png\",\r\n      \"purpose\": \"any maskable\"\r\n    },\r\n    {\r\n      \"src\": \"/images/logo.png\",\r\n      \"sizes\": \"512x512\",\r\n      \"type\": \"image/png\",\r\n      \"purpose\": \"any maskable\"\r\n    }\r\n  ],\r\n  \"screenshots\": [\r\n    {\r\n      \"src\": \"/images/hero/car-detailing.jpg\",\r\n      \"sizes\": \"1200x630\",\r\n      \"type\": \"image/jpeg\",\r\n      \"form_factor\": \"wide\",\r\n      \"label\": \"Wash Labs homepage\"\r\n    }\r\n  ],\r\n  \"shortcuts\": [\r\n    {\r\n      \"name\": \"Book a Detail\",\r\n      \"short_name\": \"Book\",\r\n      \"description\": \"Choose a service and book now\",\r\n      \"url\": \"/#services\"\r\n    },\r\n    {\r\n      \"name\": \"Contact Wash Labs\",\r\n      \"short_name\": \"Contact\",\r\n      \"url\": \"/#contact\"\r\n    }\r\n  ],\r\n  \"dir\": \"ltr\",\r\n  \"lang\": \"en-CA\"\r\n}\r\n"
+        }
+    ]
+}

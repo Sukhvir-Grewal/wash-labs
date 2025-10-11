@@ -6,7 +6,7 @@ function Footer() {
     const year = new Date().getFullYear();
 
     return (
-        <footer className="bg-blue-50 text-blue-900 py-8 border-t border-blue-100 mt-10">
+        <footer className="bg-blue-50 text-blue-900 py-8 border-t border-blue-100">
             <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
                 {/* Left: Rights */}
                 <p className="text-sm text-blue-700">
@@ -35,14 +35,6 @@ function Footer() {
                     >
                         <FaFacebook />
                     </a>
-                    {/* <a
-                        href="https://twitter.com/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-[#0076ff] transition"
-                    >
-                        <FaTwitter />
-                    </a> */}
                     <a
                         href="https://www.tiktok.com/@wash__labs"
                         target="_blank"

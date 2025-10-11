@@ -3,6 +3,8 @@ import Image from "next/image";
 import fs from "fs";
 import path from "path";
 import { useState } from "react";
+import { useRouter } from "next/router";
+import Navigation from "@/components/Navigation";
 
 // Get all image files from /public/images/gallery at build time
 export async function getStaticProps() {
@@ -23,6 +25,7 @@ export async function getStaticProps() {
 
 export default function GalleryPage({ galleryImages }) {
     const [modalImg, setModalImg] = useState(null);
+    const router = useRouter();
 
     return (
         <>
@@ -30,9 +33,17 @@ export default function GalleryPage({ galleryImages }) {
                 <title>Gallery | Wash Labs</title>
                 <meta name="description" content="Gallery of Wash Labs car detailing work in Halifax." />
             </Head>
+
+            <Navigation />
+
             <section className="min-h-screen bg-blue-50 py-14 sm:py-20">
                 <div className="max-w-7xl mx-auto px-2 sm:px-4">
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0076ff] mb-6 sm:mb-10 text-center">Gallery</h1>
+                    <h1
+	className="text-3xl sm:text-4xl font-extrabold text-neutral-950 mb-6 sm:mb-10 text-center"
+	style={{ color: "#000" }}
+>
+	Gallery
+</h1>
                     <div
                         className="grid gap-2 sm:gap-4 grid-cols-2 sm:grid-cols-4 md:grid-cols-6 auto-rows-[120px] sm:auto-rows-[180px] md:auto-rows-[200px]"
                         style={{ gridAutoFlow: "dense" }}

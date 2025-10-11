@@ -7,8 +7,14 @@ export default function Navigation() {
     const router = useRouter();
 
     const scrollTo = (id) => {
+        const onHome = router.pathname === "/";
         if (id === "gallery") {
             router.push("/gallery");
+            setMenuOpen(false);
+            return;
+        }
+        if (!onHome) {
+            router.push(`/#${id}`);
             setMenuOpen(false);
             return;
         }
@@ -19,8 +25,20 @@ export default function Navigation() {
         }
     };
 
+    const baseItems = ["services", "gallery", "about", "contact"];
+    const items =
+        router.pathname === "/gallery"
+            ? baseItems.filter((i) => i !== "gallery")
+            : baseItems;
+
     return (
         <header className="sticky top-0 z-50 bg-blue-50 border-b border-gray-200 shadow">
+            <a
+                href="#main"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-blue-600 text-white px-3 py-2 rounded"
+            >
+                Skip to content
+            </a>
             <div className="max-w-7xl mx-auto px-2 sm:px-4 h-16 flex items-center justify-between">
                 {/* Logo (flush left) */}
                 <div className="flex-1 flex items-center">
@@ -49,7 +67,7 @@ export default function Navigation() {
                 </div>
                 {/* Desktop Menu (flush right) */}
                 <nav className="hidden md:flex items-center gap-8 font-semibold flex-1 justify-end">
-                    {["services", "gallery", "about", "contact"].map((id) => (
+                    {items.map((id) => (
                         <button
                             key={id}
                             onClick={() => scrollTo(id)}
@@ -111,10 +129,12 @@ export default function Navigation() {
                         ${menuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"}
                     `}
                 >
-                    <ul className={`flex flex-col transition-all duration-500 ease-in-out
+                    <ul
+                        className={`flex flex-col transition-all duration-500 ease-in-out
                         ${menuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"}
-                    `}>
-                        {["services", "gallery", "about", "contact"].map(
+                    `}
+                    >
+                        {items.map(
                             (id) => (
                                 <li
                                     key={id}

@@ -31,6 +31,13 @@ const carTypeOptions = [
     { label: "Truck", price: 20 },
 ];
 
+// Helper to format minutes as hours text
+const formatDuration = (mins) => {
+	const hours = mins / 60;
+	const label = Number.isInteger(hours) ? hours : hours.toFixed(1);
+	return `${label} hr${hours === 1 ? "" : "s"}`;
+};
+
 export default function Services() {
 
     // State for shine selection per service (by index)
@@ -64,6 +71,7 @@ export default function Services() {
                 "Spot-Free Dry",
             ],
             time: "1 hr",
+            durationMinutes: 60,
             animation: "fade-right",
             hasShine: true,
         },
@@ -79,6 +87,7 @@ export default function Services() {
                 "Streak-Free Glass",
             ],
             time: "2 hrs",
+            durationMinutes: 120,
             animation: "fade-up",
             hasShine: false,
         },
@@ -88,6 +97,7 @@ export default function Services() {
             basePrice: 140,
             features: [" Exterior Wash + Interior Detail"],
             time: "3 hrs",
+            durationMinutes: 180,
             animation: "fade-left",
             hasShine: true,
         },
@@ -169,22 +179,11 @@ export default function Services() {
                         return (
                             <motion.div
                                 key={index}
-                                role="button"
-                                tabIndex={0}
-                                aria-label={`View booking options for ${service.title}`}
                                 data-aos={service.animation}
                                 className="rounded-2xl shadow-xl p-8 flex flex-col justify-between border border-gray-200
               bg-gray-50
               transition-transform duration-500 ease-in-out
-              hover:shadow-2xl hover:bg-gray-100
-              cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                                onClick={() => handleSelect(service, totalPrice)}
-                                onKeyDown={(event) => {
-                                    if (event.key === "Enter" || event.key === " ") {
-                                        event.preventDefault();
-                                        handleSelect(service, totalPrice);
-                                    }
-                                }}
+              hover:shadow-2xl hover:bg-gray-100"
                             >
                                 <div>
                                     <h3
@@ -206,16 +205,13 @@ export default function Services() {
                                                 <button
                                                     key={opt.label}
                                                     type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleCarTypeChange(index, opt);
-                                                    }}
+                                                    onClick={() => handleCarTypeChange(index, opt)}
                                                     className={`px-5 py-2 rounded-full border font-medium transition-all
                                                         ${
-                                                            (carTypeSelections[index]?.label ?? "Sedan") === opt.label
-                                                                ? "bg-blue-600 text-white border-blue-600 shadow"
-                                                                : "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
-                                                        }
+															(carTypeSelections[index]?.label ?? "Sedan") === opt.label
+																? "bg-blue-600 text-white border-blue-600 shadow"
+																: "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
+														}
                                                     `}
                                                 >
                                                     {opt.label}
@@ -243,27 +239,16 @@ export default function Services() {
                                             </div>
                                             <div className="flex flex-wrap gap-3">
                                                 {shineOptions.map((opt) => (
-                                                    // if (opt.label === "Ceramic Coating") return null; // Not needed, already removed from array
                                                     <button
                                                         key={opt.label}
                                                         type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleShineChange(
-                                                                index,
-                                                                opt
-                                                            );
-                                                        }}
+                                                        onClick={() => handleShineChange(index, opt)}
                                                         className={`px-5 py-2 rounded-full border font-medium transition-all
                                                             ${
-                                                                (shineSelections[
-                                                                    index
-                                                                ]?.label ??
-                                                                    "Wax") ===
-                                                                opt.label
-                                                                    ? "bg-blue-600 text-white border-blue-600 shadow"
-                                                                    : "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
-                                                            }
+																(shineSelections[index]?.label ?? "Wax") === opt.label
+																	? "bg-blue-600 text-white border-blue-600 shadow"
+																	: "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
+															}
                                                         `}
                                                     >
                                                         {opt.label}
@@ -280,21 +265,19 @@ export default function Services() {
                                             </div>
                                             <div className="flex flex-wrap gap-3">
                                                 {deconOptions.map((opt) => {
-                                                    const selected = !!(deconArr.find((o) => o.label === opt.label));
+                                                    const deconArr = service.hasShine ? deconSelections[index] || [] : [];
+                                                    const selected = !!deconArr.find((o) => o.label === opt.label);
                                                     return (
                                                         <button
                                                             key={opt.label}
                                                             type="button"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDeconChange(index, opt);
-                                                            }}
+                                                            onClick={() => handleDeconChange(index, opt)}
                                                             className={`px-5 py-2 rounded-full border font-medium transition-all
                                                                 ${
-                                                                    selected
-                                                                        ? "bg-blue-600 text-white border-blue-600 shadow"
-                                                                        : "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
-                                                                }
+																	selected
+																		? "bg-blue-600 text-white border-blue-600 shadow"
+																		: "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
+																}
                                                             `}
                                                         >
                                                             {opt.label}
@@ -302,7 +285,7 @@ export default function Services() {
                                                     );
                                                 })}
                                             </div>
-                                            {deconArr.length === 2 && (
+                                            {(deconSelections[index] || []).length === 2 && (
                                                 <div className="text-xs text-blue-600 mt-2 font-semibold">
                                                     Combo discount applied (-$5)
                                                 </div>
@@ -310,9 +293,21 @@ export default function Services() {
                                         </div>
                                     )}
                                 </div>
-                                <p className="mt-auto font-medium text-gray-500" style={{ color: "#000" }}>
-                                    Time: {service.time}
-                                </p>
+
+                                {/* Bottom actions */}
+                                <div className="mt-auto space-y-3">
+                                    <p className="font-medium text-gray-500" style={{ color: "#000" }}>
+                                        Time: {service.durationMinutes ? formatDuration(service.durationMinutes) : service.time}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSelect(service, totalPrice)}
+                                        className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                                        aria-label={`Book ${service.title}`}
+                                    >
+                                        Book Now
+                                    </button>
+                                </div>
                             </motion.div>
                         );
                     })}

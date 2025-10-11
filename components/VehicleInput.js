@@ -80,11 +80,12 @@ export default function VehicleInput({ onNext }) {
         <div className="relative space-y-4">
             {/* Brand Input */}
             <div>
-                <label className="block text-sm mb-1 text-gray-700">
+                <label htmlFor="brand" className="block text-sm mb-1 text-gray-700">
                     Car Brand
                 </label>
                 <div className="relative">
                     <input
+                        id="brand"
                         type="text"
                         value={brand}
                         onChange={handleBrandChange}
@@ -92,6 +93,8 @@ export default function VehicleInput({ onNext }) {
                         placeholder="Enter Car Brand"
                         className="w-full px-4 py-3 rounded-lg bg-white border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
                         autoComplete="off"
+                        required
+                        aria-required="true"
                     />
                     <AnimatePresence>
                         {brandSuggestions.length > 0 && !model && (
@@ -124,17 +127,20 @@ export default function VehicleInput({ onNext }) {
 
             {/* Model Input */}
             <div>
-                <label className="block text-sm mb-1 text-gray-700">
+                <label htmlFor="model" className="block text-sm mb-1 text-gray-700">
                     Car Model
                 </label>
                 <div className="relative">
                     <input
+                        id="model"
                         type="text"
                         value={model}
                         onChange={handleModelChange}
                         placeholder={brand ? "Enter Model" : "Select Brand First"}
                         disabled={!brand}
                         className="w-full px-4 py-3 rounded-lg bg-white border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 disabled:bg-gray-100"
+                        required
+                        aria-required="true"
                     />
                     <AnimatePresence>
                         {modelSuggestions.length > 0 && model && (
@@ -166,14 +172,18 @@ export default function VehicleInput({ onNext }) {
 
             {/* Year Input */}
             <div>
-                <label className="block text-sm mb-1 text-gray-700">
+                <label htmlFor="year" className="block text-sm mb-1 text-gray-700">
                     Car Year
                 </label>
                 <select
+                    id="year"
                     value={year}
                     onChange={(e) => setYear(e.target.value)}
                     className="w-full px-4 py-3 rounded-lg bg-white border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
+                    required
+                    aria-required="true"
                 >
+                    <option value="NA">N/A</option>
                     <option value="">Select Year</option>
                     {years
                         .slice()
