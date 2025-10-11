@@ -1,6 +1,5 @@
 "use client";
 import { motion } from "framer-motion";
-import { useState } from "react";
 
 export default function ReviewInfo({
     service,
@@ -10,9 +9,9 @@ export default function ReviewInfo({
     onBack,
     onSubmit,
     totalPrice, // <-- add this prop
+    status,
+    isSubmitting,
 }) {
-    const [loading, setLoading] = useState(false);
-
     // Price formatting
     let priceContent;
     if (typeof totalPrice === "number") {
@@ -57,15 +56,6 @@ export default function ReviewInfo({
             </span>
         );
     }
-
-    const handleConfirm = async () => {
-        setLoading(true);
-        try {
-            await onSubmit(); // call parent submit
-        } finally {
-            setLoading(false); // reset even if error
-        }
-    };
 
     return (
         <motion.div
@@ -126,9 +116,9 @@ export default function ReviewInfo({
                 <button
                     type="button"
                     onClick={onBack}
-                    disabled={loading}
+                    disabled={isSubmitting}
                     className={`py-3 px-6 rounded-lg font-semibold transition w-full sm:w-auto ${
-                        loading
+                        isSubmitting
                             ? "bg-gray-200 cursor-not-allowed text-gray-400 border border-blue-100"
                             : "bg-white hover:bg-blue-100 text-blue-700 border border-blue-200"
                     }`}
@@ -138,15 +128,15 @@ export default function ReviewInfo({
 
                 <button
                     type="submit"
-                    onClick={handleConfirm}
-                    disabled={loading}
+                    onClick={onSubmit}
+                    disabled={isSubmitting}
                     className={`py-3 px-6 rounded-lg font-bold transition w-full sm:w-auto flex items-center justify-center ${
-                        loading
+                        isSubmitting
                             ? "bg-blue-200 cursor-not-allowed text-blue-400 border border-blue-100"
                             : "bg-blue-600 hover:bg-blue-700 text-white border border-blue-600"
                     }`}
                 >
-                    {loading ? (
+                    {isSubmitting ? (
                         <svg
                             className="animate-spin h-5 w-5 text-white"
                             xmlns="http://www.w3.org/2000/svg"
@@ -167,11 +157,16 @@ export default function ReviewInfo({
                                 d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
                             ></path>
                         </svg>
-                    ) : (
-                        "Confirm Booking"
-                    )}
+                        ) : (
+                            "Confirm Booking"
+                        )}
                 </button>
             </div>
+            {status?.type === "error" && status.message && (
+                <p className="mt-4 text-center text-red-600 text-sm">
+                    {status.message}
+                </p>
+            )}
         </motion.div>
     );
 }

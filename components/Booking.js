@@ -17,6 +17,16 @@ export default function Booking({ service, onClose }) {
         message: "",
         countryCode: "+1",
     });
+    const [submissionStatus, setSubmissionStatus] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const getTotalPrice = () =>
+        typeof service?.totalPrice === "number"
+            ? service.totalPrice
+            : typeof service?.basePrice === "number"
+            ? service.basePrice
+            : null;
+    const totalPriceValue = getTotalPrice();
 
     const handleNextVehicle = ({ car, year }) => {
         setVehicle({ name: car, year });
@@ -31,27 +41,64 @@ export default function Booking({ service, onClose }) {
     const handleNextUserInfo = () => setStep(4);
     const handleBack = () => setStep((prev) => prev - 1);
 
+    const resetAndClose = () => {
+        setStep(1);
+        setVehicle({ name: "", year: "" });
+        setDateTime({ date: "", time: "" });
+        setUserInfo({
+            name: "",
+            email: "",
+            phone: "",
+            message: "",
+            countryCode: "+1",
+        });
+        setSubmissionStatus(null);
+        setIsSubmitting(false);
+        onClose();
+    };
+
     const handleSubmit = async () => {
-        const bookingData = { service, vehicle, dateTime, userInfo };
+        const computedTotal = getTotalPrice();
+        const bookingData = {
+            service: { ...service, totalPrice: computedTotal },
+            vehicle,
+            dateTime,
+            userInfo,
+        };
 
         try {
+            setIsSubmitting(true);
+            setSubmissionStatus(null);
             const res = await fetch("/api/booking", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(bookingData),
             });
 
-            if (!res.ok) throw new Error("Failed to send booking");
+            const data = await res.json().catch(() => ({}));
 
-            alert(
-                "✅ Booking submitted successfully! You’ll get a call soon to confirm."
-            );
-            onClose();
+            if (!res.ok) {
+                throw new Error(data.message || "Failed to send booking");
+            }
+
+            setSubmissionStatus({
+                type: "success",
+                message:
+                    data.message ||
+                    "Booking submitted successfully! You’ll get a call soon to confirm.",
+            });
+            setStep(5);
         } catch (error) {
             console.error("Error submitting booking:", error);
-            alert(
-                "❌ Something went wrong while submitting your booking. Please try again."
-            );
+            setSubmissionStatus({
+                type: "error",
+                message:
+                    error.message ||
+                    "Something went wrong while submitting your booking. Please try again.",
+            });
+            setStep(4);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -75,7 +122,7 @@ export default function Booking({ service, onClose }) {
                 >
                     {/* Close Button */}
                     <button
-                        onClick={onClose}
+                        onClick={resetAndClose}
                         className="absolute top-4 right-4 text-blue-600 text-xl font-bold hover:text-blue-500"
                     >
                         ✕
@@ -120,7 +167,9 @@ export default function Booking({ service, onClose }) {
                             dateTime={dateTime}
                             onBack={handleBack}
                             onSubmit={handleSubmit}
-                            totalPrice={service.totalPrice}
+                            totalPrice={totalPriceValue}
+                            status={submissionStatus}
+                            isSubmitting={isSubmitting}
                         />
                     )}
 
@@ -135,8 +184,21 @@ export default function Booking({ service, onClose }) {
                                 You will receive a call soon to confirm your
                                 booking details.
                             </p>
+                            {typeof totalPriceValue === "number" && (
+                                <p className="text-base text-gray-700">
+                                    Estimated total: {" "}
+                                    <span className="font-semibold text-blue-600">
+                                        ${totalPriceValue}
+                                    </span>
+                                </p>
+                            )}
+                            {submissionStatus?.message && (
+                                <p className="text-sm text-blue-600 max-w-md">
+                                    {submissionStatus.message}
+                                </p>
+                            )}
                             <button
-                                onClick={onClose}
+                                onClick={resetAndClose}
                                 className="mt-6 py-3 px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition"
                             >
                                 Close

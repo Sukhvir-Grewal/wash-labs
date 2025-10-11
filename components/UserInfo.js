@@ -9,10 +9,7 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
         phone: false,
     });
 
-    const isValidEmail =
-        /^[^\s@]+@(gmail\.com|yahoo\.com|outlook\.com|hotmail\.com)$/.test(
-            userInfo.email
-        );
+    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userInfo.email);
 
     const isValidPhone =
         /^\(\d{3}\) \d{3}-\d{4}$/.test(userInfo.phone) &&
@@ -105,7 +102,7 @@ export default function UserInfo({ userInfo, setUserInfo, onNext, onBack }) {
                 />
                 {!isValidEmail && touched.email && (
                     <p className="text-red-500 text-sm mt-1">
-                        Enter a valid email
+                        Enter a valid email address so we can send your confirmation.
                     </p>
                 )}
             </div>
