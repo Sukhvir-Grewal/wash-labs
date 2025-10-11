@@ -179,7 +179,10 @@ export default function Services() {
                         return (
                             <motion.div
                                 key={index}
-                                data-aos={service.animation}
+                                initial={{ opacity: 0, y: 24 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, amount: 0.15 }}
+                                transition={{ duration: 0.5, ease: "easeOut" }}
                                 className="rounded-2xl shadow-xl p-8 flex flex-col justify-between border border-gray-200
               bg-gray-50
               transition-transform duration-500 ease-in-out

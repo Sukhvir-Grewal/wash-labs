@@ -6,9 +6,10 @@ export default function ReviewInfo({
     vehicle,
     userInfo,
     dateTime,
+    location, // added
     onBack,
     onSubmit,
-    totalPrice, // <-- add this prop
+    totalPrice,
     status,
     isSubmitting,
 }) {
@@ -77,10 +78,12 @@ export default function ReviewInfo({
                         userInfo?.vehicleYear || (vehicle?.year && vehicle.year !== "NA" ? vehicle.year : null),
                         vehicle?.name
                     ].filter(Boolean).join(" ");
+
                     const items = [
                         { label: "Service", value: service.title },
                         { label: "Price", value: priceContent, isPrice: true },
                         { label: "Vehicle", value: vehicleDisplay },
+                        location?.address && { label: "Address", value: location.address }, // added
                         { label: "Date", value: dateTime?.date || "N/A" },
                         { label: "Time", value: dateTime?.time || "N/A" },
                         { label: "Name", value: userInfo.name },

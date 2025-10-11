@@ -20,8 +20,9 @@ export default function Document() {
 
         {/* Manifest */}
         <link rel="manifest" href="/site.webmanifest" />
+        <style>{`html{overflow-x:hidden}`}</style>
       </Head>
-      <body>
+      <body className="overflow-x-hidden">
         <Main />
         <NextScript />
       </body>

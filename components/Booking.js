@@ -5,11 +5,13 @@ import VehicleInput from "./VehicleInput";
 import DateTimePicker from "./DateTimePicker";
 import UserInfo from "./UserInfo";
 import ReviewInfo from "./ReviewInfo";
+import Location from "./Location"; // added
 
 export default function Booking({ service, onClose }) {
     const [step, setStep] = useState(1);
     const [vehicle, setVehicle] = useState({ name: "", year: "" });
     const [dateTime, setDateTime] = useState({ date: "", time: "" });
+    const [location, setLocation] = useState({ address: "", lat: null, lon: null }); // added
     const [userInfo, setUserInfo] = useState({
         name: "",
         email: "",
@@ -38,13 +40,19 @@ export default function Booking({ service, onClose }) {
         setStep(3);
     };
 
-    const handleNextUserInfo = () => setStep(4);
+    const handleNextLocation = ({ address, lat, lon }) => { // added
+        setLocation({ address, lat, lon });
+        setStep(4);
+    };
+
+    const handleNextUserInfo = () => setStep(5); // shifted to step 5
     const handleBack = () => setStep((prev) => prev - 1);
 
     const resetAndClose = () => {
         setStep(1);
         setVehicle({ name: "", year: "" });
         setDateTime({ date: "", time: "" });
+        setLocation({ address: "", lat: null, lon: null }); // reset
         setUserInfo({
             name: "",
             email: "",
@@ -63,6 +71,7 @@ export default function Booking({ service, onClose }) {
             service: { ...service, totalPrice: computedTotal },
             vehicle,
             dateTime,
+            location, // include address
             userInfo,
         };
 
@@ -87,7 +96,7 @@ export default function Booking({ service, onClose }) {
                     data.message ||
                     "Booking submitted successfully! You’ll get a call soon to confirm.",
             });
-            setStep(5);
+            setStep(6); // shifted confirmation to step 6
         } catch (error) {
             console.error("Error submitting booking:", error);
             setSubmissionStatus({
@@ -96,7 +105,7 @@ export default function Booking({ service, onClose }) {
                     error.message ||
                     "Something went wrong while submitting your booking. Please try again.",
             });
-            setStep(4);
+            setStep(5); // stay on review
         } finally {
             setIsSubmitting(false);
         }
@@ -129,7 +138,7 @@ export default function Booking({ service, onClose }) {
                     </button>
 
                     {/* Only show heading for steps except review */}
-                    {step !== 4 && (
+                    {step !== 5 && ( // updated (review is step 5)
                         <h3
                             className="text-2xl font-semibold mb-6 text-neutral-950"
                             style={{ color: "#000" }}
@@ -152,8 +161,17 @@ export default function Booking({ service, onClose }) {
                         />
                     )}
 
-                    {/* Step 3: User Info */}
+                    {/* Step 3: Location (new) */}
                     {step === 3 && (
+                        <Location
+                            location={location}
+                            onNext={handleNextLocation}
+                            onBack={handleBack}
+                        />
+                    )}
+
+                    {/* Step 4: User Info */}
+                    {step === 4 && (
                         <UserInfo
                             userInfo={userInfo}
                             setUserInfo={setUserInfo}
@@ -162,13 +180,14 @@ export default function Booking({ service, onClose }) {
                         />
                     )}
 
-                    {/* Step 4: Review */}
-                    {step === 4 && (
+                    {/* Step 5: Review */}
+                    {step === 5 && (
                         <ReviewInfo
                             service={service}
                             vehicle={vehicle}
                             userInfo={userInfo}
                             dateTime={dateTime}
+                            location={location} // pass location for review
                             onBack={handleBack}
                             onSubmit={handleSubmit}
                             totalPrice={totalPriceValue}
@@ -177,8 +196,8 @@ export default function Booking({ service, onClose }) {
                         />
                     )}
 
-                    {/* Step 5: Confirmation */}
-                    {step === 5 && (
+                    {/* Step 6: Confirmation */}
+                    {step === 6 && (
                         <div className="flex flex-col items-center justify-center text-center space-y-4 py-10">
                             <h4 className="text-2xl font-bold text-blue-600">
                                 Booking Confirmed!
@@ -190,7 +209,7 @@ export default function Booking({ service, onClose }) {
                             </p>
                             {typeof totalPriceValue === "number" && (
                                 <p className="text-base text-gray-700">
-                                    Estimated total: {" "}
+                                    Estimated total:{" "}
                                     <span className="font-semibold text-blue-600">
                                         ${totalPriceValue}
                                     </span>

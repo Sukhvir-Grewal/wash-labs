@@ -20,8 +20,8 @@ export default function Hero() {
       id="hero"
       className="relative h-[90vh] md:h-screen flex items-center justify-center overflow-hidden bg-transparent"
     >
-      {/* Fixed background image with subtle blur */}
-      <div className="fixed inset-0 -z-20">
+      {/* Background image within hero only (non-fixed) */}
+      <div className="absolute inset-0 -z-10 pointer-events-none">
         <Image
           src="/images/hero/car-detailing.jpg"
           alt="Car Detailing"
