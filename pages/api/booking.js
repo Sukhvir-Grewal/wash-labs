@@ -51,7 +51,7 @@ export default async function handler(req, res) {
             });
     }
 
-    const { service, vehicle, dateTime, userInfo } = req.body;
+    const { service, vehicle, dateTime, location, userInfo } = req.body;
 
     if (!service || !vehicle || !dateTime || !userInfo) {
         return res.status(400).json({ message: "Missing booking details" });
@@ -83,6 +83,7 @@ export default async function handler(req, res) {
         .join(" ");
     const safeDate = escapeHtml(dateTime?.date || "N/A");
     const safeTime = escapeHtml(dateTime?.time || "N/A");
+    const safeLocation = escapeHtml(location?.address || "Not specified");
     const safeName = escapeHtml(userInfo?.name || "");
     const safeEmail = escapeHtml(userInfo?.email || "");
     const safePhone = `${escapeHtml(userInfo?.countryCode || "")} ${escapeHtml(
@@ -138,6 +139,7 @@ Service: ${service.title}
 Total Price: ${formattedTotalPrice}
 Vehicle: ${vehicleDisplay}
 Date & Time: ${safeDate} at ${safeTime}
+Location: ${location?.address || "Not specified"}
 
 Client:
 Name: ${userInfo.name}
@@ -195,6 +197,7 @@ Referrer: ${referer}
                   <tr><td style="padding:6px 0;"><strong>Total Price:</strong> ${escapeHtml(formattedTotalPrice)}</td></tr>
                   <tr><td style="padding:6px 0;"><strong>Vehicle:</strong> ${vehicleDisplay}</td></tr>
                   <tr><td style="padding:6px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}</td></tr>
+                  <tr><td style="padding:6px 0;"><strong>Location:</strong> ${safeLocation}</td></tr>
                 </table>
               </td>
             </tr>
@@ -237,13 +240,14 @@ Referrer: ${referer}
         const userSubject = `Booking received — ${safeService.title} | Wash Labs`;
         const userText = `Hello ${userInfo.name},
 
-Thanks for booking with Wash Labs. We’ve received your request and will follow up shortly.
+Thanks for booking with Wash Labs. We've received your request and will follow up shortly.
 
 Booking Summary
 Service: ${service.title}
 Total Price: ${formattedTotalPrice}
 Vehicle: ${vehicleDisplay}
 Date & Time: ${safeDate} at ${safeTime}
+Location: ${location?.address || "Not specified"}
 
 Need anything else?
 Phone: ${brand.phone}
@@ -295,6 +299,7 @@ Website: ${baseUrl}
                   <tr><td style="padding:4px 0;"><strong>Total Price:</strong> ${escapeHtml(formattedTotalPrice)}</td></tr>
                   <tr><td style="padding:4px 0;"><strong>Vehicle:</strong> ${vehicleDisplay}</td></tr>
                   <tr><td style="padding:4px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}</td></tr>
+                  <tr><td style="padding:4px 0;"><strong>Location:</strong> ${safeLocation}</td></tr>
                 </table>
                 ${safeNotes ? `<div style="margin-top:12px;padding:12px;border-left:3px solid ${brand.color};background:#f8fbff;color:#334155;white-space:pre-wrap;"><strong>Your Notes:</strong>\n${safeNotes}</div>` : ""}
                 <p style="margin:16px 0 0 0;color:#475569;font-size:13px;">Sent on: <strong>${receivedAt}</strong></p>
