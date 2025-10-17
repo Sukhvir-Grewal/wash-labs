@@ -21,8 +21,12 @@ const shineOptions = [
 ];
 
 const deconOptions = [
-    { label: "Iron Remover", price: 10 },
-    { label: "Clay Bar", price: 15 },
+    { label: "Iron Remover", price: 15 },
+    { label: "Clay Bar", price: 20 },
+];
+
+const interiorAddOns = [
+    { label: "Pet Hair Removal", price: 20 },
 ];
 
 const carTypeOptions = [
@@ -53,6 +57,12 @@ export default function Services() {
         2: [],
     });
 
+    // State for interior add-ons selection per service (by index)
+    const [interiorAddOnSelections, setInteriorAddOnSelections] = useState({
+        1: [], // Complete Interior Detail
+        2: [], // Ultimate Full Detail
+    });
+
     // State for car type selection per service (by index)
     const [carTypeSelections, setCarTypeSelections] = useState({
         0: carTypeOptions[0],
@@ -77,12 +87,11 @@ export default function Services() {
         },
         {
             title: "Complete Interior Detail",
-            basePrice: 100,
+            basePrice: 110,
             features: [
                 "Full Vacuum & Wipe Down",
                 "Hot Steam Cleaning",
                 "Carpet Extraction",
-                "Pet Hair Removal",
                 "Leather Care & UV Protection",
                 "Streak-Free Glass",
             ],
@@ -90,16 +99,18 @@ export default function Services() {
             durationMinutes: 120,
             animation: "fade-up",
             hasShine: false,
+            hasInteriorAddOns: true,
         },
 
         {
             title: "Ultimate Full Detail",
-            basePrice: 140,
+            basePrice: 150,
             features: [" Exterior Wash + Interior Detail"],
             time: "3 hrs",
             durationMinutes: 180,
             animation: "fade-left",
             hasShine: true,
+            hasInteriorAddOns: true,
         },
     ];
 
@@ -141,6 +152,21 @@ export default function Services() {
         });
     };
 
+    // Handle interior add-on selection for a card (multi-select, toggle)
+    const handleInteriorAddOnChange = (serviceIdx, option) => {
+        setInteriorAddOnSelections((prev) => {
+            const selected = prev[serviceIdx] || [];
+            const exists = selected.find((o) => o.label === option.label);
+            let updated;
+            if (exists) {
+                updated = selected.filter((o) => o.label !== option.label);
+            } else {
+                updated = [...selected, option];
+            }
+            return { ...prev, [serviceIdx]: updated };
+        });
+    };
+
     // Handle car type selection for a card
     const handleCarTypeChange = (serviceIdx, option) => {
         setCarTypeSelections((prev) => ({
@@ -169,12 +195,30 @@ export default function Services() {
                         // Calculate decon total, apply -5 if both selected
                         let deconTotal = deconArr.reduce((sum, o) => sum + o.price, 0);
                         if (deconArr.length === 2) deconTotal -= 5;
+                        
+                        // Calculate interior add-ons total
+                        const interiorAddOnsArr = service.hasInteriorAddOns
+                            ? interiorAddOnSelections[index] || []
+                            : [];
+                        const interiorAddOnsTotal = interiorAddOnsArr.reduce((sum, o) => sum + o.price, 0);
+                        
                         const carType = carTypeSelections[index] || carTypeOptions[0];
+
+                        // Car type surcharge: special rule for Complete Interior Detail
+                        let carTypeSurcharge = carType ? carType.price : 0;
+                        if (service.title === "Complete Interior Detail") {
+                            const label = carType?.label || "Sedan";
+                            if (label === "SUV") carTypeSurcharge = 20; // Sedan 0, SUV +20
+                            else if (label === "Truck") carTypeSurcharge = 30; // Truck +30 over Sedan
+                            else carTypeSurcharge = 0; // Sedan
+                        }
+
                         const totalPrice =
                             service.basePrice +
                             (shine ? shine.price : 0) +
                             deconTotal +
-                            (carType ? carType.price : 0);
+                            interiorAddOnsTotal +
+                            carTypeSurcharge;
 
                         return (
                             <motion.div
@@ -293,6 +337,36 @@ export default function Services() {
                                                     Combo discount applied (-$5)
                                                 </div>
                                             )}
+                                        </div>
+                                    )}
+                                    {/* Interior Add-Ons */}
+                                    {service.hasInteriorAddOns && (
+                                        <div className="mb-5">
+                                            <div className="text-base font-semibold text-gray-700 mb-2 text-left">
+                                                Add-Ons
+                                            </div>
+                                            <div className="flex flex-wrap gap-3">
+                                                {interiorAddOns.map((opt) => {
+                                                    const addOnsArr = service.hasInteriorAddOns ? interiorAddOnSelections[index] || [] : [];
+                                                    const selected = !!addOnsArr.find((o) => o.label === opt.label);
+                                                    return (
+                                                        <button
+                                                            key={opt.label}
+                                                            type="button"
+                                                            onClick={() => handleInteriorAddOnChange(index, opt)}
+                                                            className={`px-5 py-2 rounded-full border font-medium transition-all
+                                                                ${
+																	selected
+																		? "bg-blue-600 text-white border-blue-600 shadow"
+																		: "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
+																}
+                                                            `}
+                                                        >
+                                                            {opt.label}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
