@@ -1,0 +1,18 @@
+{
+    "sourceFile": "components/StatusCalendar.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1760681522207,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1760681522207,
+            "name": "Commit-0",
+            "content": "import { useMemo, useState } from 'react';\r\nimport Calendar from 'react-calendar';\r\nimport 'react-calendar/dist/Calendar.css';\r\n\r\nfunction parseISODate(dateStr) {\r\n  if (!dateStr || typeof dateStr !== 'string') return null;\r\n  const m = dateStr.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);\r\n  if (!m) return null;\r\n  const [_, y, mo, d] = m;\r\n  return new Date(Number(y), Number(mo) - 1, Number(d));\r\n}\r\n\r\nexport default function StatusCalendar({ bookings }) {\r\n  const [value, setValue] = useState(new Date());\r\n\r\n  const statusByDay = useMemo(() => {\r\n    const map = {};\r\n    bookings.forEach(b => {\r\n      const dt = parseISODate(b.date);\r\n      if (!dt) return;\r\n      const key = dt.toISOString().slice(0,10);\r\n      // track statuses for each day\r\n      if (!map[key]) map[key] = new Set();\r\n      if (b.status) map[key].add(b.status);\r\n    });\r\n    return map;\r\n  }, [bookings]);\r\n\r\n  const getTileContent = ({ date, view }) => {\r\n    if (view !== 'month') return null;\r\n    const key = date.toISOString().slice(0,10);\r\n    const statuses = statusByDay[key];\r\n    if (!statuses) return null;\r\n\r\n    const hasPending = statuses.has('pending');\r\n    const hasComplete = statuses.has('complete');\r\n\r\n    return (\r\n      <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 2 }}>\r\n        {hasComplete && <span className=\"cal-dot cal-dot-green\" />}\r\n        {hasPending && <span className=\"cal-dot cal-dot-yellow\" />}\r\n      </div>\r\n    );\r\n  };\r\n\r\n  return (\r\n    <div className=\"status-calendar\">\r\n      <Calendar value={value} onChange={setValue} tileContent={getTileContent} />\r\n      <div className=\"flex items-center gap-3 mt-2 text-xs text-gray-600\">\r\n        <span className=\"flex items-center gap-1\"><span className=\"cal-dot cal-dot-green\" /> Complete</span>\r\n        <span className=\"flex items-center gap-1\"><span className=\"cal-dot cal-dot-yellow\" /> Pending</span>\r\n      </div>\r\n    </div>\r\n  );\r\n}\r\n"
+        }
+    ]
+}

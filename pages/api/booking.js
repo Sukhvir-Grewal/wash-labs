@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { MongoClient } from "mongodb";
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
@@ -122,7 +123,8 @@ export default async function handler(req, res) {
         address: "53 Vitalia Ct, Halifax, NS B3S 0H4",
     };
 
-    try {
+  let client;
+  try {
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
@@ -339,11 +341,48 @@ Website: ${baseUrl}
             replyTo: brand.email, // allow replies to your main inbox
         };
 
-        await transporter.sendMail(confirmationMail);
+    await transporter.sendMail(confirmationMail);
 
-        return res
-            .status(200)
-            .json({ message: "Booking and confirmation sent successfully" });
+    // Insert booking into MongoDB (best-effort, after emails)
+    const uri = process.env.MONGODB_URI;
+    const dbName = process.env.MONGODB_DB;
+    let insertedId = null;
+    if (uri && dbName) {
+      try {
+        client = await MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+        const db = client.db(dbName);
+        const collection = db.collection("bookings");
+        const doc = {
+          // Align with admin schema
+          name: userInfo.name,
+          carName: vehicleDisplay,
+          service: service.title,
+          date: dateTime.date,
+          time: dateTime.time,
+          amount: totalPrice ?? undefined,
+          status: "pending",
+          phone: userInfo.phone,
+          email: userInfo.email,
+          location: location?.address || "",
+          addOns: Array.isArray(service?.addOns) ? service.addOns : [],
+          carType: vehicle?.type || "",
+          createdAt: new Date().toISOString(),
+          source: "online",
+        };
+        const result = await collection.insertOne(doc);
+        insertedId = result.insertedId;
+      } catch (dbErr) {
+        console.error("[booking] DB insert failed:", dbErr?.message || dbErr);
+      } finally {
+        if (client) await client.close();
+      }
+    } else {
+      console.warn("[booking] Skipping DB insert: missing MONGODB config");
+    }
+
+    return res
+      .status(200)
+      .json({ message: "Booking and confirmation sent successfully", insertedId });
     } catch (error) {
         console.error("[booking] Error sending booking email", {
             error: error instanceof Error ? error.message : error,

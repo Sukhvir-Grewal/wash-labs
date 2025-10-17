@@ -1,0 +1,18 @@
+{
+    "sourceFile": "pages/api/get-bookings.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1760675211174,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1760675211174,
+            "name": "Commit-0",
+            "content": "import { MongoClient } from \"mongodb\";\r\n\r\nconst uri = process.env.MONGODB_URI;\r\nconst dbName = process.env.MONGODB_DB;\r\n\r\nexport default async function handler(req, res) {\r\n  if (req.method !== \"GET\") {\r\n    return res.status(405).json({ error: \"Method not allowed\" });\r\n  }\r\n  if (!uri || !dbName) {\r\n    return res.status(500).json({ error: \"Missing MongoDB config\" });\r\n  }\r\n  let client;\r\n  try {\r\n    client = await MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });\r\n    const db = client.db(dbName);\r\n    const collection = db.collection(\"bookings\");\r\n    const bookings = await collection.find({}).sort({ date: -1, time: -1 }).toArray();\r\n    res.status(200).json({ success: true, bookings });\r\n  } catch (err) {\r\n    res.status(500).json({ error: err.message });\r\n  } finally {\r\n    if (client) await client.close();\r\n  }\r\n}\r\n"
+        }
+    ]
+}

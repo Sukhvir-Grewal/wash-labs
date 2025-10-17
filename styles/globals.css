@@ -217,3 +217,76 @@ a:hover {
     white-space: nowrap !important;
     border: 0 !important;
 }
+
+/* Calendar status dots */
+.cal-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    display: inline-block;
+}
+.cal-dot-green { background-color: #16a34a; }
+.cal-dot-yellow { background-color: #ca8a04; }
+
+.status-calendar .react-calendar {
+    width: 100%;
+    border: 1px solid #374151; /* gray-700 */
+    border-radius: 12px;
+    padding: 4px;
+    background: #111214; /* dark surface */
+    color: #e5e7eb; /* gray-200 text */
+}
+
+/* Calendar navigation (month label + arrows) */
+.status-calendar .react-calendar__navigation {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.status-calendar .react-calendar__navigation button {
+    color: #e5e7eb;
+    background: transparent;
+    border-radius: 8px;
+    min-height: 32px;
+}
+.status-calendar .react-calendar__navigation button:enabled:hover,
+.status-calendar .react-calendar__navigation button:enabled:focus {
+    background: #1f2937; /* gray-800 */
+}
+.status-calendar .react-calendar__navigation__label {
+    font-weight: 700;
+}
+
+/* Weekday headers */
+.status-calendar .react-calendar__month-view__weekdays {
+    text-align: center;
+}
+.status-calendar .react-calendar__month-view__weekdays__weekday abbr {
+    text-decoration: none;
+    color: #9ca3af; /* gray-400 */
+    font-weight: 600;
+}
+
+/* Day tiles */
+.status-calendar .react-calendar__tile {
+    color: #e5e7eb; /* gray-200 */
+    border-radius: 8px;
+}
+.status-calendar .react-calendar__tile:enabled:hover,
+.status-calendar .react-calendar__tile:enabled:focus {
+    background: #1f2937; /* gray-800 */
+}
+.status-calendar .react-calendar__tile--now {
+    background: #0b1220; /* subtle blue-ish dark */
+    color: #ffffff;
+}
+.status-calendar .react-calendar__tile--active {
+    background: #1d4ed8; /* blue-700 */
+    color: #ffffff;
+}
+
+/* Neighboring month days (previous/next displayed within current month) */
+.status-calendar .react-calendar__month-view__days__day--neighboringMonth {
+    color: #6b7280; /* gray-500 */
+    opacity: 0.6;
+}

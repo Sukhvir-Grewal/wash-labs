@@ -1,0 +1,22 @@
+{
+    "sourceFile": "pages/bookingsCalendar.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 1,
+            "patches": [
+                {
+                    "date": 1760681156318,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1760682513193,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -0,0 +1,8 @@\n+export default function BookingsCalendarPage() {\r\n+\treturn (\r\n+\t\t<div style={{ padding: 24 }}>\r\n+\t\t\t<h1>Bookings Calendar</h1>\r\n+\t\t\t<p>This page is under construction.</p>\r\n+\t\t</div>\r\n+\t);\r\n+}\r\n"
+                }
+            ],
+            "date": 1760681156318,
+            "name": "Commit-0",
+            "content": ""
+        }
+    ]
+}

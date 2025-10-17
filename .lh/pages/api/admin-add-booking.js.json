@@ -1,0 +1,22 @@
+{
+    "sourceFile": "pages/api/admin-add-booking.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 1,
+            "patches": [
+                {
+                    "date": 1760674580459,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1760674679951,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -0,0 +1,26 @@\n+import { MongoClient } from \"mongodb\";\r\n+\r\n+const uri = process.env.MONGODB_URI;\r\n+const dbName = process.env.MONGODB_DB;\r\n+\r\n+export default async function handler(req, res) {\r\n+  if (req.method !== \"POST\") {\r\n+    return res.status(405).json({ error: \"Method not allowed\" });\r\n+  }\r\n+  const booking = req.body;\r\n+  if (!uri || !dbName) {\r\n+    return res.status(500).json({ error: \"Missing MongoDB config\" });\r\n+  }\r\n+  let client;\r\n+  try {\r\n+    client = await MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });\r\n+    const db = client.db(dbName);\r\n+    const collection = db.collection(\"bookings\");\r\n+    const result = await collection.insertOne(booking);\r\n+    res.status(200).json({ success: true, insertedId: result.insertedId });\r\n+  } catch (err) {\r\n+    res.status(500).json({ error: err.message });\r\n+  } finally {\r\n+    if (client) await client.close();\r\n+  }\r\n+}\r\n"
+                }
+            ],
+            "date": 1760674580459,
+            "name": "Commit-0",
+            "content": ""
+        }
+    ]
+}

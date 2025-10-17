@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Host
-Host: https://washlabs.ca
+Host: https://www.washlabs.ca
 
 # Sitemaps
-Sitemap: https://washlabs.ca/sitemap.xml
+Sitemap: https://www.washlabs.ca/sitemap.xml
