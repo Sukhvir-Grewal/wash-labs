@@ -3,11 +3,23 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 0,
+            "activePatchIndex": 3,
             "patches": [
                 {
                     "date": 1760673393922,
                     "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1760730144467,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -0,0 +1,33 @@\n+import { MongoClient } from 'mongodb';\r\n+\r\n+const uri = process.env.MONGODB_URI;\r\n+const dbName = process.env.MONGODB_DB;\r\n+\r\n+if (!uri) {\r\n+  throw new Error('Please define the MONGODB_URI environment variable');\r\n+}\r\n+if (!dbName) {\r\n+  throw new Error('Please define the MONGODB_DB environment variable');\r\n+}\r\n+\r\n+let cached = global._mongo;\r\n+if (!cached) {\r\n+  cached = global._mongo = { client: null, promise: null };\r\n+}\r\n+\r\n+export async function getDb() {\r\n+  if (cached.client) {\r\n+    return cached.client.db(dbName);\r\n+  }\r\n+  if (!cached.promise) {\r\n+    cached.promise = MongoClient.connect(uri, {\r\n+      serverSelectionTimeoutMS: 8000,\r\n+      maxPoolSize: 10,\r\n+    }).then(client => {\r\n+      cached.client = client;\r\n+      return client;\r\n+    });\r\n+  }\r\n+  const client = await cached.promise;\r\n+  return client.db(dbName);\r\n+}\r\n"
+                },
+                {
+                    "date": 1760730729118,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -19,12 +19,18 @@\n   if (cached.client) {\r\n     return cached.client.db(dbName);\r\n   }\r\n   if (!cached.promise) {\r\n-    cached.promise = MongoClient.connect(uri, {\r\n+    const clientOptions = {\r\n       serverSelectionTimeoutMS: 8000,\r\n       maxPoolSize: 10,\r\n-    }).then(client => {\r\n+    };\r\n+    // In development, relax TLS to avoid local intercept/proxy cert issues\r\n+    if (process.env.NODE_ENV !== 'production') {\r\n+      clientOptions.tlsAllowInvalidCertificates = true;\r\n+      clientOptions.tlsInsecure = true;\r\n+    }\r\n+    cached.promise = MongoClient.connect(uri, clientOptions).then(client => {\r\n       cached.client = client;\r\n       return client;\r\n     });\r\n   }\r\n"
+                },
+                {
+                    "date": 1760730803035,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,39 +0,0 @@\n-import { MongoClient } from 'mongodb';\r\n-\r\n-const uri = process.env.MONGODB_URI;\r\n-const dbName = process.env.MONGODB_DB;\r\n-\r\n-if (!uri) {\r\n-  throw new Error('Please define the MONGODB_URI environment variable');\r\n-}\r\n-if (!dbName) {\r\n-  throw new Error('Please define the MONGODB_DB environment variable');\r\n-}\r\n-\r\n-let cached = global._mongo;\r\n-if (!cached) {\r\n-  cached = global._mongo = { client: null, promise: null };\r\n-}\r\n-\r\n-export async function getDb() {\r\n-  if (cached.client) {\r\n-    return cached.client.db(dbName);\r\n-  }\r\n-  if (!cached.promise) {\r\n-    const clientOptions = {\r\n-      serverSelectionTimeoutMS: 8000,\r\n-      maxPoolSize: 10,\r\n-    };\r\n-    // In development, relax TLS to avoid local intercept/proxy cert issues\r\n-    if (process.env.NODE_ENV !== 'production') {\r\n-      clientOptions.tlsAllowInvalidCertificates = true;\r\n-      clientOptions.tlsInsecure = true;\r\n-    }\r\n-    cached.promise = MongoClient.connect(uri, clientOptions).then(client => {\r\n-      cached.client = client;\r\n-      return client;\r\n-    });\r\n-  }\r\n-  const client = await cached.promise;\r\n-  return client.db(dbName);\r\n-}\r\n\\ No newline at end of file\n"
                 }
             ],
             "date": 1760673393922,
