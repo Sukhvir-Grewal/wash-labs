@@ -1,0 +1,18 @@
+{
+    "sourceFile": "components/ProfitsCard.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1760895589535,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1760895589535,
+            "name": "Commit-0",
+            "content": "import { useEffect, useMemo, useState } from 'react';\r\nimport { Bar } from 'react-chartjs-2';\r\nimport { Chart, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js';\r\nChart.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);\r\n\r\nfunction getMonthKey(dateStr) {\r\n  // bookings have YYYY-MM-DD; expenses use same\r\n  return (dateStr || '').slice(0,7); // YYYY-MM\r\n}\r\n\r\nexport default function ProfitsCard({ bookings }) {\r\n  const [expenses, setExpenses] = useState([]);\r\n  const [error, setError] = useState('');\r\n\r\n  useEffect(() => {\r\n    (async () => {\r\n      try {\r\n        const res = await fetch('/api/expenses');\r\n        const data = await res.json();\r\n        if (res.ok && data.success) setExpenses(data.items || []);\r\n        else setError(data.error || 'Failed to load expenses');\r\n      } catch (e) { setError(e.message || 'Failed to load expenses'); }\r\n    })();\r\n  }, []);\r\n\r\n  const monthly = useMemo(() => {\r\n    const rev = {}; // completed revenue by month\r\n    const exp = {}; // expenses by month\r\n    (bookings || []).forEach(b => {\r\n      if (b.status !== 'complete') return;\r\n      const key = getMonthKey(b.date);\r\n      if (!rev[key]) rev[key] = 0;\r\n      const amt = Number(b.amount || 0) || 0;\r\n      rev[key] += amt;\r\n    });\r\n    (expenses || []).forEach(it => {\r\n      const key = getMonthKey(it.date);\r\n      if (!exp[key]) exp[key] = 0;\r\n      exp[key] += Number(it.amount || 0) || 0;\r\n    });\r\n    const keys = Array.from(new Set([...Object.keys(rev), ...Object.keys(exp)])).sort();\r\n    const profit = {};\r\n    keys.forEach(k => { profit[k] = (rev[k] || 0) - (exp[k] || 0); });\r\n    return { keys, rev, exp, profit };\r\n  }, [bookings, expenses]);\r\n\r\n  const totalProfit = useMemo(() => monthly.keys.reduce((s,k)=> s + (monthly.profit[k] || 0), 0), [monthly]);\r\n\r\n  const data = useMemo(() => ({\r\n    labels: monthly.keys,\r\n    datasets: [\r\n      { label: 'Revenue (completed)', data: monthly.keys.map(k => monthly.rev[k] || 0), backgroundColor: 'rgba(37,99,235,0.6)' },\r\n      { label: 'Expenses', data: monthly.keys.map(k => monthly.exp[k] || 0), backgroundColor: 'rgba(239,68,68,0.6)' },\r\n      { label: 'Profit', data: monthly.keys.map(k => monthly.profit[k] || 0), backgroundColor: 'rgba(16,185,129,0.6)' },\r\n    ],\r\n  }), [monthly]);\r\n\r\n  const options = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } };\r\n\r\n  return (\r\n    <div className=\"bg-white rounded-xl shadow p-6 border border-blue-100\">\r\n      <div className=\"flex items-center justify-between mb-2\">\r\n        <div className=\"text-lg font-semibold text-blue-700\">Profits</div>\r\n        <div className=\"text-xl font-bold text-green-700\">${totalProfit}</div>\r\n      </div>\r\n      {error && <div className=\"text-red-600 text-sm mb-2\">{error}</div>}\r\n      <div className=\"w-full mt-2 bg-white rounded-lg p-2\" style={{ height: '240px' }}>\r\n        <Bar data={data} options={options} />\r\n      </div>\r\n    </div>\r\n  );\r\n}\r\n"
+        }
+    ]
+}

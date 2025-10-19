@@ -3,6 +3,8 @@ import { useCallback } from "react";
 import AdminAddBooking from "../components/AdminAddBooking";
 import RevenueChart from "../components/RevenueChart";
 import StatusCalendar from "../components/StatusCalendar";
+import ExpensesCard from "../components/ExpensesCard";
+import ProfitsCard from "../components/ProfitsCard";
 import dynamic from 'next/dynamic';
 const VisitorsCard = dynamic(() => import('../components/VisitorsCard'), { ssr: false });
 import { useRouter } from "next/router";
@@ -198,6 +200,11 @@ export default function AdminDashboard() {
             </div>
             <div className="text-xs mt-2 text-blue-700/70">(Pending bookings)</div>
           </div>
+        </div>
+        {/* Expenses and Profits */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+          <ExpensesCard />
+          <ProfitsCard bookings={bookings} />
         </div>
         {/* Optional: Visitors (GA4) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
