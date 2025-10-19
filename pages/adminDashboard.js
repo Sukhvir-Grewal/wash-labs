@@ -178,10 +178,8 @@ export default function AdminDashboard() {
           </div>
           <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center justify-center border border-blue-100">
             <div className="text-lg font-semibold mb-2 text-blue-700">Bookings</div>
-            <div className="text-3xl font-bold text-blue-900">{bookings.length}</div>
-            <div className="text-xs mt-2 text-blue-700/70">(All statuses)</div>
-            {/* Calendar moved here under the Bookings card */}
-            <div className="w-full mt-4">
+            {/* Calendar with filter buttons will render its own controls; count removed per request */}
+            <div className="w-full mt-2">
               <StatusCalendar bookings={bookings} />
             </div>
           </div>

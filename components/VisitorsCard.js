@@ -33,8 +33,11 @@ export default function VisitorsCard() {
   const [error, setError] = useState('');
   const [total, setTotal] = useState(0);
   const [rawSeries, setRawSeries] = useState([]);
-  const [interval, setInterval] = useState('week'); // 'day' | 'week' | 'month'
+  const [mode, setMode] = useState('trend'); // 'live' | 'trend'
+  const excludeMe = true;
+  const [live, setLive] = useState({ active: 0 });
 
+  // Fetch trend data once
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -57,51 +60,48 @@ export default function VisitorsCard() {
     return () => { mounted = false; };
   }, []);
 
+  // Poll realtime when in live
+  useEffect(() => {
+    let mounted = true;
+    let timer;
+    async function loadRealtime() {
+      try {
+        const url = new URL('/api/analytics-realtime', window.location.origin);
+        url.searchParams.set('excludeMe', excludeMe ? '1' : '0');
+        const resp = await fetch(url.toString());
+        const data = await resp.json();
+        if (!mounted) return;
+        if (resp.ok && data.success) {
+          setLive({ active: data.totalActive || 0 });
+        } else {
+          setError(data.error || 'Failed to fetch realtime');
+        }
+      } catch (e) {
+        if (mounted) setError(e.message || 'Failed to fetch realtime');
+      }
+    }
+    if (mode === 'live') {
+      loadRealtime();
+      timer = setInterval(loadRealtime, 10000); // 10s
+    }
+    return () => { mounted = false; if (timer) clearInterval(timer); };
+  }, [mode, excludeMe]);
+
   let labels = [], values = [];
   const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
-  if (interval === 'day') {
+  const interval = 'day';
+  if (mode === 'trend') {
+    // daily trend view
     labels = rawSeries.map(p => `${p.date?.slice(6,8)}${months[Number(p.date?.slice(4,6))-1]}`);
     values = rawSeries.map(p => p.users);
-  } else if (interval === 'week') {
-    const weekMap = groupByWeek(rawSeries);
-    const rawWeeks = Object.keys(weekMap).sort();
-    labels = rawWeeks.map(wstr => {
-      const [year, w] = wstr.split('-W');
-      if (year && w) {
-        const weekNum = parseInt(w, 10);
-        const jan1 = new Date(Number(year), 0, 1);
-        const start = new Date(jan1.getTime() + (weekNum - 1) * 7 * 86400000);
-        const dayOfWeek = start.getDay();
-        const weekStart = new Date(start);
-        weekStart.setDate(start.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        const mAbbr = months[weekStart.getMonth()];
-        return `${mAbbr} (${weekStart.getDate()}-${weekEnd.getDate()})`;
-      }
-      return wstr;
-    });
-    values = rawWeeks.map(w => weekMap[w]);
-  } else if (interval === 'month') {
-    const monthMap = groupByMonth(rawSeries);
-    const rawMonths = Object.keys(monthMap).sort();
-    labels = rawMonths.map(mstr => {
-      if (mstr.length === 6) {
-        const y = mstr.slice(0,4);
-        const m = months[Number(mstr.slice(4,6))-1];
-        return `${m} ${y}`;
-      }
-      return mstr;
-    });
-    values = rawMonths.map(m => monthMap[m]);
   }
 
   const data = {
     labels,
     datasets: [{
-      label: 'Visitors',
-      data: values,
+      label: mode === 'trend' ? 'Visitors' : 'Live',
+      data: mode === 'trend' ? values : [],
       borderColor: '#4b5563',
       backgroundColor: 'rgba(75, 85, 99, 0.1)',
       pointBackgroundColor: '#4b5563',
@@ -127,23 +127,20 @@ export default function VisitorsCard() {
     }
   };
 
-  let intervalLabel = 'Last 14 days (daily view)';
-  if (interval === 'week') intervalLabel = `Last ${labels.length} weeks (weekly view)`;
-  if (interval === 'month') intervalLabel = `Last ${labels.length} months (monthly view)`;
+  let subtitle = '';
+  if (mode === 'trend') subtitle = 'Last 14 days trend';
+  if (mode === 'live') subtitle = 'Realtime active users';
 
   return (
     <div className="bg-white shadow-md rounded-lg p-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold" style={{ color: '#2563eb' }}>Website Visitors</h2>
-        <div className="flex gap-2">
-          <button onClick={() => setInterval('day')} className={`px-3 py-1 text-sm rounded ${interval === 'day' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>
-            Daily
+        <div className="flex gap-2 items-center">
+          <button onClick={() => setMode('live')} className={`px-3 py-1 text-sm rounded ${mode === 'live' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>
+            Live
           </button>
-          <button onClick={() => setInterval('week')} className={`px-3 py-1 text-sm rounded ${interval === 'week' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>
-            Weekly
-          </button>
-          <button onClick={() => setInterval('month')} className={`px-3 py-1 text-sm rounded ${interval === 'month' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>
-            Monthly
+          <button onClick={() => setMode('trend')} className={`px-3 py-1 text-sm rounded ${mode === 'trend' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>
+            Trend
           </button>
         </div>
       </div>
@@ -151,11 +148,20 @@ export default function VisitorsCard() {
       {error && <p className="text-red-500">Error: {error}</p>}
       {!loading && !error && (
         <div>
-          <div className="text-2xl font-bold text-gray-700">{total.toLocaleString()}</div>
-          <p className="text-sm text-gray-600">{intervalLabel}; Total: 30 days</p>
-          <div className="w-full mt-4 bg-white rounded-lg p-2" style={{ height: '280px' }}>
-            <Line data={data} options={options} />
-          </div>
+          {mode === 'trend' ? (
+            <>
+              <div className="text-2xl font-bold text-gray-700">{total.toLocaleString()}</div>
+              <p className="text-sm text-gray-600">{subtitle}; Total: 30 days</p>
+              <div className="w-full mt-4 bg-white rounded-lg p-2" style={{ height: '280px' }}>
+                <Line data={data} options={options} />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-2xl font-bold text-gray-700">{live.active}</div>
+              <p className="text-sm text-gray-600">{subtitle}</p>
+            </>
+          )}
         </div>
       )}
     </div>

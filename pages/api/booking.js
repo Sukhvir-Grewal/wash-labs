@@ -52,7 +52,7 @@ export default async function handler(req, res) {
             });
     }
 
-    const { service, vehicle, dateTime, location, userInfo } = req.body;
+  const { service, vehicle, dateTime, location, userInfo, source: reqSource, status: reqStatus } = req.body;
 
     if (!service || !vehicle || !dateTime || !userInfo) {
         return res.status(400).json({ message: "Missing booking details" });
@@ -70,7 +70,12 @@ export default async function handler(req, res) {
         });
     }
 
-    // Sanitize inputs and compute meta
+  // Helpers
+  const isNA = (v) => typeof v === 'string' && v.trim().toLowerCase() === 'n/a';
+  const hasValue = (v) => v !== undefined && v !== null && String(v).trim() !== '' && !isNA(String(v));
+  const isValidEmail = (v) => hasValue(v) && /.+@.+\..+/.test(String(v));
+
+  // Sanitize inputs and compute meta
     const safeService = {
         title: escapeHtml(service.title || ""),
     };
@@ -84,9 +89,10 @@ export default async function handler(req, res) {
         .join(" ");
     const safeDate = escapeHtml(dateTime?.date || "N/A");
     const safeTime = escapeHtml(dateTime?.time || "N/A");
-    const safeLocation = escapeHtml(location?.address || "Not specified");
-    const safeName = escapeHtml(userInfo?.name || "");
-    const safeEmail = escapeHtml(userInfo?.email || "");
+  const safeLocation = escapeHtml(location?.address || "N/A");
+  const safeName = escapeHtml(userInfo?.name || "");
+  const rawEmail = userInfo?.email || "";
+  const safeEmail = escapeHtml(rawEmail);
     const safePhone = `${escapeHtml(userInfo?.countryCode || "")} ${escapeHtml(
         userInfo?.phone || ""
     )}`.trim();
@@ -135,25 +141,27 @@ export default async function handler(req, res) {
 
         // Admin notification (branded + detailed)
         const adminSubject = `New Booking Request — ${safeService.title}`;
-        const adminText = `New booking request
-
-Service: ${service.title}
-Total Price: ${formattedTotalPrice}
-Vehicle: ${vehicleDisplay}
-Date & Time: ${safeDate} at ${safeTime}
-Location: ${location?.address || "Not specified"}
-
-Client:
-Name: ${userInfo.name}
-Email: ${userInfo.email}
-Phone: ${userInfo.countryCode || ""} ${userInfo.phone}
-${userInfo.message ? `Notes:\n${userInfo.message}\n` : ""}
----
-Received: ${receivedAt}
-Client IP: ${clientId}
-User-Agent: ${userAgent}
-Referrer: ${referer}
-`;
+        const adminTextLines = [
+          'New booking request',
+          '',
+          `Service: ${service.title}`,
+          `Total Price: ${formattedTotalPrice}`,
+          `Vehicle: ${vehicleDisplay}`,
+          hasValue(safeDate) || hasValue(safeTime) ? `Date & Time: ${safeDate} at ${safeTime}` : null,
+          hasValue(location?.address) ? `Location: ${location?.address}` : null,
+          '',
+          'Client:',
+          hasValue(userInfo.name) ? `Name: ${userInfo.name}` : null,
+          hasValue(rawEmail) ? `Email: ${rawEmail}` : null,
+          hasValue(userInfo.phone) || hasValue(userInfo.countryCode) ? `Phone: ${userInfo.countryCode || ''} ${userInfo.phone || ''}`.trim() : null,
+          userInfo.message && !isNA(userInfo.message) ? `Notes:\n${userInfo.message}\n` : null,
+          '---',
+          `Received: ${receivedAt}`,
+          `Client IP: ${clientId}`,
+          `User-Agent: ${userAgent}`,
+          `Referrer: ${referer}`,
+        ].filter(Boolean);
+        const adminText = adminTextLines.join('\n');
 
         const adminHtml = `
 <!doctype html>
@@ -198,18 +206,18 @@ Referrer: ${referer}
                   <tr><td style="padding:6px 0;"><strong>Service:</strong> ${safeService.title}</td></tr>
                   <tr><td style="padding:6px 0;"><strong>Total Price:</strong> ${escapeHtml(formattedTotalPrice)}</td></tr>
                   <tr><td style="padding:6px 0;"><strong>Vehicle:</strong> ${vehicleDisplay}</td></tr>
-                  <tr><td style="padding:6px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}</td></tr>
-                  <tr><td style="padding:6px 0;"><strong>Location:</strong> ${safeLocation}</td></tr>
+                  ${(hasValue(safeDate) || hasValue(safeTime)) ? `<tr><td style="padding:6px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}</td></tr>` : ''}
+                  ${hasValue(location?.address) ? `<tr><td style="padding:6px 0;"><strong>Location:</strong> ${escapeHtml(location.address)}</td></tr>` : ''}
                 </table>
               </td>
             </tr>
             <tr>
               <td style="padding:16px 24px 0 24px;">
                 <h2 style="margin:0 0 8px 0;font-size:16px;color:#0f172a;">Client</h2>
-                <p style="margin:0;color:#475569;font-size:13px;"><strong>Name:</strong> ${safeName}</p>
-                <p style="margin:0;color:#475569;font-size:13px;"><strong>Email:</strong> <a href="mailto:${safeEmail}" style="color:${brand.color};text-decoration:none;">${safeEmail}</a></p>
-                <p style="margin:0;color:#475569;font-size:13px;"><strong>Phone:</strong> ${escapeHtml(safePhone)}</p>
-                ${safeNotes ? `<div style="margin-top:8px;padding:12px;border-left:3px solid ${brand.color};background:#f8fbff;color:#334155;white-space:pre-wrap;"><strong>Notes:</strong>\n${safeNotes}</div>` : ""}
+                ${hasValue(safeName) ? `<p style="margin:0;color:#475569;font-size:13px;"><strong>Name:</strong> ${safeName}</p>` : ''}
+                ${isValidEmail(rawEmail) ? `<p style="margin:0;color:#475569;font-size:13px;"><strong>Email:</strong> <a href="mailto:${safeEmail}" style="color:${brand.color};text-decoration:none;">${safeEmail}</a></p>` : ''}
+                ${hasValue(safePhone) ? `<p style="margin:0;color:#475569;font-size:13px;"><strong>Phone:</strong> ${escapeHtml(safePhone)}</p>` : ''}
+                ${hasValue(safeNotes) ? `<div style="margin-top:8px;padding:12px;border-left:3px solid ${brand.color};background:#f8fbff;color:#334155;white-space:pre-wrap;"><strong>Notes:</strong>\n${safeNotes}</div>` : ''}
               </td>
             </tr>
             <tr>
@@ -233,32 +241,37 @@ Referrer: ${referer}
             subject: adminSubject,
             text: adminText,
             html: adminHtml,
-            replyTo: userInfo.email,
+            replyTo: isValidEmail(rawEmail) ? rawEmail : undefined,
         };
 
         await transporter.sendMail(adminMail);
 
-        // Customer confirmation (branded + logo, professional tone)
-        const userSubject = `Booking received — ${safeService.title} | Wash Labs`;
-        const userText = `Hello ${userInfo.name},
+        // Customer confirmation (send only if email provided and valid)
+        const shouldEmailCustomer = isValidEmail(rawEmail);
+        if (shouldEmailCustomer) {
+          const userSubject = `Booking received — ${safeService.title} | Wash Labs`;
+          const userTextLines = [
+            `Hello ${userInfo.name || 'there'},`,
+            '',
+            "Thanks for booking with Wash Labs. We've received your request and will follow up shortly.",
+            '',
+            'Booking Summary',
+            `Service: ${service.title}`,
+            `Total Price: ${formattedTotalPrice}`,
+            `Vehicle: ${vehicleDisplay}`,
+            (hasValue(safeDate) || hasValue(safeTime)) ? `Date & Time: ${safeDate} at ${safeTime}` : null,
+            hasValue(location?.address) ? `Location: ${location.address}` : null,
+            '',
+            'Need anything else?',
+            `Phone: ${brand.phone}`,
+            `Email: ${brand.email}`,
+            `Website: ${baseUrl}`,
+            '',
+            '— Wash Labs, Halifax NS',
+          ].filter(Boolean);
+          const userText = userTextLines.join('\n');
 
-Thanks for booking with Wash Labs. We've received your request and will follow up shortly.
-
-Booking Summary
-Service: ${service.title}
-Total Price: ${formattedTotalPrice}
-Vehicle: ${vehicleDisplay}
-Date & Time: ${safeDate} at ${safeTime}
-Location: ${location?.address || "Not specified"}
-
-Need anything else?
-Phone: ${brand.phone}
-Email: ${brand.email}
-Website: ${baseUrl}
-
-— Wash Labs, Halifax NS`;
-
-        const userHtml = `
+          const userHtml = `
 <!doctype html>
 <html>
   <body style="margin:0;padding:0;background:#f6f9fc;font-family:Inter,Arial,sans-serif;">
@@ -293,17 +306,17 @@ Website: ${baseUrl}
             </tr>
             <tr>
               <td style="padding:24px;">
-                <h1 style="margin:0 0 8px 0;font-size:20px;color:#0f172a;">Thanks for your booking, ${safeName}!</h1>
+                <h1 style="margin:0 0 8px 0;font-size:20px;color:#0f172a;">Thanks for your booking, ${safeName || 'there'}!</h1>
                 <p style="margin:0 0 14px 0;color:#334155;font-size:14px;">We’ve received your request and will follow up shortly.</p>
                 <h2 style="margin:0 0 8px 0;font-size:16px;color:#0f172a;">Booking Summary</h2>
                 <table cellpadding="0" cellspacing="0" style="font-size:14px;color:#0f172a;">
                   <tr><td style="padding:4px 0;"><strong>Service:</strong> ${safeService.title}</td></tr>
                   <tr><td style="padding:4px 0;"><strong>Total Price:</strong> ${escapeHtml(formattedTotalPrice)}</td></tr>
                   <tr><td style="padding:4px 0;"><strong>Vehicle:</strong> ${vehicleDisplay}</td></tr>
-                  <tr><td style="padding:4px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}</td></tr>
-                  <tr><td style="padding:4px 0;"><strong>Location:</strong> ${safeLocation}</td></tr>
+                  ${(hasValue(safeDate) || hasValue(safeTime)) ? `<tr><td style="padding:4px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}</td></tr>` : ''}
+                  ${hasValue(location?.address) ? `<tr><td style=\"padding:4px 0;\"><strong>Location:</strong> ${escapeHtml(location.address)}</td></tr>` : ''}
                 </table>
-                ${safeNotes ? `<div style="margin-top:12px;padding:12px;border-left:3px solid ${brand.color};background:#f8fbff;color:#334155;white-space:pre-wrap;"><strong>Your Notes:</strong>\n${safeNotes}</div>` : ""}
+                ${hasValue(safeNotes) ? `<div style="margin-top:12px;padding:12px;border-left:3px solid ${brand.color};background:#f8fbff;color:#334155;white-space:pre-wrap;"><strong>Your Notes:</strong>\n${safeNotes}</div>` : ''}
                 <p style="margin:16px 0 0 0;color:#475569;font-size:13px;">Sent on: <strong>${receivedAt}</strong></p>
               </td>
             </tr>
@@ -331,17 +344,17 @@ Website: ${baseUrl}
     </table>
   </body>
 </html>`;
+          const confirmationMail = {
+              from: `"Wash Labs" <${EMAIL_USER}>`,
+              to: rawEmail,
+              subject: userSubject,
+              text: userText,
+              html: userHtml,
+              replyTo: brand.email, // allow replies to your main inbox
+          };
 
-        const confirmationMail = {
-            from: `"Wash Labs" <${EMAIL_USER}>`,
-            to: userInfo.email,
-            subject: userSubject,
-            text: userText,
-            html: userHtml,
-            replyTo: brand.email, // allow replies to your main inbox
-        };
-
-    await transporter.sendMail(confirmationMail);
+          await transporter.sendMail(confirmationMail);
+        }
 
     // Insert booking into MongoDB (best-effort, after emails)
     const uri = process.env.MONGODB_URI;
@@ -360,14 +373,14 @@ Website: ${baseUrl}
           date: dateTime.date,
           time: dateTime.time,
           amount: totalPrice ?? undefined,
-          status: "pending",
+          status: reqStatus === 'complete' ? 'complete' : 'pending',
           phone: userInfo.phone,
           email: userInfo.email,
           location: location?.address || "",
           addOns: Array.isArray(service?.addOns) ? service.addOns : [],
           carType: vehicle?.type || "",
           createdAt: new Date().toISOString(),
-          source: "online",
+          source: reqSource || "online",
         };
         const result = await collection.insertOne(doc);
         insertedId = result.insertedId;
@@ -380,9 +393,10 @@ Website: ${baseUrl}
       console.warn("[booking] Skipping DB insert: missing MONGODB config");
     }
 
-    return res
-      .status(200)
-      .json({ message: "Booking and confirmation sent successfully", insertedId });
+    const responseMsg = isValidEmail(rawEmail)
+      ? "Booking and confirmation sent successfully"
+      : "Booking saved and admin notified; customer email not sent (no valid email)";
+    return res.status(200).json({ message: responseMsg, insertedId });
     } catch (error) {
         console.error("[booking] Error sending booking email", {
             error: error instanceof Error ? error.message : error,

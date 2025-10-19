@@ -136,18 +136,43 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
           carType: carTypeOptions[0].label,
         });
       } else {
-        const resp = await fetch("/api/admin-add-booking", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+        // Map admin form to public booking API shape so emails are sent automatically
+        const bookingPayload = {
+          source: 'admin',
+          status: newBooking.status || 'pending',
+          service: {
+            title: newBooking.service,
+            totalPrice: computedAmount,
+            addOns: Array.isArray(newBooking.addOns) ? newBooking.addOns : [],
+          },
+          vehicle: {
+            name: newBooking.carName,
+            type: newBooking.carType,
+          },
+          dateTime: {
+            date: newBooking.date || 'N/A',
+            time: newBooking.time || 'N/A',
+          },
+          location: {
+            address: newBooking.location || 'N/A',
+          },
+          userInfo: {
+            name: newBooking.name || 'N/A',
+            email: newBooking.email || 'N/A',
+            phone: newBooking.phone || 'N/A',
+          },
+        };
+
+        const resp = await fetch('/api/booking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bookingPayload),
         });
         const data = await resp.json();
-        if (resp.ok && data.success) {
-          setSubmitStatus("success");
-          setSubmitMsg("Booking saved to database!");
-          // Delegate closing and refetching to parent handler
+        if (resp.ok) {
+          setSubmitStatus('success');
+          setSubmitMsg('Booking created. Emails sent (if email provided).');
           onAdd?.(payload);
-          // Reset form state after successful add
           setOverrideAmount(false);
           setNewBooking({
             name: "",
@@ -164,8 +189,8 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
             carType: carTypeOptions[0].label,
           });
         } else {
-          setSubmitStatus("error");
-          setSubmitMsg(data.error || "Failed to save booking");
+          setSubmitStatus('error');
+          setSubmitMsg(data?.message || data?.error || 'Failed to create booking');
         }
       }
     } catch (err) {
