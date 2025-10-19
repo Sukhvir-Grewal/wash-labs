@@ -16,9 +16,18 @@ export default function ReviewInfo({
     // Price formatting
     let priceContent;
     if (typeof totalPrice === "number") {
+        const orig = service?.originalPrice;
         priceContent = (
-            <span className="font-bold text-lg sm:text-xl text-blue-600">
-                ${totalPrice}
+            <span className="font-bold text-lg sm:text-xl">
+                {typeof orig === "number" ? (
+                    <>
+                        <span className="line-through text-gray-400 mr-2">${orig}</span>
+                        <span className="text-blue-600">${totalPrice}</span>
+                        <span className="ml-2 text-xs text-gray-500">(30% off)</span>
+                    </>
+                ) : (
+                    <span className="text-blue-600">${totalPrice}</span>
+                )}
             </span>
         );
     } else if (service?.prices) {

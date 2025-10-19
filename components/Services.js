@@ -43,6 +43,10 @@ const formatDuration = (mins) => {
 };
 
 export default function Services() {
+    // Winter deal: 30% off all service totals (base + options), rounded to nearest $10
+    const DISCOUNT_RATE = 0.3;
+    const roundToNearest10 = (n) => Math.round(n / 10) * 10;
+    const applyDiscount = (amount) => roundToNearest10(amount * (1 - DISCOUNT_RATE));
 
     // State for shine selection per service (by index)
     const [shineSelections, setShineSelections] = useState({
@@ -73,7 +77,7 @@ export default function Services() {
     const services = [
         {
             title: "Premium Exterior Wash",
-            basePrice: 50,
+            basePrice: 70,
             features: [
                 "Foam Bath & Hand Wash",
                 "Wheels & Tires Cleaned",
@@ -87,7 +91,7 @@ export default function Services() {
         },
         {
             title: "Complete Interior Detail",
-            basePrice: 110,
+            basePrice: 160,
             features: [
                 "Full Vacuum & Wipe Down",
                 "Hot Steam Cleaning",
@@ -104,7 +108,7 @@ export default function Services() {
 
         {
             title: "Ultimate Full Detail",
-            basePrice: 150,
+            basePrice: 230,
             features: [" Exterior Wash + Interior Detail"],
             time: "3 hrs",
             durationMinutes: 180,
@@ -213,20 +217,22 @@ export default function Services() {
                             else carTypeSurcharge = 0; // Sedan
                         }
 
-                        const totalPrice =
+                        const originalTotal =
                             service.basePrice +
                             (shine ? shine.price : 0) +
                             deconTotal +
                             interiorAddOnsTotal +
                             carTypeSurcharge;
 
+                        const discountedTotal = applyDiscount(originalTotal);
+
                         return (
                             <motion.div
                                 key={index}
-                                initial={{ opacity: 0, y: 24 }}
+                                initial={{ opacity: 0, y: 30 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, amount: 0.15 }}
-                                transition={{ duration: 0.5, ease: "easeOut" }}
+                                transition={{ duration: 0.45, ease: [0.25, 0.1, 0.25, 1] }}
                                 className="rounded-2xl shadow-xl p-8 flex flex-col justify-between border border-gray-200
               bg-gray-50
               transition-transform duration-500 ease-in-out
@@ -239,8 +245,10 @@ export default function Services() {
                                     >
                                         {service.title}
                                     </h3>
-                                    <p className="font-semibold mb-2 text-xl" style={{ color: "#000" }}>
-                                        ${totalPrice}
+                                    <p className="font-semibold mb-2 text-xl flex items-baseline gap-2" style={{ color: "#000" }}>
+                                        <span className="line-through text-gray-400">${originalTotal}</span>
+                                        <span className="text-green-600 font-extrabold">${discountedTotal}</span>
+                                        <span className="text-xs text-gray-500">(30% off)</span>
                                     </p>
                                     {/* Car Type Selection */}
                                     <div className="mb-5">
@@ -378,7 +386,7 @@ export default function Services() {
                                     </p>
                                     <button
                                         type="button"
-                                        onClick={() => handleSelect(service, totalPrice)}
+                                        onClick={() => handleSelect({ ...service, originalPrice: originalTotal }, discountedTotal)}
                                         className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold"
                                         aria-label={`Book ${service.title}`}
                                     >

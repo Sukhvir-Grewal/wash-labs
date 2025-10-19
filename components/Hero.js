@@ -59,14 +59,22 @@ export default function Hero() {
         </motion.p>
 
         <motion.a
+          aria-label="Book now — Winter Deal 30% off applied"
           style={{ y: buttonY, opacity: buttonOpacity }}
           href="#services"
-          className="inline-block rounded-full px-8 py-3 md:px-10 md:py-4 text-lg md:text-xl font-medium
+          className="inline-flex items-center justify-center gap-3 rounded-full px-8 py-3 md:px-10 md:py-4 text-lg md:text-xl font-medium
                      bg-transparent hover:bg-blue-50 text-[#0076ff] shadow-lg transition-all duration-200
                      border border-[#0076ff] backdrop-blur-sm"
         >
-          Book Now
+          <span>Book Now</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#0a4aa6] text-white text-xs md:text-sm px-3 py-1">
+            <span aria-hidden="true">❄</span>
+            <span>30% OFF</span>
+          </span>
         </motion.a>
+        <div className="mt-3 text-xs text-white/80">
+          Winter pricing applied automatically at checkout
+        </div>
       </div>
     </section>
   );

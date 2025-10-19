@@ -4,15 +4,27 @@
 
 import { BetaAnalyticsDataClient } from '@google-analytics/data';
 
+function normalizePrivateKey(raw) {
+  if (!raw) return raw;
+  let key = raw.trim();
+  // Remove wrapping quotes if set in env: "-----BEGIN ... -----END ..."
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1);
+  }
+  // If the key has literal \n sequences, convert them to newlines
+  if (key.includes('\\n')) {
+    key = key.replace(/\\n/g, '\n');
+  }
+  return key;
+}
+
 function getAnalyticsClient() {
   const propertyId = process.env.GA4_PROPERTY_ID;
   const clientEmail = process.env.GA4_CLIENT_EMAIL;
-  let privateKey = process.env.GA4_PRIVATE_KEY;
+  let privateKey = normalizePrivateKey(process.env.GA4_PRIVATE_KEY);
   if (!propertyId || !clientEmail || !privateKey) {
     throw new Error('Missing GA4 credentials in environment');
   }
-  // Handle escaped newlines
-  privateKey = privateKey.replace(/\\n/g, '\n');
   const client = new BetaAnalyticsDataClient({
     credentials: {
       client_email: clientEmail,
@@ -51,6 +63,9 @@ export default async function handler(req, res) {
 
     res.status(200).json({ success: true, totalUsers: Number(totalUsers), daily: dailySeries });
   } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+    const name = e?.name || 'Error';
+    const message = e?.message || 'Unknown error';
+    const details = Array.isArray(e?.errors) && e.errors.length ? e.errors[0]?.message : undefined;
+    res.status(500).json({ success: false, error: `${name}: ${message}`, details });
   }
 }
