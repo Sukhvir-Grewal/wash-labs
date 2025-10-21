@@ -1,4 +1,5 @@
 import { getDb } from "../../lib/mongodb";
+import { ObjectId } from "mongodb";
 
 // Expected expense shape: { date: 'YYYY-MM-DD', amount: number, category: 'one-time'|'chemicals'|'other', note?: string }
 export default async function handler(req, res) {
@@ -40,7 +41,22 @@ export default async function handler(req, res) {
       const result = await col.insertOne(doc);
       return res.status(200).json({ success: true, insertedId: result.insertedId, item: { ...doc, _id: result.insertedId } });
     }
-    res.setHeader('Allow', ['GET', 'POST']);
+    if (req.method === 'DELETE') {
+      const { id } = req.query || {};
+      if (!id || typeof id !== 'string') {
+        return res.status(400).json({ success: false, error: 'Missing expense id' });
+      }
+      try {
+        const result = await col.deleteOne({ _id: new ObjectId(id) });
+        if (result.deletedCount === 1) {
+          return res.status(200).json({ success: true });
+        }
+        return res.status(404).json({ success: false, error: 'Expense not found' });
+      } catch (err) {
+        return res.status(400).json({ success: false, error: 'Invalid expense id' });
+      }
+    }
+    res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   } catch (e) {
     console.error('[expenses] error', e);

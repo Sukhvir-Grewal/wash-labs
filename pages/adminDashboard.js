@@ -34,6 +34,11 @@ export default function AdminDashboard() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("bookings"); // "bookings" or "expenses"
+  // Expense delete modal state
+  const [showExpenseDelete, setShowExpenseDelete] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState(null);
+  const [deletingExpense, setDeletingExpense] = useState(false);
+  const [expenseDeleteError, setExpenseDeleteError] = useState("");
   // Calculate total revenue (exclude pending)
   const totalRevenue = bookings.filter(b => b.status === 'complete').reduce((sum, b) => sum + (b.amount || 0), 0);
   // Pending count and estimated revenue
@@ -338,6 +343,7 @@ export default function AdminDashboard() {
                       <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Supplier</th>
                       <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Category</th>
                       <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Amount</th>
+                      <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -353,6 +359,15 @@ export default function AdminDashboard() {
                           ${exp.amount}
                           {exp.taxIncluded && <span className="text-xs text-gray-500 ml-1">(incl tax)</span>}
                         </td>
+                        <td className="py-2 px-2 sm:px-3">
+                          <button
+                            type="button"
+                            className="px-3 py-1 text-xs rounded-full border border-red-200 text-red-700 hover:bg-red-50"
+                            onClick={() => { setExpenseDeleteError(""); setExpenseToDelete(exp); setShowExpenseDelete(true); }}
+                          >
+                            Delete
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -361,6 +376,59 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+        {/* Expense delete confirmation modal */}
+        {showExpenseDelete && expenseToDelete && (
+          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md border border-blue-100">
+              <h3 className="text-xl font-bold mb-4 text-center" style={{ color: '#000' }}>Delete Expense</h3>
+              <p className="text-sm text-gray-700 mb-6 text-center">
+                Are you sure you want to delete this expense?
+                <br />
+                <span className="font-semibold">{formatDateShort(expenseToDelete.date)}</span>
+                {" • "}
+                <span className="font-semibold">{expenseToDelete.productName || 'Item'}</span>
+                {" • $"}
+                <span className="font-semibold">{expenseToDelete.amount}</span>
+              </p>
+              {expenseDeleteError && (
+                <div className="text-red-600 text-sm mb-3 text-center">{expenseDeleteError}</div>
+              )}
+              <div className="mt-2 flex gap-3">
+                <button
+                  className="w-1/2 py-3 rounded-lg bg-gray-200 hover:bg-gray-300 text-blue-700 font-semibold"
+                  onClick={() => { setShowExpenseDelete(false); setExpenseToDelete(null); }}
+                  disabled={deletingExpense}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="w-1/2 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-50"
+                  onClick={async () => {
+                    if (!expenseToDelete?._id) return;
+                    setDeletingExpense(true);
+                    setExpenseDeleteError("");
+                    try {
+                      const resp = await fetch(`/api/expenses?id=${expenseToDelete._id}`, { method: 'DELETE' });
+                      const data = await resp.json().catch(() => ({}));
+                      if (!resp.ok || data.success === false) {
+                        throw new Error(data.error || 'Failed to delete');
+                      }
+                      setExpenses(prev => prev.filter(e => (e._id !== expenseToDelete._id)));
+                      setShowExpenseDelete(false);
+                      setExpenseToDelete(null);
+                    } catch (err) {
+                      setExpenseDeleteError(err.message || 'Failed to delete expense');
+                    }
+                    setDeletingExpense(false);
+                  }}
+                  disabled={deletingExpense}
+                >
+                  {deletingExpense ? 'Deleting...' : 'Confirm Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Booking details modal */}
         {showDetail && detailBooking && (
           <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
