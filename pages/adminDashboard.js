@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useCallback } from "react";
 import AdminAddBooking from "../components/AdminAddBooking";
+import AddExpenseModal from "../components/AddExpenseModal";
 import RevenueChart from "../components/RevenueChart";
 import StatusCalendar from "../components/StatusCalendar";
 import ExpensesCard from "../components/ExpensesCard";
@@ -24,6 +25,7 @@ export default function AdminDashboard() {
   }
   const router = useRouter();
   const [bookings, setBookings] = useState([]);
+  const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
@@ -31,6 +33,7 @@ export default function AdminDashboard() {
   const [editBooking, setEditBooking] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState("bookings"); // "bookings" or "expenses"
   // Calculate total revenue (exclude pending)
   const totalRevenue = bookings.filter(b => b.status === 'complete').reduce((sum, b) => sum + (b.amount || 0), 0);
   // Pending count and estimated revenue
@@ -103,8 +106,15 @@ export default function AdminDashboard() {
         } else {
           setBookings([]);
         }
+        // Also fetch expenses
+        const expRes = await fetch('/api/expenses');
+        const expData = await expRes.json();
+        if (expRes.ok && expData.success) {
+          setExpenses(expData.items || []);
+        }
       } catch {
         setBookings([]);
+        setExpenses([]);
       }
       setLoading(false);
     }
@@ -210,92 +220,146 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <VisitorsCard />
         </div>
-        {/* Booking list with status calendar */}
+        {/* Booking/Expense list with tabs */}
         <div className="bg-white rounded-xl shadow p-6 border border-blue-100 mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold" style={{ color: '#888' }}>Booking History</h2>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setActiveTab('bookings')}
+                className={`text-xl font-bold ${activeTab === 'bookings' ? 'text-blue-700 border-b-2 border-blue-700' : 'text-gray-400'}`}
+              >
+                Bookings
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('expenses')}
+                className={`text-xl font-bold ${activeTab === 'expenses' ? 'text-blue-700 border-b-2 border-blue-700' : 'text-gray-400'}`}
+              >
+                Expenses
+              </button>
+            </div>
             <button
               className="py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold"
               onClick={() => setShowAdd(true)}
             >
-              Add Booking
+              {activeTab === 'bookings' ? 'Add Booking' : 'Add Expense'}
             </button>
           </div>
-          {/* Status Filter */}
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-sm text-gray-600">Filter:</span>
-            {[
-              { key: 'all', label: 'All' },
-              { key: 'pending', label: 'Pending' },
-              { key: 'complete', label: 'Complete' },
-            ].map(opt => (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={() => setStatusFilter(opt.key)}
-                className={`px-3 py-1 rounded-full text-sm border ${statusFilter === opt.key ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'}`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-          <div className="overflow-x-auto">
-            {loading ? (
-              <div className="py-10 text-center text-blue-600 font-semibold text-lg">Loading bookings...</div>
-            ) : (
-              <table className="w-full text-left border-collapse min-w-[760px] text-xs sm:text-sm">
-                <thead>
-                  <tr style={{ background: '#f5f5f5' }}>
-                    <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Status</th>
-                    <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Name</th>
-                    <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Car</th>
-                    <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Service</th>
-                    <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Date</th>
-                    <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Time</th>
-                    <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Amount</th>
-                    <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {getDisplayBookings()
-                    .map(b => (
-                    <tr key={b.id} style={{ background: '#fff', color: '#222' }}>
-                      <td className="py-2 px-2 sm:px-3">
-                        <span
-                          aria-label={b.status}
-                          className={`px-3 py-1 rounded-full text-xs font-bold ${b.status === "complete" ? "bg-green-200 text-green-800" : b.status === "pending" ? "bg-yellow-200 text-yellow-800" : "bg-gray-200 text-gray-800"}`}
-                        >
-                          <span className="sm:hidden">
-                            {b.status === 'complete' ? 'C' : b.status === 'pending' ? 'P' : (b.status?.[0]?.toUpperCase() || '')}
-                          </span>
-                          <span className="hidden sm:inline">{b.status}</span>
-                        </span>
-                      </td>
-                      <td className="py-2 px-2 sm:px-3 max-w-[140px] sm:max-w-none truncate" style={{ color: '#222', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleEditBooking(b)}>{b.name}</td>
-                      <td className="py-2 px-2 sm:px-3 max-w-[160px] truncate" style={{ color: '#222' }}>{b.carName || "--"}</td>
-                      <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>{b.service}</td>
-                      <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>{formatDateShort(b.date)}</td>
-                      <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>{b.time || "--"}</td>
-                      <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>${b.amount}</td>
-                      <td className="py-2 px-2 sm:px-3">
-                        <button
-                          type="button"
-                          className="px-3 py-1 text-xs rounded-full border border-blue-200 text-blue-700 hover:bg-blue-50"
-                          onClick={() => {
-                            setDetailBooking(b);
-                            setShowDeleteConfirm(false);
-                            setShowDetail(true);
-                          }}
-                        >
-                          Details
-                        </button>
-                      </td>
+          {activeTab === 'bookings' && (
+            <>
+              {/* Status Filter */}
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-sm text-gray-600">Filter:</span>
+                {[
+                  { key: 'all', label: 'All' },
+                  { key: 'pending', label: 'Pending' },
+                  { key: 'complete', label: 'Complete' },
+                ].map(opt => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setStatusFilter(opt.key)}
+                    className={`px-3 py-1 rounded-full text-sm border ${statusFilter === opt.key ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div className="overflow-x-auto">
+                {loading ? (
+                  <div className="py-10 text-center text-blue-600 font-semibold text-lg">Loading bookings...</div>
+                ) : (
+                  <table className="w-full text-left border-collapse min-w-[760px] text-xs sm:text-sm">
+                    <thead>
+                      <tr style={{ background: '#f5f5f5' }}>
+                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Status</th>
+                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Name</th>
+                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Car</th>
+                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Service</th>
+                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Date</th>
+                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Time</th>
+                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Amount</th>
+                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getDisplayBookings()
+                        .map(b => (
+                        <tr key={b.id} style={{ background: '#fff', color: '#222' }}>
+                          <td className="py-2 px-2 sm:px-3">
+                            <span
+                              aria-label={b.status}
+                              className={`px-3 py-1 rounded-full text-xs font-bold ${b.status === "complete" ? "bg-green-200 text-green-800" : b.status === "pending" ? "bg-yellow-200 text-yellow-800" : "bg-gray-200 text-gray-800"}`}
+                            >
+                              <span className="sm:hidden">
+                                {b.status === 'complete' ? 'C' : b.status === 'pending' ? 'P' : (b.status?.[0]?.toUpperCase() || '')}
+                              </span>
+                              <span className="hidden sm:inline">{b.status}</span>
+                            </span>
+                          </td>
+                          <td className="py-2 px-2 sm:px-3 max-w-[140px] sm:max-w-none truncate" style={{ color: '#222', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleEditBooking(b)}>{b.name}</td>
+                          <td className="py-2 px-2 sm:px-3 max-w-[160px] truncate" style={{ color: '#222' }}>{b.carName || "--"}</td>
+                          <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>{b.service}</td>
+                          <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>{formatDateShort(b.date)}</td>
+                          <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>{b.time || "--"}</td>
+                          <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>${b.amount}</td>
+                          <td className="py-2 px-2 sm:px-3">
+                            <button
+                              type="button"
+                              className="px-3 py-1 text-xs rounded-full border border-blue-200 text-blue-700 hover:bg-blue-50"
+                              onClick={() => {
+                                setDetailBooking(b);
+                                setShowDeleteConfirm(false);
+                                setShowDetail(true);
+                              }}
+                            >
+                              Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
+          )}
+          {activeTab === 'expenses' && (
+            <div className="overflow-x-auto">
+              {loading ? (
+                <div className="py-10 text-center text-blue-600 font-semibold text-lg">Loading expenses...</div>
+              ) : (
+                <table className="w-full text-left border-collapse min-w-[760px] text-xs sm:text-sm">
+                  <thead>
+                    <tr style={{ background: '#f5f5f5' }}>
+                      <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Date</th>
+                      <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Product</th>
+                      <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Supplier</th>
+                      <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Category</th>
+                      <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Amount</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+                  </thead>
+                  <tbody>
+                    {expenses.map((exp, idx) => (
+                      <tr key={exp._id || idx} style={{ background: '#fff', color: '#222' }}>
+                        <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>{formatDateShort(exp.date)}</td>
+                        <td className="py-2 px-2 sm:px-3" style={{ color: '#222' }}>{exp.productName || '--'}</td>
+                        <td className="py-2 px-2 sm:px-3" style={{ color: '#222' }}>{exp.supplier || '--'}</td>
+                        <td className="py-2 px-2 sm:px-3" style={{ color: '#222' }}>
+                          {exp.category === 'one-time' ? 'Equipment' : exp.category === 'chemicals' ? 'Chemicals' : 'Other'}
+                        </td>
+                        <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>
+                          ${exp.amount}
+                          {exp.taxIncluded && <span className="text-xs text-gray-500 ml-1">(incl tax)</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
         </div>
         {/* Booking details modal */}
         {showDetail && detailBooking && (
@@ -388,39 +452,52 @@ export default function AdminDashboard() {
           </div>
         )}
         {/* Add booking modal (component) */}
-        <AdminAddBooking
-          open={showAdd}
-          onClose={() => { setShowAdd(false); setEditBooking(null); }}
-          onAdd={(payload) => handleAddFromChild(payload)}
-          editBooking={editBooking}
-          onEdit={async (updated) => {
-            // PATCH to API
-            if (!updated.id) return;
-            setLoading(true);
-            try {
-              await fetch(`/api/update-booking?id=${updated.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updated),
-              });
-            } catch {}
-            // Refresh bookings
-            try {
-              const resp = await fetch("/api/get-bookings");
-              const data = await resp.json();
-              if (resp.ok && data.success) {
-                setBookings(data.bookings.map(b => ({ ...b, id: b._id || b.id })));
-              } else {
+        {activeTab === 'bookings' && (
+          <AdminAddBooking
+            open={showAdd}
+            onClose={() => { setShowAdd(false); setEditBooking(null); }}
+            onAdd={(payload) => handleAddFromChild(payload)}
+            editBooking={editBooking}
+            onEdit={async (updated) => {
+              // PATCH to API
+              if (!updated.id) return;
+              setLoading(true);
+              try {
+                await fetch(`/api/update-booking?id=${updated.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(updated),
+                });
+              } catch {}
+              // Refresh bookings
+              try {
+                const resp = await fetch("/api/get-bookings");
+                const data = await resp.json();
+                if (resp.ok && data.success) {
+                  setBookings(data.bookings.map(b => ({ ...b, id: b._id || b.id })));
+                } else {
+                  setBookings([]);
+                }
+              } catch {
                 setBookings([]);
               }
-            } catch {
-              setBookings([]);
-            }
-            setLoading(false);
-            setShowAdd(false);
-            setEditBooking(null);
-          }}
-        />
+              setLoading(false);
+              setShowAdd(false);
+              setEditBooking(null);
+            }}
+          />
+        )}
+        {/* Add expense modal */}
+        {activeTab === 'expenses' && (
+          <AddExpenseModal
+            open={showAdd}
+            onClose={() => setShowAdd(false)}
+            onSuccess={async (newItem) => {
+              setExpenses(prev => [newItem, ...prev]);
+              setShowAdd(false);
+            }}
+          />
+        )}
       </div>
     </div>
   );
