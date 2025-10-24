@@ -7,7 +7,7 @@ const FAQ_ENTRIES = [
   },
   {
     question: "Do I need to supply water or power?",
-    answer: "No. Our vans carry filtered water and quiet generators so we can work anywhere that is driveway-safe.",
+    answer: "Yes we will need water and electric outlet.",
   },
   {
     question: "What if it rains on my appointment day?",
@@ -15,7 +15,7 @@ const FAQ_ENTRIES = [
   },
   {
     question: "Which payment methods do you accept?",
-    answer: "We accept tap or chip cards, Apple Pay, and cash. Invoices are emailed for easy record keeping.",
+    answer: "We accept tap or chip cards, Apple Pay, and cash.If needed Invoices are emailed for easy record keeping.",
   },
 ];
 

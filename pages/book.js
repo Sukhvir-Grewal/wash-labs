@@ -7,6 +7,12 @@ import { SERVICES, getServiceById } from "@/data/services";
 
 const Booking = dynamic(() => import("@/components/Booking"), { ssr: false });
 
+const VEHICLE_OPTIONS = [
+  { id: "sedan", label: "Sedan", adjustment: 0 },
+  { id: "suv", label: "SUV", adjustment: 20 },
+  { id: "truck", label: "Truck", adjustment: 40 },
+];
+
 export default function BookPage() {
   const router = useRouter();
   const { service: serviceId } = router.query;
@@ -17,17 +23,48 @@ export default function BookPage() {
 
   const [showBooking, setShowBooking] = useState(false);
   const [plan, setPlan] = useState("base");
+  const [vehicleType, setVehicleType] = useState(VEHICLE_OPTIONS[0].id);
 
   const planFeatures = useMemo(() => {
-    if (!selectedService?.features) return [];
-    const planKey = plan === "revive" ? "revive" : "base";
-    return selectedService.features
-      .filter((feature) => feature[planKey] === "✅")
-      .map((feature) => ({ text: feature.text, status: feature[planKey] }));
+    if (!selectedService) return [];
+
+    const baseFeatures = selectedService.baseFeatures ?? [];
+    const reviveFeatures = selectedService.reviveFeatures ?? [];
+
+    if (plan === "revive") {
+      return [...baseFeatures, ...reviveFeatures].map((feature) => ({ text: feature, status: "✅" }));
+    }
+
+    const baseIncluded = baseFeatures.map((feature) => ({ text: feature, status: "✅" }));
+    const reviveExtras = reviveFeatures.map((feature) => ({ text: feature, status: "❌" }));
+
+    return [...baseIncluded, ...reviveExtras];
   }, [selectedService, plan]);
+
+  const basePlanPrice = useMemo(() => {
+    if (!selectedService) return null;
+    if (plan === "revive" && typeof selectedService.revivePrice === "number") {
+      return selectedService.revivePrice;
+    }
+    if (plan === "base" && typeof selectedService.basePrice === "number") {
+      return selectedService.basePrice;
+    }
+    return null;
+  }, [plan, selectedService]);
+
+  const vehicleOption = useMemo(
+    () => VEHICLE_OPTIONS.find((option) => option.id === vehicleType) ?? VEHICLE_OPTIONS[0],
+    [vehicleType]
+  );
+
+  const totalPrice = useMemo(() => {
+    if (typeof basePlanPrice !== "number") return null;
+    return basePlanPrice + vehicleOption.adjustment;
+  }, [basePlanPrice, vehicleOption.adjustment]);
 
   useEffect(() => {
     setPlan("base");
+    setVehicleType(VEHICLE_OPTIONS[0].id);
   }, [selectedService?.id]);
 
   useEffect(() => {
@@ -100,12 +137,33 @@ export default function BookPage() {
                   Revive
                 </button>
               </div>
-              <div className="text-xl font-semibold text-blue-700">
-                {plan === "revive" && typeof selectedService.revivePrice === "number"
-                  ? `$${selectedService.revivePrice}`
-                  : typeof selectedService.basePrice === "number"
-                  ? `$${selectedService.basePrice}`
-                  : "Contact us"}
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-1">
+                <div className="grid grid-cols-3 gap-2">
+                  {VEHICLE_OPTIONS.map((option, index) => {
+                    const isSelected = vehicleType === option.id;
+                    const alignment = index === 0 ? "justify-start" : index === 1 ? "justify-center" : "justify-end";
+                    return (
+                      <div key={option.id} className={`flex ${alignment}`}>
+                        <button
+                          type="button"
+                          onClick={() => setVehicleType(option.id)}
+                          className={`px-4 py-2 text-sm font-semibold rounded-full transition-colors ${
+                            isSelected
+                              ? "bg-white text-blue-700 shadow"
+                              : "text-blue-500 hover:text-blue-600"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xl font-semibold text-blue-700">
+                  {totalPrice !== null ? `Total: $${totalPrice}` : "Contact us"}
+                </div>
               </div>
               {planFeatures.length ? (
                 <ul className="grid sm:grid-cols-2 gap-3 text-blue-800 text-sm sm:text-base">
@@ -166,3 +224,4 @@ export default function BookPage() {
     </main>
   );
 }
+       

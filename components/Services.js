@@ -24,7 +24,7 @@ export default function Services() {
             <div className="max-w-6xl mx-auto px-4">
                 <div className="text-center mb-12">
                     <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight" style={{ color: "#000" }}>
-                        Choose Your Detailing Package
+                        Packages
                     </h2>
                     <p className="mt-4 text-blue-800 text-base sm:text-lg max-w-2xl mx-auto">
                         Pick the finish that fits your ride. Expand a card to book online or ring us right away.
@@ -34,6 +34,7 @@ export default function Services() {
                     {SERVICES.map((service) => {
                         const isOpen = openId === service.id;
                         const priceLabel = typeof service.basePrice === "number" ? `$${service.basePrice}` : "--";
+                        const baseFeatures = service.baseFeatures ?? [];
                         return (
                             <div
                                 key={service.id}
@@ -48,28 +49,28 @@ export default function Services() {
                                         {service.comingSoon ? "Stay tuned" : "Detail package"}
                                     </span>
                                     <span className="text-2xl font-bold text-blue-900" style={{ color: "#000" }}>{service.title}</span>
-                                    <p className="text-sm text-blue-700 leading-relaxed">
+                                    {/* <p className="text-sm text-blue-700 leading-relaxed">
                                         {service.summary}
-                                    </p>
+                                    </p> */}
                                     {!service.comingSoon && (
                                         <span className="inline-flex items-center text-base font-semibold text-blue-600">
                                             Starting at {priceLabel}
                                         </span>
                                     )}
-                                    <span className={`mt-4 inline-flex h-10 w-10 items-center justify-center rounded-full border text-blue-600 transition-transform ${isOpen ? "rotate-45" : ""}`}>
-                                        {isOpen ? "-" : "+"}
+                                    <span className="mt-4 inline-flex h-10 w-10 items-center justify-center rounded-full border text-blue-600 transition-transform">
+                                        {isOpen ? "−" : "+"}
                                     </span>
                                 </button>
                                 <div
-                                    className={`overflow-hidden transition-[max-height] duration-300 ease-out ${isOpen ? "max-h-80" : "max-h-0"}`}
+                                    className={`overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? "max-h-[32rem]" : "max-h-0"}`}
                                 >
                                     <div className="px-6 pb-6 space-y-4">
-                                        {service.features?.length ? (
+                                        {baseFeatures.length ? (
                                             <ul className="space-y-2 text-sm text-blue-800">
-                                                {service.features.map((feature) => (
-                                                    <li key={feature.text} className="flex items-start gap-2">
+                                                {baseFeatures.map((feature) => (
+                                                    <li key={feature} className="flex items-start gap-2">
                                                         <span className="text-blue-500">•</span>
-                                                        <span>{feature.text}</span>
+                                                        <span>{feature}</span>
                                                     </li>
                                                 ))}
                                             </ul>
