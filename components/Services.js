@@ -1,418 +1,108 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import dynamic from "next/dynamic";
-
-// Lazy-load the Booking modal to keep the main bundle small
-const Booking = dynamic(() => import("./Booking"), {
-    ssr: false,
-    loading: () => (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-            <div className="bg-white text-blue-700 px-4 py-3 rounded-lg shadow border border-blue-100">
-                Loading booking…
-            </div>
-        </div>
-    ),
-});
-
-const shineOptions = [
-    { label: "Wax", price: 0 },
-    { label: "Ceramic Sealant", price: 10 },
-    // { label: "Ceramic Coating", price: 20 }, // Removed for now
-];
-
-const deconOptions = [
-    { label: "Iron Remover", price: 15 },
-    { label: "Clay Bar", price: 20 },
-];
-
-const interiorAddOns = [
-    { label: "Pet Hair Removal", price: 20 },
-];
-
-const carTypeOptions = [
-    { label: "Sedan", price: 0 },
-    { label: "SUV", price: 10 },
-    { label: "Truck", price: 20 },
-];
-
-// Helper to format minutes as hours text
-const formatDuration = (mins) => {
-	const hours = mins / 60;
-	const label = Number.isInteger(hours) ? hours : hours.toFixed(1);
-	return `${label} hr${hours === 1 ? "" : "s"}`;
-};
+import { useRouter } from "next/router";
+import { SERVICES } from "@/data/services";
 
 export default function Services() {
-    // Winter deal: 30% off all service totals (base + options), rounded to nearest $10
-    const DISCOUNT_RATE = 0.3;
-    const roundToNearest10 = (n) => Math.round(n / 10) * 10;
-    const applyDiscount = (amount) => roundToNearest10(amount * (1 - DISCOUNT_RATE));
+    const router = useRouter();
+    const [openId, setOpenId] = useState(null);
 
-    // State for shine selection per service (by index)
-    const [shineSelections, setShineSelections] = useState({
-        0: shineOptions[0], // Premium Exterior Wash
-        2: shineOptions[0], // Ultimate Full Detail
-    });
-
-    // State for decontamination selection per service (by index)
-    // Now supports multiple selections per service (array of selected options)
-    const [deconSelections, setDeconSelections] = useState({
-        0: [],
-        2: [],
-    });
-
-    // State for interior add-ons selection per service (by index)
-    const [interiorAddOnSelections, setInteriorAddOnSelections] = useState({
-        1: [], // Complete Interior Detail
-        2: [], // Ultimate Full Detail
-    });
-
-    // State for car type selection per service (by index)
-    const [carTypeSelections, setCarTypeSelections] = useState({
-        0: carTypeOptions[0],
-        1: carTypeOptions[0],
-        2: carTypeOptions[0],
-    });
-
-    const services = [
-        {
-            title: "Premium Exterior Wash",
-            basePrice: 70,
-            features: [
-                "Foam Bath & Hand Wash",
-                "Wheels & Tires Cleaned",
-                "Tire Shine Finish",
-                "Spot-Free Dry",
-            ],
-            time: "1 hr",
-            durationMinutes: 60,
-            animation: "fade-right",
-            hasShine: true,
-        },
-        {
-            title: "Complete Interior Detail",
-            basePrice: 160,
-            features: [
-                "Full Vacuum & Wipe Down",
-                "Hot Steam Cleaning",
-                "Carpet Extraction",
-                "Leather Care & UV Protection",
-                "Streak-Free Glass",
-            ],
-            time: "2 hrs",
-            durationMinutes: 120,
-            animation: "fade-up",
-            hasShine: false,
-            hasInteriorAddOns: true,
-        },
-
-        {
-            title: "Ultimate Full Detail",
-            basePrice: 230,
-            features: [" Exterior Wash + Interior Detail"],
-            time: "3 hrs",
-            durationMinutes: 180,
-            animation: "fade-left",
-            hasShine: true,
-            hasInteriorAddOns: true,
-        },
-    ];
-
-    const [selectedService, setSelectedService] = useState(null);
-
-    const handleSelect = (service, totalPrice) => {
-        setSelectedService({ ...service, totalPrice });
-        document.body.style.overflow = "hidden"; // lock scroll when modal is open
+    const handleToggle = (id) => {
+        setOpenId((prev) => (prev === id ? null : id));
     };
 
-    const handleClose = () => {
-        setSelectedService(null);
-        document.body.style.overflow = "auto"; // unlock scroll
-    };
-
-    // Handle shine selection for a card
-    const handleShineChange = (serviceIdx, option) => {
-        // if (option.label === "Ceramic Coating") {
-        //     // Any special logic for Ceramic Coating can be commented here
-        // }
-        setShineSelections((prev) => ({
-            ...prev,
-            [serviceIdx]: option,
-        }));
-    };
-
-    // Handle decon selection for a card (multi-select, toggle)
-    const handleDeconChange = (serviceIdx, option) => {
-        setDeconSelections((prev) => {
-            const selected = prev[serviceIdx] || [];
-            const exists = selected.find((o) => o.label === option.label);
-            let updated;
-            if (exists) {
-                updated = selected.filter((o) => o.label !== option.label);
-            } else {
-                updated = [...selected, option];
-            }
-            return { ...prev, [serviceIdx]: updated };
-        });
-    };
-
-    // Handle interior add-on selection for a card (multi-select, toggle)
-    const handleInteriorAddOnChange = (serviceIdx, option) => {
-        setInteriorAddOnSelections((prev) => {
-            const selected = prev[serviceIdx] || [];
-            const exists = selected.find((o) => o.label === option.label);
-            let updated;
-            if (exists) {
-                updated = selected.filter((o) => o.label !== option.label);
-            } else {
-                updated = [...selected, option];
-            }
-            return { ...prev, [serviceIdx]: updated };
-        });
-    };
-
-    // Handle car type selection for a card
-    const handleCarTypeChange = (serviceIdx, option) => {
-        setCarTypeSelections((prev) => ({
-            ...prev,
-            [serviceIdx]: option,
-        }));
+    const handleBook = (service) => {
+        if (service.comingSoon) return;
+        router.push(
+            { pathname: "/book", query: { service: service.id } },
+            undefined,
+            { scroll: true }
+        );
     };
 
     return (
-        <section id="services" className="py-20 min-h-screen bg-blue-50">
-            <div className="max-w-7xl mx-auto px-4 text-center">
-                <h2 className="text-4xl font-extrabold mb-12 font-heading tracking-tight"
-                    style={{ color: "#000" }}>
-                    <span className="text-black">Our </span>
-                    <span className="text-blue-600">Services</span>
-                </h2>
-                <div className="grid gap-10 md:grid-cols-3" >
-                    {services.map((service, index) => {
-                        // Calculate price with shine and decon add-on if applicable
-                        const shine = service.hasShine
-                            ? shineSelections[index] || shineOptions[0]
-                            : null;
-                        const deconArr = service.hasShine
-                            ? deconSelections[index] || []
-                            : [];
-                        // Calculate decon total, apply -5 if both selected
-                        let deconTotal = deconArr.reduce((sum, o) => sum + o.price, 0);
-                        if (deconArr.length === 2) deconTotal -= 5;
-                        
-                        // Calculate interior add-ons total
-                        const interiorAddOnsArr = service.hasInteriorAddOns
-                            ? interiorAddOnSelections[index] || []
-                            : [];
-                        const interiorAddOnsTotal = interiorAddOnsArr.reduce((sum, o) => sum + o.price, 0);
-                        
-                        const carType = carTypeSelections[index] || carTypeOptions[0];
-
-                        // Car type surcharge: special rule for Complete Interior Detail
-                        let carTypeSurcharge = carType ? carType.price : 0;
-                        if (service.title === "Complete Interior Detail") {
-                            const label = carType?.label || "Sedan";
-                            if (label === "SUV") carTypeSurcharge = 20; // Sedan 0, SUV +20
-                            else if (label === "Truck") carTypeSurcharge = 30; // Truck +30 over Sedan
-                            else carTypeSurcharge = 0; // Sedan
-                        }
-
-                        const originalTotal =
-                            service.basePrice +
-                            (shine ? shine.price : 0) +
-                            deconTotal +
-                            interiorAddOnsTotal +
-                            carTypeSurcharge;
-
-                        const discountedTotal = applyDiscount(originalTotal);
-
+        <section id="services" className="py-20 bg-blue-50">
+            <div className="max-w-6xl mx-auto px-4">
+                <div className="text-center mb-12">
+                    <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight" style={{ color: "#000" }}>
+                        Choose Your Detailing Package
+                    </h2>
+                    <p className="mt-4 text-blue-800 text-base sm:text-lg max-w-2xl mx-auto">
+                        Pick the finish that fits your ride. Expand a card to book online or ring us right away.
+                    </p>
+                </div>
+                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+                    {SERVICES.map((service) => {
+                        const isOpen = openId === service.id;
+                        const priceLabel = typeof service.basePrice === "number" ? `$${service.basePrice}` : "--";
                         return (
-                            <motion.div
-                                key={index}
-                                initial={{ opacity: 0, y: 30 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true, amount: 0.15 }}
-                                transition={{ duration: 0.45, ease: [0.25, 0.1, 0.25, 1] }}
-                                className="rounded-2xl shadow-xl p-8 flex flex-col justify-between border border-gray-200
-              bg-gray-50
-              transition-transform duration-500 ease-in-out
-              hover:shadow-2xl hover:bg-gray-100"
+                            <div
+                                key={service.id}
+                                className="rounded-2xl border border-blue-100 bg-white shadow-sm hover:shadow-md transition-shadow"
                             >
-                                <div>
-                                    <h3
-                                        className="text-2xl font-bold mb-4 font-heading"
-                                        style={{ color: "#000" }}
-                                    >
-                                        {service.title}
-                                    </h3>
-                                    <p className="font-semibold mb-2 text-xl flex items-baseline gap-2" style={{ color: "#000" }}>
-                                        <span className="line-through text-gray-400">${originalTotal}</span>
-                                        <span className="text-green-600 font-extrabold">${discountedTotal}</span>
-                                        <span className="text-xs text-gray-500">(30% off)</span>
+                                <button
+                                    type="button"
+                                    onClick={() => handleToggle(service.id)}
+                                    className="w-full text-left px-6 py-6 flex flex-col gap-2"
+                                >
+                                    <span className="text-sm uppercase tracking-[0.2em] text-blue-500">
+                                        {service.comingSoon ? "Stay tuned" : "Detail package"}
+                                    </span>
+                                    <span className="text-2xl font-bold text-blue-900" style={{ color: "#000" }}>{service.title}</span>
+                                    <p className="text-sm text-blue-700 leading-relaxed">
+                                        {service.summary}
                                     </p>
-                                    {/* Car Type Selection */}
-                                    <div className="mb-5">
-                                        <div className="text-base font-semibold text-gray-700 mb-2 text-left">
-                                            Car Type
-                                        </div>
-                                        <div className="flex flex-wrap gap-3">
-                                            {carTypeOptions.map((opt) => (
-                                                <button
-                                                    key={opt.label}
-                                                    type="button"
-                                                    onClick={() => handleCarTypeChange(index, opt)}
-                                                    className={`px-5 py-2 rounded-full border font-medium transition-all
-                                                        ${
-															(carTypeSelections[index]?.label ?? "Sedan") === opt.label
-																? "bg-blue-600 text-white border-blue-600 shadow"
-																: "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
-														}
-                                                    `}
-                                                >
-                                                    {opt.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <ul className="text-left mb-6 space-y-2">
-                                        {service.features.map((feature, i) => (
-                                            <li key={i}>
-                                                <span className="text-blue-600 mr-2">
-                                                    •
-                                                </span>
-                                                <span className="text-gray-700">
-                                                    {feature}
-                                                </span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                    {/* Paint Protection & Shine */}
-                                    {service.hasShine && (
-                                        <div className="mb-5">
-                                            <div className="text-base font-semibold text-gray-700 mb-2 text-left">
-                                                Paint Protection &amp; Shine
-                                            </div>
-                                            <div className="flex flex-wrap gap-3">
-                                                {shineOptions.map((opt) => (
-                                                    <button
-                                                        key={opt.label}
-                                                        type="button"
-                                                        onClick={() => handleShineChange(index, opt)}
-                                                        className={`px-5 py-2 rounded-full border font-medium transition-all
-                                                            ${
-																(shineSelections[index]?.label ?? "Wax") === opt.label
-																	? "bg-blue-600 text-white border-blue-600 shadow"
-																	: "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
-															}
-                                                        `}
-                                                    >
-                                                        {opt.label}
-                                                    </button>
+                                    {!service.comingSoon && (
+                                        <span className="inline-flex items-center text-base font-semibold text-blue-600">
+                                            Starting at {priceLabel}
+                                        </span>
+                                    )}
+                                    <span className={`mt-4 inline-flex h-10 w-10 items-center justify-center rounded-full border text-blue-600 transition-transform ${isOpen ? "rotate-45" : ""}`}>
+                                        {isOpen ? "-" : "+"}
+                                    </span>
+                                </button>
+                                <div
+                                    className={`overflow-hidden transition-[max-height] duration-300 ease-out ${isOpen ? "max-h-80" : "max-h-0"}`}
+                                >
+                                    <div className="px-6 pb-6 space-y-4">
+                                        {service.features?.length ? (
+                                            <ul className="space-y-2 text-sm text-blue-800">
+                                                {service.features.map((feature) => (
+                                                    <li key={feature.text} className="flex items-start gap-2">
+                                                        <span className="text-blue-500">•</span>
+                                                        <span>{feature.text}</span>
+                                                    </li>
                                                 ))}
+                                            </ul>
+                                        ) : (
+                                            <p className="text-sm text-blue-700">{service.summary}</p>
+                                        )}
+                                        {service.comingSoon ? (
+                                            <div className="rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-4 py-3 text-sm text-blue-700">
+                                                Subscription plans are almost ready. Join our newsletter to be first in line.
                                             </div>
-                                        </div>
-                                    )}
-                                    {/* Decontamination */}
-                                    {service.hasShine && (
-                                        <div className="mb-5">
-                                            <div className="text-base font-semibold text-gray-700 mb-2 text-left">
-                                                Decontamination
+                                        ) : (
+                                            <div className="flex flex-col gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleBook(service)}
+                                                    className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition"
+                                                >
+                                                    Book Online
+                                                </button>
+                                                <a
+                                                    href="tel:+17828275010"
+                                                    className="w-full py-3 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-100 font-semibold text-center transition"
+                                                >
+                                                    Call +1 (782) 827-5010
+                                                </a>
                                             </div>
-                                            <div className="flex flex-wrap gap-3">
-                                                {deconOptions.map((opt) => {
-                                                    const deconArr = service.hasShine ? deconSelections[index] || [] : [];
-                                                    const selected = !!deconArr.find((o) => o.label === opt.label);
-                                                    return (
-                                                        <button
-                                                            key={opt.label}
-                                                            type="button"
-                                                            onClick={() => handleDeconChange(index, opt)}
-                                                            className={`px-5 py-2 rounded-full border font-medium transition-all
-                                                                ${
-																	selected
-																		? "bg-blue-600 text-white border-blue-600 shadow"
-																		: "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
-																}
-                                                            `}
-                                                        >
-                                                            {opt.label}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                            {(deconSelections[index] || []).length === 2 && (
-                                                <div className="text-xs text-blue-600 mt-2 font-semibold">
-                                                    Combo discount applied (-$5)
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                    {/* Interior Add-Ons */}
-                                    {service.hasInteriorAddOns && (
-                                        <div className="mb-5">
-                                            <div className="text-base font-semibold text-gray-700 mb-2 text-left">
-                                                Add-Ons
-                                            </div>
-                                            <div className="flex flex-wrap gap-3">
-                                                {interiorAddOns.map((opt) => {
-                                                    const addOnsArr = service.hasInteriorAddOns ? interiorAddOnSelections[index] || [] : [];
-                                                    const selected = !!addOnsArr.find((o) => o.label === opt.label);
-                                                    return (
-                                                        <button
-                                                            key={opt.label}
-                                                            type="button"
-                                                            onClick={() => handleInteriorAddOnChange(index, opt)}
-                                                            className={`px-5 py-2 rounded-full border font-medium transition-all
-                                                                ${
-																	selected
-																		? "bg-blue-600 text-white border-blue-600 shadow"
-																		: "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
-																}
-                                                            `}
-                                                        >
-                                                            {opt.label}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
-
-                                {/* Bottom actions */}
-                                <div className="mt-auto space-y-3">
-                                    <p className="font-medium text-gray-500" style={{ color: "#000" }}>
-                                        Time: {service.durationMinutes ? formatDuration(service.durationMinutes) : service.time}
-                                    </p>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleSelect({ ...service, originalPrice: originalTotal }, discountedTotal)}
-                                        className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                                        aria-label={`Book ${service.title}`}
-                                    >
-                                        Book Now
-                                    </button>
-                                </div>
-                            </motion.div>
+                            </div>
                         );
                     })}
                 </div>
-                {/* Booking Modal */}
-                <AnimatePresence>
-                    {selectedService && (
-                        <motion.div
-                            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                        >
-                            <Booking
-                                service={selectedService}
-                                onClose={handleClose}
-                            />
-                        </motion.div>
-                    )}
-                </AnimatePresence>
             </div>
         </section>
     );

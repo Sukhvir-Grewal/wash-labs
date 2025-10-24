@@ -25,7 +25,7 @@ export default function Navigation() {
         }
     };
 
-    const baseItems = ["services", "gallery", "about", "contact"];
+    const baseItems = ["services", "gallery", "about", "faq", "contact"];
     const items =
         router.pathname === "/gallery"
             ? baseItems.filter((i) => i !== "gallery")

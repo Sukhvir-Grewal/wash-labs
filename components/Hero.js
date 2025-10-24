@@ -66,11 +66,11 @@ export default function Hero() {
                      bg-transparent hover:bg-blue-50 text-[#0076ff] shadow-lg transition-all duration-200
                      border border-[#0076ff] backdrop-blur-sm"
         >
-          <span>Book Now</span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#0a4aa6] text-white text-xs md:text-sm px-3 py-1">
+          <span>❄ Book Now ❄</span>
+          {/* <span className="inline-flex items-center gap-1 rounded-full bg-[#0a4aa6] text-white text-xs md:text-sm px-3 py-1">
             <span aria-hidden="true">❄</span>
             <span>30% OFF</span>
-          </span>
+          </span> */}
         </motion.a>
         <div className="mt-3 text-xs text-white/80">
           Winter pricing applied automatically at checkout
