@@ -117,9 +117,18 @@ export default function RevenueChart({ bookings, status = 'complete', datasetLab
 
   const options = {
     responsive: true,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+      axis: 'x',
+    },
     plugins: {
       legend: { display: false },
-      tooltip: { enabled: true },
+      tooltip: {
+        enabled: true,
+        mode: 'index',
+        intersect: false,
+      },
     },
     scales: {
       x: {

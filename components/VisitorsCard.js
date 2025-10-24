@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import { Chart, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend } from 'chart.js';
+import EyeToggle from './EyeToggle';
 Chart.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
 function groupByWeek(daily) {
@@ -34,6 +35,7 @@ export default function VisitorsCard() {
   const [total, setTotal] = useState(0);
   const [rawSeries, setRawSeries] = useState([]);
   const [mode, setMode] = useState('trend'); // 'live' | 'trend'
+  const [showChart, setShowChart] = useState(false);
   const excludeMe = true;
   const [live, setLive] = useState({ active: 0 });
 
@@ -97,14 +99,16 @@ export default function VisitorsCard() {
     values = rawSeries.map(p => p.users);
   }
 
+  const accentColor = '#e4c59c';
+
   const data = {
     labels,
     datasets: [{
       label: mode === 'trend' ? 'Visitors' : 'Live',
       data: mode === 'trend' ? values : [],
-      borderColor: '#4b5563',
-      backgroundColor: 'rgba(75, 85, 99, 0.1)',
-      pointBackgroundColor: '#4b5563',
+      borderColor: accentColor,
+      backgroundColor: 'rgba(228, 197, 156, 0.25)',
+      pointBackgroundColor: accentColor,
       fill: true,
       tension: 0.3,
     }]
@@ -127,39 +131,60 @@ export default function VisitorsCard() {
     }
   };
 
-  let subtitle = '';
-  if (mode === 'trend') subtitle = 'Last 14 days trend';
-  if (mode === 'live') subtitle = 'Realtime active users';
-
   return (
-    <div className="bg-white shadow-md rounded-lg p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold" style={{ color: '#2563eb' }}>Website Visitors</h2>
+    <div
+      className="shadow-md rounded-lg p-6"
+      style={{ backgroundColor: accentColor }}
+    >
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h2 className="text-xl font-semibold text-stone-800">Visitors</h2>
+        </div>
         <div className="flex gap-2 items-center">
-          <button onClick={() => setMode('live')} className={`px-3 py-1 text-sm rounded ${mode === 'live' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>
-            Live
-          </button>
-          <button onClick={() => setMode('trend')} className={`px-3 py-1 text-sm rounded ${mode === 'trend' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>
+          <button
+            onClick={() => setMode('trend')}
+            className={`px-3 py-1 text-sm rounded ${mode === 'trend' ? 'bg-stone-700 text-white' : 'bg-stone-200 text-stone-700'}`}
+          >
             Trend
           </button>
+          <button
+            onClick={() => setMode('live')}
+            className={`px-3 py-1 text-sm rounded ${mode === 'live' ? 'bg-stone-700 text-white' : 'bg-stone-200 text-stone-700'}`}
+          >
+            Live
+          </button>
+          <EyeToggle
+            open={showChart}
+            onToggle={() => setShowChart(prev => !prev)}
+            label="visitors chart"
+          />
         </div>
       </div>
-      {loading && <p className="text-gray-500">Loading analytics...</p>}
-      {error && <p className="text-red-500">Error: {error}</p>}
+      {loading && <p className="text-stone-700/80">Loading analytics...</p>}
+      {error && <p className="text-red-600">Error: {error}</p>}
       {!loading && !error && (
         <div>
           {mode === 'trend' ? (
             <>
-              <div className="text-2xl font-bold text-gray-700">{total.toLocaleString()}</div>
-              <p className="text-sm text-gray-600">{subtitle}; Total: 30 days</p>
-              <div className="w-full mt-4 bg-white rounded-lg p-2" style={{ height: '280px' }}>
-                <Line data={data} options={options} />
+              <div className="text-2xl font-bold text-stone-900">{total.toLocaleString()}</div>
+              <div
+                style={{
+                  width: '100%',
+                  overflow: 'hidden',
+                  transition: 'max-height 0.35s ease, margin-top 0.2s ease',
+                  maxHeight: showChart ? '320px' : '0px',
+                  marginTop: showChart ? '16px' : '0px',
+                }}
+              >
+                <div className="w-full bg-white rounded-lg p-2" style={{ height: '280px' }}>
+                  <Line data={data} options={options} />
+                </div>
               </div>
             </>
           ) : (
             <>
-              <div className="text-2xl font-bold text-gray-700">{live.active}</div>
-              <p className="text-sm text-gray-600">{subtitle}</p>
+              <div className="text-2xl font-bold text-stone-900">{live.active}</div>
+              <p className="text-sm text-stone-700/80">Realtime active users</p>
             </>
           )}
         </div>

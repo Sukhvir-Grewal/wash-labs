@@ -45,8 +45,21 @@ export default function StatusCalendar({ bookings }) {
     const summary = summaryByDay[key];
     if (!summary) return null;
 
-    const hasPending = summary.pending > 0;
-    const hasComplete = summary.complete > 0;
+    const dots = [];
+    const MAX_DOTS = 3;
+
+    if (filter === 'all' || filter === 'complete') {
+      const limit = filter === 'all' ? Math.min(summary.complete, MAX_DOTS - dots.length) : Math.min(summary.complete, MAX_DOTS);
+      for (let i = 0; i < limit; i += 1) dots.push('green');
+    }
+
+    if (filter === 'all' || filter === 'pending') {
+      const remaining = MAX_DOTS - (filter === 'all' ? dots.length : 0);
+      const limit = filter === 'all' ? Math.min(summary.pending, remaining) : Math.min(summary.pending, MAX_DOTS);
+      for (let i = 0; i < limit; i += 1) dots.push('yellow');
+    }
+
+    const limitedDots = dots.slice(0, MAX_DOTS);
 
     // Compose hover label based on filter
     let hoverTitle = '';
@@ -62,10 +75,11 @@ export default function StatusCalendar({ bookings }) {
     }
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 2 }} title={hoverTitle}>
-        <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-          {(filter === 'all' || filter === 'complete') && hasComplete && <span className="cal-dot cal-dot-green" />}
-          {(filter === 'all' || filter === 'pending') && hasPending && <span className="cal-dot cal-dot-yellow" />}
+      <div className="cal-dot-wrapper" title={hoverTitle}>
+        <div className="cal-dot-row">
+          {limitedDots.map((color, idx) => (
+            <span key={idx} className={`cal-dot ${color === 'green' ? 'cal-dot-green' : 'cal-dot-yellow'}`} />
+          ))}
         </div>
       </div>
     );

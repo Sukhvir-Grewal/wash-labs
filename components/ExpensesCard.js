@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Chart, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js';
+import EyeToggle from './EyeToggle';
 Chart.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 const CATEGORIES = [
@@ -13,6 +14,7 @@ export default function ExpensesCard() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showChart, setShowChart] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -46,22 +48,57 @@ export default function ExpensesCard() {
     const data = {
       labels,
       datasets: [
-        { label: 'Total', data: labels.map(k => monthly.map[k].total), backgroundColor: 'rgba(239,68,68,0.6)' },
+        {
+          label: 'Expenses',
+          data: labels.map(k => monthly.map[k].total),
+          backgroundColor: '#ef4444',
+          borderColor: '#ef4444',
+          borderWidth: 1,
+        },
       ],
     };
     return data;
   }, [monthly]);
 
-  const chartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } };
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+    },
+  };
+  const totalSpent = useMemo(() => {
+    const sum = items.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
+    return sum.toFixed(2);
+  }, [items]);
 
   return (
-    <div className="bg-white rounded-xl shadow p-6 border border-blue-100">
-      <div className="flex items-center justify-between mb-4">
-        <div className="text-lg font-semibold text-blue-700">Expenses</div>
+    <div
+      className="text-white rounded-xl shadow p-6"
+      style={{ backgroundColor: '#ef4444' }}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div className="text-lg font-semibold">Expenses</div>
+        <EyeToggle
+          open={showChart}
+          onToggle={() => setShowChart(prev => !prev)}
+          label="expenses chart"
+        />
       </div>
-      {/* Graph only */}
-      <div className="w-full mt-2 bg-white rounded-lg p-2" style={{ height: '240px' }}>
-        <Bar data={chartData} options={chartOptions} />
+  <div className="text-2xl font-bold text-white">${totalSpent}</div>
+  {error && <div className="text-white/90 text-sm mb-2">{error}</div>}
+      <div
+        style={{
+          width: '100%',
+          overflow: 'hidden',
+          transition: 'max-height 0.35s ease, margin-top 0.2s ease',
+          maxHeight: showChart ? '260px' : '0px',
+          marginTop: showChart ? '16px' : '0px',
+        }}
+      >
+        <div className="w-full bg-white rounded-lg p-2" style={{ height: '240px' }}>
+          <Bar data={chartData} options={chartOptions} />
+        </div>
       </div>
     </div>
   );

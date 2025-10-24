@@ -227,6 +227,20 @@ a:hover {
 }
 .cal-dot-green { background-color: #16a34a; }
 .cal-dot-yellow { background-color: #ca8a04; }
+.cal-dot-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 4px;
+    min-height: 18px;
+}
+.cal-dot-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    min-height: 12px;
+    width: 100%;
+}
 
 .status-calendar .react-calendar {
     width: 100%;

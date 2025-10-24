@@ -203,8 +203,8 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md md:max-w-lg border border-blue-100 flex flex-col relative"
-        style={{ maxHeight: '90vh', minHeight: '60vh', width: '100%', margin: '0 1rem' }}
+  className="bg-white rounded-2xl shadow-xl w-full max-w-lg border border-blue-100 flex flex-col relative mx-4 sm:mx-0 overflow-hidden"
+        style={{ maxHeight: '90vh', minHeight: '60vh' }}
       >
         {/* Close (X) button */}
         <button
@@ -217,15 +217,15 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
           &times;
         </button>
         <h3 className="text-xl font-bold mb-4 text-center mt-6" style={{ color: '#888' }}>Add Booking</h3>
-        <div className="overflow-y-auto px-2 pb-2" style={{ maxHeight: '70vh' }}>
+  <div className="overflow-y-auto overflow-x-hidden px-3 sm:px-4 pb-3" style={{ maxHeight: '70vh' }}>
           {submitStatus && (
             <div className={`mb-2 text-center font-semibold ${submitStatus === 'success' ? 'text-green-600' : 'text-red-600'}`}>{submitMsg}</div>
           )}
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Name */}
-            <input type="text" placeholder="Name" value={newBooking.name} onChange={e => setNewBooking({ ...newBooking, name: e.target.value })} className="w-full px-4 py-3 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" />
+            <input type="text" placeholder="Name" value={newBooking.name} onChange={e => setNewBooking({ ...newBooking, name: e.target.value })} className="w-full px-3 py-3 sm:px-4 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" />
             {/* Car Name */}
-            <input type="text" placeholder="Car (e.g., Toyota Camry)" value={newBooking.carName} onChange={e => setNewBooking({ ...newBooking, carName: e.target.value })} className="w-full px-4 py-3 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" />
+            <input type="text" placeholder="Car (e.g., Toyota Camry)" value={newBooking.carName} onChange={e => setNewBooking({ ...newBooking, carName: e.target.value })} className="w-full px-3 py-3 sm:px-4 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" />
             {/* Service dropdown */}
             <select required value={newBooking.service} onChange={e => {
               const selectedService = e.target.value;
@@ -235,7 +235,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                 addOns: [],
                 amount: overrideAmount ? nb.amount : calculatePrice(selectedService, [], nb.carType),
               }));
-            }} className="w-full px-4 py-3 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800">
+            }} className="w-full px-3 py-3 sm:px-4 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800">
               {serviceOptions.map(s => (
                 <option key={s.title} value={s.title}>{s.title}</option>
               ))}
@@ -248,7 +248,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                 carType,
                 amount: overrideAmount ? nb.amount : calculatePrice(nb.service, nb.addOns, carType),
               }));
-            }} className="w-full px-4 py-3 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800">
+            }} className="w-full px-3 py-3 sm:px-4 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800">
               {carTypeOptions.map(c => (
                 <option key={c.label} value={c.label}>{c.label}</option>
               ))}
@@ -256,7 +256,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
             {/* Add-ons */}
             <div>
               <div className="text-base font-semibold text-gray-700 mb-2 text-left">Add-Ons</div>
-              <div className="flex flex-wrap gap-3 mb-2">
+              <div className="flex flex-wrap gap-2 mb-2">
                 {(() => {
                   let validAddOns = [];
                   if (newBooking.service === "Premium Exterior Wash") {
@@ -283,7 +283,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                           };
                         });
                       }}
-                      className={`px-5 py-2 rounded-full border font-medium transition-all ${newBooking.addOns.find(a => a.label === opt.label) ? "bg-blue-600 text-white border-blue-600 shadow" : "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"}`}
+                          className={`px-4 sm:px-5 py-2 rounded-full border text-sm font-medium transition-all ${newBooking.addOns.find(a => a.label === opt.label) ? "bg-blue-600 text-white border-blue-600 shadow" : "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"}`}
                     >
                       {opt.label}
                     </button>
@@ -306,14 +306,16 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
               })()}
             </div>
             {/* Date */}
-            <input type="date" value={newBooking.date} onChange={e => setNewBooking({ ...newBooking, date: e.target.value })} className="w-full px-4 py-3 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" />
+            <label className="block text-sm font-medium text-gray-600">Date</label>
+            <input type="date" value={newBooking.date} onChange={e => setNewBooking({ ...newBooking, date: e.target.value })} className="w-full px-3 py-3 sm:px-4 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" />
             {/* Time (enabled after selecting date) */}
+            <label className="block text-sm font-medium text-gray-600">Time</label>
             <input
               type="time"
               disabled={!newBooking.date}
               value={newBooking.time}
               onChange={e => setNewBooking({ ...newBooking, time: e.target.value })}
-              className="w-full px-4 py-3 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800 disabled:bg-gray-100"
+              className="w-full px-3 py-3 sm:px-4 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800 disabled:bg-gray-100"
             />
             {/* Amount override */}
             <div className="space-y-2">
@@ -326,7 +328,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                 placeholder="Amount"
                 value={newBooking.amount}
                 onChange={e => setNewBooking({ ...newBooking, amount: Number(e.target.value || 0) })}
-                className={`w-full px-4 py-3 rounded-lg border ${overrideAmount ? 'border-blue-500 bg-white' : 'border-blue-200 bg-gray-100'} text-gray-800`}
+                className={`w-full px-3 py-3 sm:px-4 rounded-lg border ${overrideAmount ? 'border-blue-500 bg-white' : 'border-blue-200 bg-gray-100'} text-gray-800`}
                 readOnly={!overrideAmount}
                 min={0}
               />
@@ -338,9 +340,9 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
             <input type="text" placeholder="Phone" value={newBooking.phone} onChange={e => {
               const val = e.target.value.replace(/[^0-9]/g, "");
               setNewBooking({ ...newBooking, phone: val });
-            }} maxLength={10} className="w-full px-4 py-3 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" />
+            }} maxLength={10} className="w-full px-3 py-3 sm:px-4 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" />
             {/* Email */}
-            <input type="text" placeholder="Email" value={newBooking.email} onChange={e => setNewBooking({ ...newBooking, email: e.target.value })} className="w-full px-4 py-3 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" />
+            <input type="text" placeholder="Email" value={newBooking.email} onChange={e => setNewBooking({ ...newBooking, email: e.target.value })} className="w-full px-3 py-3 sm:px-4 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" />
             {/* Location autocomplete (Google Places API) */}
             <input type="text" placeholder="Location" value={newBooking.location} onChange={async e => {
               const val = e.target.value;
@@ -354,10 +356,10 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
               } else {
                 setLocationSuggestions([]);
               }
-            }} className="w-full px-4 py-3 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" autoComplete="off" />
+            }} className="w-full px-3 py-3 sm:px-4 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" autoComplete="off" />
             {/* Location suggestions dropdown */}
             {locationSuggestions.length > 0 && (
-              <div className="bg-white border border-blue-200 rounded-lg shadow mt-1">
+              <div className="bg-white border border-blue-200 rounded-lg shadow mt-1 w-full">
                 {locationSuggestions.map((sug, i) => (
                   <div key={i} className="px-4 py-2 cursor-pointer hover:bg-blue-50" onClick={() => {
                     setNewBooking(nb => ({ ...nb, location: sug }));
@@ -367,11 +369,11 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
               </div>
             )}
             {/* Status dropdown */}
-            <select value={newBooking.status} onChange={e => setNewBooking({ ...newBooking, status: e.target.value })} className="w-full px-4 py-3 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800">
+            <select value={newBooking.status} onChange={e => setNewBooking({ ...newBooking, status: e.target.value })} className="w-full px-3 py-3 sm:px-4 rounded-lg border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-800">
               <option value="pending">Pending</option>
               <option value="complete">Complete</option>
             </select>
-            <div className="flex gap-4 mt-4 pb-4">
+            <div className="flex flex-col sm:flex-row gap-3 mt-4 pb-4">
               <button type="submit" className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold" disabled={isSubmitting}>
                 {isSubmitting ? (editBooking ? 'Saving...' : 'Adding...') : (editBooking ? 'Edit' : 'Add')}
               </button>

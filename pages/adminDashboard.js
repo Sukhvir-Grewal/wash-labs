@@ -6,6 +6,7 @@ import RevenueChart from "../components/RevenueChart";
 import StatusCalendar from "../components/StatusCalendar";
 import ExpensesCard from "../components/ExpensesCard";
 import ProfitsCard from "../components/ProfitsCard";
+import EyeToggle from "../components/EyeToggle";
 import dynamic from 'next/dynamic';
 const VisitorsCard = dynamic(() => import('../components/VisitorsCard'), { ssr: false });
 import { useRouter } from "next/router";
@@ -23,6 +24,7 @@ export default function AdminDashboard() {
     const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
     return `${months[m - 1]}-${d}`;
   }
+  const formatCurrency = (amount) => `$${Number(amount || 0).toFixed(2)}`;
   const router = useRouter();
   const [bookings, setBookings] = useState([]);
   const [expenses, setExpenses] = useState([]);
@@ -34,17 +36,33 @@ export default function AdminDashboard() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("bookings"); // "bookings" or "expenses"
+  const [showRevenueChart, setShowRevenueChart] = useState(false);
+  const [showPendingChart, setShowPendingChart] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState(null);
+  const [selectedExpenseId, setSelectedExpenseId] = useState(null);
+  const [expenseFilter, setExpenseFilter] = useState('all');
   // Expense delete modal state
   const [showExpenseDelete, setShowExpenseDelete] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState(null);
   const [deletingExpense, setDeletingExpense] = useState(false);
   const [expenseDeleteError, setExpenseDeleteError] = useState("");
   // Calculate total revenue (exclude pending)
-  const totalRevenue = bookings.filter(b => b.status === 'complete').reduce((sum, b) => sum + (b.amount || 0), 0);
+  const totalRevenue = bookings.filter(b => b.status === 'complete').reduce((sum, b) => sum + Number(b.amount || 0), 0);
   // Pending count and estimated revenue
   const pendingBookings = bookings.filter(b => b.status === 'pending');
   const pendingCount = pendingBookings.length;
-  const pendingRevenue = pendingBookings.reduce((sum, b) => sum + (b.amount || 0), 0);
+  const pendingRevenue = pendingBookings.reduce((sum, b) => sum + Number(b.amount || 0), 0);
+  const completedCount = bookings.filter(b => b.status === 'complete').length;
+  const totalBookingsCount = bookings.length;
+  const totalBookingAmount = bookings
+    .filter(b => b.status === 'complete' || b.status === 'pending')
+    .reduce((sum, b) => sum + Number(b.amount || 0), 0);
+  const bookingSummaryText = statusFilter === 'pending'
+    ? `Pending: ${formatCurrency(pendingRevenue)}`
+    : statusFilter === 'complete'
+    ? `Completed: ${formatCurrency(totalRevenue)}`
+    : `Total: ${formatCurrency(totalBookingAmount)} (Completed + Pending)`;
 
   // After a successful add from the child modal, refresh from DB and close the modal
   const handleAddFromChild = useCallback(async () => {
@@ -126,6 +144,14 @@ export default function AdminDashboard() {
     fetchBookingsAndUpdate();
   }, [updatePendingToComplete]);
 
+  useEffect(() => {
+    setSelectedExpenseId(null);
+  }, [expenseFilter]);
+
+  useEffect(() => {
+    setSelectedBookingId(null);
+  }, [statusFilter]);
+
   // Show booking details modal
   const handleShowDetail = (booking) => {
     setDetailBooking(booking);
@@ -179,41 +205,122 @@ export default function AdminDashboard() {
     return [first, ...remaining, ...othersSorted];
   };
 
+  const expenseFilterLabels = {
+    all: 'All',
+    equipment: 'Equipment',
+    chemicals: 'Chemicals',
+    other: 'Other',
+  };
+
+  const matchExpenseFilter = (exp) => {
+    if (expenseFilter === 'all') return true;
+    const category = (exp.category || '').toLowerCase();
+    if (expenseFilter === 'equipment') return category === 'one-time';
+    if (expenseFilter === 'chemicals') return category === 'chemicals';
+    if (expenseFilter === 'other') return category !== 'one-time' && category !== 'chemicals';
+    return true;
+  };
+
+  const filteredExpenses = expenses.filter(matchExpenseFilter);
+  const filteredExpenseTotal = filteredExpenses.reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
+  const expenseTotalSuffix = expenseFilter === 'all'
+    ? ''
+    : ` on ${(expenseFilterLabels[expenseFilter] || expenseFilter).toLowerCase()}`;
+
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4">
       <div className="max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold mb-8 text-center" style={{ color: '#000' }}>Admin Booking Dashboard</h1>
         {/* Revenue summary */}
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <div className="bg-gradient-to-br from-blue-600 to-blue-400 text-white rounded-xl shadow p-6 flex flex-col items-center justify-center">
-            <div className="text-lg font-semibold mb-2">Total Revenue</div>
-            <div className="text-3xl font-bold">${totalRevenue}</div>
-            <div className="w-full mt-4 mb-2 bg-white rounded-lg p-2">
-              <RevenueChart bookings={bookings} />
-            </div>
-            <div className="text-xs mt-2 text-white/80">(Completed bookings only)</div>
-          </div>
-          <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center justify-center border border-blue-100">
-            <div className="text-lg font-semibold mb-2 text-blue-700">Bookings</div>
-            {/* Calendar with filter buttons will render its own controls; count removed per request */}
-            <div className="w-full mt-2">
-              <StatusCalendar bookings={bookings} />
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center justify-center border border-blue-100">
-            <div className="text-lg font-semibold mb-2 text-blue-700">PE (Pending Estimate)</div>
-            <div className="text-3xl font-bold text-blue-900">${pendingRevenue}</div>
-            <div className="w-full mt-4 mb-2 bg-white rounded-lg p-2">
-              <RevenueChart
-                bookings={bookings}
-                status="pending"
-                datasetLabel="Pending Estimate"
-                borderColor="rgb(202, 138, 4)"           
-                backgroundColor="rgba(202,138,4,0.2)"   
-                pointBackgroundColor="rgb(202, 138, 4)" 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="bg-gradient-to-br from-blue-600 to-blue-400 text-white rounded-xl shadow p-6 flex flex-col">
+            <div className="w-full flex items-start justify-between">
+              <div>
+                <div className="text-lg font-semibold">Total Revenue</div>
+                <div className="text-3xl font-bold mt-1">${totalRevenue}</div>
+                <div className="text-xs mt-2 text-white/80">(Completed bookings only)</div>
+              </div>
+              <EyeToggle
+                open={showRevenueChart}
+                onToggle={() => setShowRevenueChart(prev => !prev)}
+                label="total revenue chart"
               />
             </div>
-            <div className="text-xs mt-2 text-blue-700/70">(Pending bookings)</div>
+            <div
+              style={{
+                width: '100%',
+                overflow: 'hidden',
+                transition: 'max-height 0.35s ease, margin-top 0.2s ease',
+                maxHeight: showRevenueChart ? '320px' : '0px',
+                marginTop: showRevenueChart ? '16px' : '0px',
+              }}
+            >
+              <div className="w-full bg-white rounded-lg p-2">
+                <RevenueChart bookings={bookings} />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow p-6 flex flex-col border border-blue-100 text-blue-900">
+            <div className="w-full flex items-start justify-between">
+              <div>
+                <div className="text-lg font-semibold text-blue-700">Bookings</div>
+                <div className="text-3xl font-bold mt-1">{totalBookingsCount}</div>
+                <div className="text-xs mt-2 text-blue-600/70">
+                  Pending {pendingCount} • Complete {completedCount}
+                </div>
+              </div>
+              <EyeToggle
+                open={showCalendar}
+                onToggle={() => setShowCalendar(prev => !prev)}
+                label="bookings calendar"
+              />
+            </div>
+            <div
+              style={{
+                width: '100%',
+                overflow: 'hidden',
+                transition: 'max-height 0.35s ease, margin-top 0.2s ease',
+                maxHeight: showCalendar ? '420px' : '0px',
+                marginTop: showCalendar ? '16px' : '0px',
+              }}
+            >
+              <div className="bg-white rounded-lg p-2 text-gray-900 border border-blue-50">
+                <StatusCalendar bookings={bookings} />
+              </div>
+            </div>
+          </div>
+          <div className="bg-gradient-to-br from-amber-500 to-amber-400 text-white rounded-xl shadow p-6 flex flex-col">
+            <div className="w-full flex items-start justify-between">
+              <div>
+                <div className="text-lg font-semibold">Pending Estimates</div>
+                <div className="text-3xl font-bold mt-1">${pendingRevenue}</div>
+              </div>
+              <EyeToggle
+                open={showPendingChart}
+                onToggle={() => setShowPendingChart(prev => !prev)}
+                label="pending revenue chart"
+              />
+            </div>
+            <div
+              style={{
+                width: '100%',
+                overflow: 'hidden',
+                transition: 'max-height 0.35s ease, margin-top 0.2s ease',
+                maxHeight: showPendingChart ? '320px' : '0px',
+                marginTop: showPendingChart ? '16px' : '0px',
+              }}
+            >
+              <div className="w-full bg-white rounded-lg p-2">
+                <RevenueChart
+                  bookings={bookings}
+                  status="pending"
+                  datasetLabel="Pending Estimate"
+                  borderColor="rgb(202, 138, 4)"
+                  backgroundColor="rgba(202,138,4,0.2)"
+                  pointBackgroundColor="rgb(202, 138, 4)"
+                />
+              </div>
+            </div>
           </div>
         </div>
         {/* Expenses and Profits */}
@@ -248,51 +355,56 @@ export default function AdminDashboard() {
               className="py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold"
               onClick={() => setShowAdd(true)}
             >
-              {activeTab === 'bookings' ? 'Add Booking' : 'Add Expense'}
+              +ADD
             </button>
           </div>
           {activeTab === 'bookings' && (
             <>
               {/* Status Filter */}
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-sm text-gray-600">Filter:</span>
-                {[
-                  { key: 'all', label: 'All' },
-                  { key: 'pending', label: 'Pending' },
-                  { key: 'complete', label: 'Complete' },
-                ].map(opt => (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    onClick={() => setStatusFilter(opt.key)}
-                    className={`px-3 py-1 rounded-full text-sm border ${statusFilter === opt.key ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'}`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
+                <label className="text-sm text-gray-600" htmlFor="booking-filter">Filter:</label>
+                <select
+                  id="booking-filter"
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                  className="px-3 py-2 text-sm border border-blue-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                  <option value="all">All</option>
+                  <option value="pending">Pending</option>
+                  <option value="complete">Complete</option>
+                </select>
               </div>
+              {bookingSummaryText && (
+                <p className="text-xs text-gray-500 mb-4">{bookingSummaryText}</p>
+              )}
               <div className="overflow-x-auto">
                 {loading ? (
                   <div className="py-10 text-center text-blue-600 font-semibold text-lg">Loading bookings...</div>
                 ) : (
-                  <table className="w-full text-left border-collapse min-w-[760px] text-xs sm:text-sm">
+                  <table className="w-full text-left border-collapse min-w-[720px] text-xs">
                     <thead>
-                      <tr style={{ background: '#f5f5f5' }}>
-                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Status</th>
-                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Name</th>
-                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Car</th>
-                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Service</th>
-                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Date</th>
-                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Time</th>
-                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Amount</th>
-                        <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Actions</th>
+                      <tr style={{ background: '#f5f5f5' }} className="text-[11px] uppercase tracking-wide">
+                        <th className="border border-gray-200 py-2 px-2 font-semibold" style={{ color: '#000' }}>Status</th>
+                        <th className="border border-gray-200 py-2 px-2 font-semibold" style={{ color: '#000' }}>Name</th>
+                        <th className="border border-gray-200 py-2 px-2 font-semibold" style={{ color: '#000' }}>$</th>
+                        <th className="border border-gray-200 py-2 px-2 font-semibold" style={{ color: '#000' }}>Date</th>
+                        <th className="border border-gray-200 py-2 px-2 font-semibold" style={{ color: '#000' }}>Time</th>
+                        <th className="border border-gray-200 py-2 px-2 font-semibold" style={{ color: '#000' }}>Car</th>
+                        <th className="border border-gray-200 py-2 px-2 font-semibold" style={{ color: '#000' }}>Service</th>
+                        <th className="border border-gray-200 py-2 px-2 font-semibold" style={{ color: '#000' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {getDisplayBookings()
-                        .map(b => (
-                        <tr key={b.id} style={{ background: '#fff', color: '#222' }}>
-                          <td className="py-2 px-2 sm:px-3">
+                      {getDisplayBookings().map(b => {
+                        const isSelected = selectedBookingId === b.id;
+                        return (
+                          <tr
+                            key={b.id}
+                            onClick={() => setSelectedBookingId(prev => (prev === b.id ? null : b.id))}
+                            className={`text-[11px] cursor-pointer transition-colors ${isSelected ? 'bg-blue-50' : ''}`}
+                            style={{ color: '#222', background: isSelected ? '#e9f2ff' : '#fff' }}
+                          >
+                          <td className="border border-gray-200 py-2 px-2">
                             <span
                               aria-label={b.status}
                               className={`px-3 py-1 rounded-full text-xs font-bold ${b.status === "complete" ? "bg-green-200 text-green-800" : b.status === "pending" ? "bg-yellow-200 text-yellow-800" : "bg-gray-200 text-gray-800"}`}
@@ -303,27 +415,33 @@ export default function AdminDashboard() {
                               <span className="hidden sm:inline">{b.status}</span>
                             </span>
                           </td>
-                          <td className="py-2 px-2 sm:px-3 max-w-[140px] sm:max-w-none truncate" style={{ color: '#222', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleEditBooking(b)}>{b.name}</td>
-                          <td className="py-2 px-2 sm:px-3 max-w-[160px] truncate" style={{ color: '#222' }}>{b.carName || "--"}</td>
-                          <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>{b.service}</td>
-                          <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>{formatDateShort(b.date)}</td>
-                          <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>{b.time || "--"}</td>
-                          <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>${b.amount}</td>
-                          <td className="py-2 px-2 sm:px-3">
+                          <td
+                            className="border border-gray-200 py-2 px-2 max-w-[140px] truncate"
+                            style={{ color: '#222', cursor: 'pointer', textDecoration: 'underline' }}
+                            onClick={() => handleEditBooking(b)}
+                          >
+                            {b.name}
+                          </td>
+                          <td className="border border-gray-200 py-2 px-2 text-[11px] font-semibold text-gray-600 whitespace-nowrap">${b.amount}</td>
+                          <td className="border border-gray-200 py-2 px-2 whitespace-nowrap" style={{ color: '#222' }}>{formatDateShort(b.date)}</td>
+                          <td className="border border-gray-200 py-2 px-2 whitespace-nowrap" style={{ color: '#222' }}>{b.time || "--"}</td>
+                          <td className="border border-gray-200 py-2 px-2 max-w-[140px] truncate" style={{ color: '#222' }}>{b.carName || "--"}</td>
+                          <td className="border border-gray-200 py-2 px-2 whitespace-nowrap" style={{ color: '#222' }}>{b.service}</td>
+                          <td className="border border-gray-200 py-2 px-2">
                             <button
                               type="button"
                               className="px-3 py-1 text-xs rounded-full border border-blue-200 text-blue-700 hover:bg-blue-50"
-                              onClick={() => {
-                                setDetailBooking(b);
-                                setShowDeleteConfirm(false);
-                                setShowDetail(true);
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleShowDetail(b);
                               }}
                             >
                               Details
                             </button>
                           </td>
-                        </tr>
-                      ))}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 )}
@@ -331,49 +449,82 @@ export default function AdminDashboard() {
             </>
           )}
           {activeTab === 'expenses' && (
-            <div className="overflow-x-auto">
+            <>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                <label className="text-sm text-gray-600" htmlFor="expense-filter">Filter:</label>
+                <select
+                  id="expense-filter"
+                  value={expenseFilter}
+                  onChange={(event) => setExpenseFilter(event.target.value)}
+                  className="px-3 py-2 text-sm border border-blue-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                  <option value="all">All</option>
+                  <option value="equipment">Equipment</option>
+                  <option value="chemicals">Chemicals</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">
+                Total spent{expenseTotalSuffix}: ${filteredExpenseTotal.toFixed(2)}
+              </p>
+              <div className="overflow-x-auto">
               {loading ? (
                 <div className="py-10 text-center text-blue-600 font-semibold text-lg">Loading expenses...</div>
               ) : (
-                <table className="w-full text-left border-collapse min-w-[760px] text-xs sm:text-sm">
+                <table className="w-full text-left border-collapse min-w-[680px] text-[11px]">
                   <thead>
-                    <tr style={{ background: '#f5f5f5' }}>
-                      <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Date</th>
-                      <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Product</th>
-                      <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Supplier</th>
-                      <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Category</th>
-                      <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Amount</th>
-                      <th className="py-2 px-2 sm:px-3 font-semibold" style={{ color: '#000' }}>Actions</th>
+                    <tr style={{ background: '#f5f5f5' }} className="uppercase tracking-wide">
+                      <th className="border border-gray-200 py-2 px-2 font-semibold" style={{ color: '#000' }}>Date</th>
+                      <th className="border border-gray-200 py-2 px-2 font-semibold" style={{ color: '#000' }}>Product</th>
+                      <th className="border border-gray-200 py-2 px-2 font-semibold" style={{ color: '#000' }}>Supplier</th>
+                      <th className="border border-gray-200 py-2 px-2 font-semibold" style={{ color: '#000' }}>Category</th>
+                      <th className="border border-gray-200 py-2 px-2 font-semibold" style={{ color: '#000' }}>Amount</th>
+                      <th className="border border-gray-200 py-2 px-2 font-semibold" style={{ color: '#000' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {expenses.map((exp, idx) => (
-                      <tr key={exp._id || idx} style={{ background: '#fff', color: '#222' }}>
-                        <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>{formatDateShort(exp.date)}</td>
-                        <td className="py-2 px-2 sm:px-3" style={{ color: '#222' }}>{exp.productName || '--'}</td>
-                        <td className="py-2 px-2 sm:px-3" style={{ color: '#222' }}>{exp.supplier || '--'}</td>
-                        <td className="py-2 px-2 sm:px-3" style={{ color: '#222' }}>
-                          {exp.category === 'one-time' ? 'Equipment' : exp.category === 'chemicals' ? 'Chemicals' : 'Other'}
+                    {filteredExpenses.map((exp, idx) => {
+                      const rowId = exp._id || idx;
+                      const isSelected = selectedExpenseId === rowId;
+                      return (
+                        <tr
+                          key={rowId}
+                          onClick={() => setSelectedExpenseId(prev => (prev === rowId ? null : rowId))}
+                          className={`text-[11px] cursor-pointer transition-colors ${isSelected ? 'bg-blue-50' : ''}`}
+                          style={{ color: '#222', background: isSelected ? '#e9f2ff' : '#fff' }}
+                        >
+                        <td className="border border-gray-200 py-2 px-2 whitespace-nowrap" style={{ color: '#222' }}>{formatDateShort(exp.date)}</td>
+                        <td className="border border-gray-200 py-2 px-2 max-w-[140px] truncate" style={{ color: '#222' }}>{exp.productName || '--'}</td>
+                        <td className="border border-gray-200 py-2 px-2 max-w-[140px] truncate" style={{ color: '#222' }}>{exp.supplier || '--'}</td>
+                        <td className="border border-gray-200 py-2 px-2 whitespace-nowrap" style={{ color: '#222' }}>
+                          {exp.category === 'one-time' ? 'Equipment' : exp.category === 'chemicals' ? 'Chemicals' : exp.category || 'Other'}
                         </td>
-                        <td className="py-2 px-2 sm:px-3 whitespace-nowrap" style={{ color: '#222' }}>
-                          ${exp.amount}
-                          {exp.taxIncluded && <span className="text-xs text-gray-500 ml-1">(incl tax)</span>}
+                        <td className="border border-gray-200 py-2 px-2 whitespace-nowrap" style={{ color: '#111' }}>
+                          ${Number(exp.amount || 0).toFixed(2)}
+                          {exp.taxIncluded && <span className="text-[10px] text-gray-500 ml-1">(incl tax)</span>}
                         </td>
-                        <td className="py-2 px-2 sm:px-3">
+                        <td className="border border-gray-200 py-2 px-2">
                           <button
                             type="button"
                             className="px-3 py-1 text-xs rounded-full border border-red-200 text-red-700 hover:bg-red-50"
-                            onClick={() => { setExpenseDeleteError(""); setExpenseToDelete(exp); setShowExpenseDelete(true); }}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setExpenseDeleteError("");
+                              setExpenseToDelete(exp);
+                              setShowExpenseDelete(true);
+                            }}
                           >
                             Delete
                           </button>
                         </td>
-                      </tr>
-                    ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
             </div>
+            </>
           )}
         </div>
         {/* Expense delete confirmation modal */}
@@ -524,7 +675,7 @@ export default function AdminDashboard() {
           <AdminAddBooking
             open={showAdd}
             onClose={() => { setShowAdd(false); setEditBooking(null); }}
-            onAdd={(payload) => handleAddFromChild(payload)}
+            onAdd={handleAddFromChild}
             editBooking={editBooking}
             onEdit={async (updated) => {
               // PATCH to API
