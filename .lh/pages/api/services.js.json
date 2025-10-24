@@ -1,0 +1,18 @@
+{
+    "sourceFile": "pages/api/services.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1761335959372,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1761335959372,
+            "name": "Commit-0",
+            "content": "import { promises as fs } from \"fs\";\r\nimport path from \"path\";\r\n\r\nconst servicesFilePath = path.join(process.cwd(), \"data\", \"services.js\");\r\n\r\nfunction sanitizeNumber(value) {\r\n  if (value === null || value === undefined || value === \"\") return null;\r\n  const numeric = Number(value);\r\n  return Number.isFinite(numeric) ? numeric : null;\r\n}\r\n\r\nfunction sanitizeString(value) {\r\n  if (value === null || value === undefined) return \"\";\r\n  return String(value).trim();\r\n}\r\n\r\nfunction sanitizeFeatureList(list) {\r\n  if (!Array.isArray(list)) return [];\r\n  return list\r\n    .map((item) => sanitizeString(item))\r\n    .filter((item) => item.length > 0);\r\n}\r\n\r\nfunction formatServicesFileContent(services) {\r\n  const servicesJson = JSON.stringify(services, null, 4);\r\n  return `export const SERVICES = ${servicesJson};\\n\\nexport function getServiceById(id) {\\n    return SERVICES.find((service) => service.id === id);\\n}\\n`;\r\n}\r\n\r\nexport default async function handler(request, response) {\r\n  if (request.method === \"GET\") {\r\n    try {\r\n      const { SERVICES } = await import(`../../data/services.js?update=${Date.now()}`);\r\n      return response.status(200).json({ services: SERVICES });\r\n    } catch (error) {\r\n      return response.status(500).json({ error: \"Failed to load services.\" });\r\n    }\r\n  }\r\n\r\n  if (request.method === \"PUT\") {\r\n    try {\r\n      const { services } = request.body || {};\r\n\r\n      if (!Array.isArray(services)) {\r\n        return response.status(400).json({ error: \"Payload must include a services array.\" });\r\n      }\r\n\r\n      const normalizedServices = services.map((service) => {\r\n        const id = sanitizeString(service.id);\r\n        if (!id) {\r\n          throw new Error(\"Each service must include an id.\");\r\n        }\r\n\r\n        return {\r\n          id,\r\n          title: sanitizeString(service.title),\r\n          summary: sanitizeString(service.summary),\r\n          basePrice: sanitizeNumber(service.basePrice),\r\n          revivePrice: sanitizeNumber(service.revivePrice),\r\n          durationMinutes: sanitizeNumber(service.durationMinutes),\r\n          comingSoon: Boolean(service.comingSoon),\r\n          baseFeatures: sanitizeFeatureList(service.baseFeatures),\r\n          reviveFeatures: sanitizeFeatureList(service.reviveFeatures),\r\n        };\r\n      });\r\n\r\n      const fileContent = formatServicesFileContent(normalizedServices);\r\n      await fs.writeFile(servicesFilePath, fileContent, \"utf8\");\r\n\r\n      return response.status(200).json({ services: normalizedServices });\r\n    } catch (error) {\r\n      return response.status(500).json({ error: error.message || \"Failed to update services.\" });\r\n    }\r\n  }\r\n\r\n  response.setHeader(\"Allow\", [\"GET\", \"PUT\"]);\r\n  return response.status(405).json({ error: \"Method not allowed.\" });\r\n}\r\n"
+        }
+    ]
+}

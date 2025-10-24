@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useCallback } from "react";
+import Link from "next/link";
 import AdminAddBooking from "../components/AdminAddBooking";
 import AddExpenseModal from "../components/AddExpenseModal";
 import RevenueChart from "../components/RevenueChart";
@@ -230,7 +231,17 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4">
       <div className="max-w-5xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8 text-center" style={{ color: '#000' }}>Admin Booking Dashboard</h1>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+          <div>
+            <Link
+              href="/admin-services"
+              className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm transition-colors hover:bg-blue-50"
+            >
+              Edit Services and Prices
+            </Link>
+          </div>
+          <h1 className="text-3xl font-bold text-center md:text-right" style={{ color: '#000' }}>Admin Booking Dashboard</h1>
+        </div>
         {/* Revenue summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <div className="bg-gradient-to-br from-blue-600 to-blue-400 text-white rounded-xl shadow p-6 flex flex-col">
