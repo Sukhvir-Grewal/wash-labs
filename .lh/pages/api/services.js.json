@@ -3,11 +3,15 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 0,
+            "activePatchIndex": 1,
             "patches": [
                 {
                     "date": 1761335959372,
                     "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1761405101883,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,6 +1,7 @@\n import { promises as fs } from \"fs\";\r\n import path from \"path\";\r\n+import { pathToFileURL } from \"url\";\r\n \r\n const servicesFilePath = path.join(process.cwd(), \"data\", \"services.js\");\r\n \r\n function sanitizeNumber(value) {\r\n@@ -25,15 +26,24 @@\n   const servicesJson = JSON.stringify(services, null, 4);\r\n   return `export const SERVICES = ${servicesJson};\\n\\nexport function getServiceById(id) {\\n    return SERVICES.find((service) => service.id === id);\\n}\\n`;\r\n }\r\n \r\n+async function readServicesFromFile() {\r\n+  const fileUrl = `${pathToFileURL(servicesFilePath).href}?update=${Date.now()}`;\r\n+  const module = await import(/* webpackIgnore: true */ fileUrl);\r\n+  if (!module || !Array.isArray(module.SERVICES)) {\r\n+    throw new Error(\"SERVICES export not found\");\r\n+  }\r\n+  return module.SERVICES;\r\n+}\r\n+\r\n export default async function handler(request, response) {\r\n   if (request.method === \"GET\") {\r\n     try {\r\n-      const { SERVICES } = await import(`../../data/services.js?update=${Date.now()}`);\r\n-      return response.status(200).json({ services: SERVICES });\r\n+      const services = await readServicesFromFile();\r\n+      return response.status(200).json({ services });\r\n     } catch (error) {\r\n-      return response.status(500).json({ error: \"Failed to load services.\" });\r\n+  return response.status(500).json({ error: error.message || \"Failed to load services.\" });\r\n     }\r\n   }\r\n \r\n   if (request.method === \"PUT\") {\r\n@@ -67,9 +77,9 @@\n       await fs.writeFile(servicesFilePath, fileContent, \"utf8\");\r\n \r\n       return response.status(200).json({ services: normalizedServices });\r\n     } catch (error) {\r\n-      return response.status(500).json({ error: error.message || \"Failed to update services.\" });\r\n+  return response.status(500).json({ error: error.message || \"Failed to update services.\" });\r\n     }\r\n   }\r\n \r\n   response.setHeader(\"Allow\", [\"GET\", \"PUT\"]);\r\n"
                 }
             ],
             "date": 1761335959372,

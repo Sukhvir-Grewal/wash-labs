@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { pathToFileURL } from "url";
 
 const servicesFilePath = path.join(process.cwd(), "data", "services.js");
 
@@ -26,13 +27,22 @@ function formatServicesFileContent(services) {
   return `export const SERVICES = ${servicesJson};\n\nexport function getServiceById(id) {\n    return SERVICES.find((service) => service.id === id);\n}\n`;
 }
 
+async function readServicesFromFile() {
+  const fileUrl = `${pathToFileURL(servicesFilePath).href}?update=${Date.now()}`;
+  const module = await import(/* webpackIgnore: true */ fileUrl);
+  if (!module || !Array.isArray(module.SERVICES)) {
+    throw new Error("SERVICES export not found");
+  }
+  return module.SERVICES;
+}
+
 export default async function handler(request, response) {
   if (request.method === "GET") {
     try {
-      const { SERVICES } = await import(`../../data/services.js?update=${Date.now()}`);
-      return response.status(200).json({ services: SERVICES });
+      const services = await readServicesFromFile();
+      return response.status(200).json({ services });
     } catch (error) {
-      return response.status(500).json({ error: "Failed to load services." });
+  return response.status(500).json({ error: error.message || "Failed to load services." });
     }
   }
 
@@ -68,7 +78,7 @@ export default async function handler(request, response) {
 
       return response.status(200).json({ services: normalizedServices });
     } catch (error) {
-      return response.status(500).json({ error: error.message || "Failed to update services." });
+  return response.status(500).json({ error: error.message || "Failed to update services." });
     }
   }
 

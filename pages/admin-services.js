@@ -17,11 +17,11 @@ function FeatureListEditor({ label, features, onChange, onAdd, onRemove }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-blue-800">{label}</h4>
+        <h4 className="text-sm font-semibold text-slate-900">{label}</h4>
         <button
           type="button"
           onClick={onAdd}
-          className="rounded-full border border-blue-300 px-3 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+          className="rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50"
         >
           + Add item
         </button>
@@ -36,7 +36,8 @@ function FeatureListEditor({ label, features, onChange, onAdd, onRemove }) {
               value={feature}
               onChange={(event) => onChange(index, event.target.value)}
               rows={2}
-              className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-blue-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              placeholder="Add bullet point"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400"
             />
             <button
               type="button"
@@ -229,8 +230,8 @@ export default function AdminServicesPage() {
           </div>
         </div>
 
-        <header className="rounded-2xl border border-blue-200 bg-white p-6 shadow">
-          <h1 className="text-2xl font-bold" style={{ color: "#000" }}>
+        <header className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 via-white to-blue-50 p-6 shadow">
+          <h1 className="text-2xl font-bold text-slate-900">
             Services & Pricing Editor
           </h1>
           <p className="mt-2 text-sm text-blue-700">
@@ -252,38 +253,46 @@ export default function AdminServicesPage() {
         ) : (
           <div className="space-y-8">
             {services.map((service, index) => (
-              <section key={service.id || index} className="rounded-2xl border border-blue-200 bg-white p-6 shadow">
+              <section key={service.id || index} className="rounded-2xl border border-blue-100 bg-white/90 p-6 shadow transition-shadow hover:shadow-lg">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex-1 space-y-2">
+                    <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+                      {service.id || "New service"}
+                    </span>
+                    <h2 className="text-xl font-semibold text-slate-900">
+                      {service.title || "Untitled Service"}
+                    </h2>
+                  </div>
                   <div className="space-y-4 sm:flex-1">
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <label className="text-sm font-semibold text-blue-800">
+                      <label className="text-sm font-semibold text-slate-900">
                         Service ID
                         <input
                           type="text"
                           value={service.id}
                           onChange={(event) => handleServiceChange(index, "id", event.target.value)}
-                          className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-blue-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                          className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400"
                         />
                       </label>
-                      <label className="text-sm font-semibold text-blue-800">
+                      <label className="text-sm font-semibold text-slate-900">
                         Title
                         <input
                           type="text"
                           value={service.title || ""}
                           onChange={(event) => handleServiceChange(index, "title", event.target.value)}
-                          className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-blue-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                          className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400"
                         />
                       </label>
-                      <label className="text-sm font-semibold text-blue-800 sm:col-span-2">
+                      <label className="text-sm font-semibold text-slate-900 sm:col-span-2">
                         Summary
                         <textarea
                           value={service.summary || ""}
                           onChange={(event) => handleServiceChange(index, "summary", event.target.value)}
                           rows={3}
-                          className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-blue-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                          className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400"
                         />
                       </label>
-                      <label className="text-sm font-semibold text-blue-800">
+                      <label className="text-sm font-semibold text-slate-900">
                         Base Price
                         <input
                           type="number"
@@ -291,10 +300,10 @@ export default function AdminServicesPage() {
                           step="1"
                           value={service.basePrice ?? ""}
                           onChange={(event) => handleNumberChange(index, "basePrice", event.target.value)}
-                          className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-blue-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                          className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400"
                         />
                       </label>
-                      <label className="text-sm font-semibold text-blue-800">
+                      <label className="text-sm font-semibold text-slate-900">
                         Revive Price
                         <input
                           type="number"
@@ -302,10 +311,10 @@ export default function AdminServicesPage() {
                           step="1"
                           value={service.revivePrice ?? ""}
                           onChange={(event) => handleNumberChange(index, "revivePrice", event.target.value)}
-                          className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-blue-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                          className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400"
                         />
                       </label>
-                      <label className="text-sm font-semibold text-blue-800">
+                      <label className="text-sm font-semibold text-slate-900">
                         Duration (minutes)
                         <input
                           type="number"
@@ -313,11 +322,11 @@ export default function AdminServicesPage() {
                           step="15"
                           value={service.durationMinutes ?? ""}
                           onChange={(event) => handleNumberChange(index, "durationMinutes", event.target.value)}
-                          className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-blue-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                          className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400"
                         />
                       </label>
                     </div>
-                    <label className="flex items-center gap-2 text-sm font-semibold text-blue-800">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                       <input
                         type="checkbox"
                         checked={Boolean(service.comingSoon)}
