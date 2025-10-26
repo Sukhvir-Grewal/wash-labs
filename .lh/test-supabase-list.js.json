@@ -1,0 +1,22 @@
+{
+    "sourceFile": "test-supabase-list.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 1,
+            "patches": [
+                {
+                    "date": 1761442888612,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1761443025507,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -5,17 +5,29 @@\n const bucket = process.env.SUPABASE_GALLERY_BUCKET || 'Gallery';\r\n const path = process.env.SUPABASE_GALLERY_PATH || '';\r\n \r\n async function listImages() {\r\n+  console.log('Bucket:', bucket);\r\n+  console.log('Path:', path || '(root)');\r\n+  console.log('---');\r\n+  \r\n   const { data, error } = await supabase.storage.from(bucket).list(path);\r\n   if (error) {\r\n     console.error('Error listing images:', error.message);\r\n+    console.error('Full error:', JSON.stringify(error, null, 2));\r\n     process.exit(1);\r\n   }\r\n   if (!data || !data.length) {\r\n-    console.log('No images found.');\r\n+    console.log('No files/folders found in this bucket/path.');\r\n+    console.log('Full response:', JSON.stringify(data, null, 2));\r\n     return;\r\n   }\r\n-  data.forEach(f => console.log(f.name, f.metadata ? f.metadata.mimetype : ''));\r\n+  console.log(`Found ${data.length} items:`);\r\n+  data.forEach((f, i) => {\r\n+    console.log(`${i + 1}. Name: ${f.name}`);\r\n+    console.log(`   ID: ${f.id || 'N/A'}`);\r\n+    console.log(`   Metadata: ${JSON.stringify(f.metadata || {})}`);\r\n+    console.log('');\r\n+  });\r\n }\r\n \r\n listImages();\r\n"
+                }
+            ],
+            "date": 1761442888612,
+            "name": "Commit-0",
+            "content": "require('dotenv').config({ path: '.env.local' });\r\nconst { createClient } = require('@supabase/supabase-js');\r\n\r\nconst supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);\r\nconst bucket = process.env.SUPABASE_GALLERY_BUCKET || 'Gallery';\r\nconst path = process.env.SUPABASE_GALLERY_PATH || '';\r\n\r\nasync function listImages() {\r\n  const { data, error } = await supabase.storage.from(bucket).list(path);\r\n  if (error) {\r\n    console.error('Error listing images:', error.message);\r\n    process.exit(1);\r\n  }\r\n  if (!data || !data.length) {\r\n    console.log('No images found.');\r\n    return;\r\n  }\r\n  data.forEach(f => console.log(f.name, f.metadata ? f.metadata.mimetype : ''));\r\n}\r\n\r\nlistImages();\r\n"
+        }
+    ]
+}

@@ -1,29 +1,60 @@
 import Head from "next/head";
 import Image from "next/image";
-import fs from "fs";
-import path from "path";
 import { useState } from "react";
 import { useRouter } from "next/router";
 import Navigation from "@/components/Navigation";
+import { createClient } from "@supabase/supabase-js";
 
-// Get all image files from /public/images/gallery at build time
-export async function getStaticProps() {
-    const galleryDir = path.join(process.cwd(), "public", "images", "gallery");
+// Load gallery images from Supabase Storage bucket "Gallery" at request time
+export async function getServerSideProps() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    // Use service role key for server-side operations (bypasses RLS)
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const bucket = process.env.SUPABASE_GALLERY_BUCKET || "Gallery";
+    const pathPrefix = (process.env.SUPABASE_GALLERY_PATH || "").replace(
+        /^\/+|\/+$/g,
+        ""
+    );
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     let images = [];
+    let errorMsg = null;
     try {
-        images = fs
-            .readdirSync(galleryDir)
-            .filter((file) =>
-                /\.(jpe?g|png|webp|gif|heic)$/i.test(file)
+        const listPath = pathPrefix || "";
+        const { data, error } = await supabase.storage
+            .from(bucket)
+            .list(listPath, {
+                limit: 200,
+                sortBy: { column: "created_at", order: "desc" },
+            });
+        if (error) throw error;
+
+        images = (data || [])
+            .filter(
+                (file) =>
+                    file &&
+                    file.name &&
+                    /\.(jpe?g|png|webp|gif|heic)$/i.test(file.name)
             )
-            .map((file) => `/images/gallery/${file}`);
+            .map((file) => {
+                const filePath = pathPrefix
+                    ? `${pathPrefix}/${file.name}`
+                    : file.name;
+                const { data: pub } = supabase.storage
+                    .from(bucket)
+                    .getPublicUrl(filePath);
+                return pub?.publicUrl || null;
+            })
+            .filter(Boolean);
     } catch (e) {
-        // Directory may not exist yet
+        errorMsg = e?.message || String(e);
+        images = [];
     }
-    return { props: { galleryImages: images } };
+
+    return { props: { galleryImages: images, galleryError: errorMsg } };
 }
 
-export default function GalleryPage({ galleryImages }) {
+export default function GalleryPage({ galleryImages, galleryError }) {
     const [modalImg, setModalImg] = useState(null);
     const router = useRouter();
 
@@ -31,7 +62,10 @@ export default function GalleryPage({ galleryImages }) {
         <>
             <Head>
                 <title>Gallery | Wash Labs</title>
-                <meta name="description" content="Gallery of Wash Labs car detailing work in Halifax." />
+                <meta
+                    name="description"
+                    content="Gallery of Wash Labs car detailing work in Halifax."
+                />
             </Head>
 
             <Navigation />
@@ -39,11 +73,19 @@ export default function GalleryPage({ galleryImages }) {
             <section className="min-h-screen bg-blue-50 py-14 sm:py-20">
                 <div className="max-w-7xl mx-auto px-2 sm:px-4">
                     <h1
-	className="text-3xl sm:text-4xl font-extrabold text-neutral-950 mb-6 sm:mb-10 text-center"
-	style={{ color: "#000" }}
->
-	Gallery
-</h1>
+                        className="text-3xl sm:text-4xl font-extrabold text-neutral-950 mb-6 sm:mb-10 text-center"
+                        style={{ color: "#000" }}
+                    >
+                        Gallery
+                    </h1>
+                    {galleryError && (
+                        <p
+                            className="mb-4 text-center text-sm"
+                            style={{ color: "#B91C1C" }}
+                        >
+                            {galleryError}
+                        </p>
+                    )}
                     <div
                         className="grid gap-2 sm:gap-4 grid-cols-2 sm:grid-cols-4 md:grid-cols-6 auto-rows-[120px] sm:auto-rows-[180px] md:auto-rows-[200px]"
                         style={{ gridAutoFlow: "dense" }}
@@ -54,12 +96,18 @@ export default function GalleryPage({ galleryImages }) {
                                 <div
                                     key={img}
                                     className={`relative overflow-hidden rounded-xl shadow-lg bg-white group transition-all duration-300
-                                        ${isLarge ? "col-span-2 row-span-2" : ""}
+                                        ${
+                                            isLarge
+                                                ? "col-span-2 row-span-2"
+                                                : ""
+                                        }
                                         cursor-pointer
                                     `}
                                     style={{
                                         minHeight: isLarge ? 240 : 100,
-                                        gridColumn: isLarge ? "span 2" : undefined,
+                                        gridColumn: isLarge
+                                            ? "span 2"
+                                            : undefined,
                                         gridRow: isLarge ? "span 2" : undefined,
                                     }}
                                     onClick={() => setModalImg(img)}
@@ -68,7 +116,11 @@ export default function GalleryPage({ galleryImages }) {
                                         src={img}
                                         alt={`Gallery image ${idx + 1}`}
                                         fill
-                                        sizes={isLarge ? "(min-width: 768px) 33vw, 100vw" : "(min-width: 768px) 16vw, 50vw"}
+                                        sizes={
+                                            isLarge
+                                                ? "(min-width: 768px) 33vw, 100vw"
+                                                : "(min-width: 768px) 16vw, 50vw"
+                                        }
                                         className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
                                         style={{ objectPosition: "center" }}
                                         quality={90}
@@ -87,8 +139,12 @@ export default function GalleryPage({ galleryImages }) {
                     >
                         <div
                             className="relative max-w-3xl w-[96vw] sm:w-[90vw] max-h-[90vh] flex items-center justify-center animate-fade-in"
-                            onClick={e => e.stopPropagation()}
-                            style={{ aspectRatio: "3/2", transition: "transform 0.3s cubic-bezier(.4,2,.6,1)" }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                                aspectRatio: "3/2",
+                                transition:
+                                    "transform 0.3s cubic-bezier(.4,2,.6,1)",
+                            }}
                         >
                             <div className="relative w-full h-[60vw] sm:h-[50vw] max-h-[80vh] max-w-3xl transition-all duration-300">
                                 <Image
@@ -108,11 +164,17 @@ export default function GalleryPage({ galleryImages }) {
             </section>
             <style jsx global>{`
                 @keyframes fade-in {
-                    from { opacity: 0; transform: scale(0.96);}
-                    to { opacity: 1; transform: scale(1);}
+                    from {
+                        opacity: 0;
+                        transform: scale(0.96);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: scale(1);
+                    }
                 }
                 .animate-fade-in {
-                    animation: fade-in 0.35s cubic-bezier(.4,2,.6,1);
+                    animation: fade-in 0.35s cubic-bezier(0.4, 2, 0.6, 1);
                 }
             `}</style>
         </>

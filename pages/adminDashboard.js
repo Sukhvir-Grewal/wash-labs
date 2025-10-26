@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useCallback } from "react";
 import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
+import { useRef } from "react";
+import imageCompression from "browser-image-compression";
+// We'll lazy-load heic2any only if needed
 import AdminAddBooking from "../components/AdminAddBooking";
 import AddExpenseModal from "../components/AddExpenseModal";
 import RevenueChart from "../components/RevenueChart";
@@ -228,20 +232,262 @@ export default function AdminDashboard() {
     ? ''
     : ` on ${(expenseFilterLabels[expenseFilter] || expenseFilter).toLowerCase()}`;
 
+  // Supabase client for uploads
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+  const galleryBucket = process.env.NEXT_PUBLIC_SUPABASE_GALLERY_BUCKET || "Gallery";
+  const [showGallery, setShowGallery] = useState(false);
+  const [galleryImages, setGalleryImages] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryError, setGalleryError] = useState("");
+  const [deletingImage, setDeletingImage] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState({ total: 0, done: 0 });
+
+  // Fetch all images from Supabase Storage
+  const fetchGalleryImages = async () => {
+    setGalleryLoading(true);
+    setGalleryError("");
+    try {
+      const { data, error } = await supabase.storage.from(galleryBucket).list('', { limit: 200, sortBy: { column: 'created_at', order: 'desc' } });
+      if (error) throw error;
+      const images = (data || [])
+        .filter(f => f && f.name && /\.(jpe?g|png|webp|gif)$/i.test(f.name))
+        .map(f => {
+          const { data: pub } = supabase.storage.from(galleryBucket).getPublicUrl(f.name);
+          return { name: f.name, url: pub?.publicUrl };
+        });
+      setGalleryImages(images);
+    } catch (e) {
+      setGalleryError(e.message || String(e));
+      setGalleryImages([]);
+    }
+    setGalleryLoading(false);
+  };
+
+  useEffect(() => {
+    if (showGallery) fetchGalleryImages();
+  }, [showGallery]);
+  const fileInputRef = useRef();
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState("");
+
+  // Handle file input change
+  async function handleGalleryImageUpload(e) {
+    setUploadError("");
+    setUploadSuccess("");
+    setUploading(true);
+    const files = Array.from(e.target.files || []);
+    if (!files.length) {
+      setUploading(false);
+      return;
+    }
+    // Only allow image types
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"];
+    const toUpload = [];
+    for (const file of files) {
+      let processedFile = file;
+      if (file.type === "image/heic" || file.name.toLowerCase().endsWith(".heic")) {
+        // Convert HEIC to JPEG using heic2any
+        try {
+          const heic2any = (await import("heic2any")).default;
+          const jpgBlob = await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.92,
+          });
+          processedFile = new File([
+            Array.isArray(jpgBlob) ? jpgBlob[0] : jpgBlob
+          ], file.name.replace(/\.heic$/i, ".jpg"), { type: "image/jpeg" });
+        } catch (err) {
+          setUploadError("Failed to convert HEIC to JPG: " + err.message);
+          continue;
+        }
+      }
+      // Compress/resize image (browser-image-compression)
+      if (allowedTypes.includes(processedFile.type) || /\.(jpg|jpeg|png|webp|gif)$/i.test(processedFile.name)) {
+        try {
+          const compressed = await imageCompression(processedFile, {
+            maxWidthOrHeight: 1920,
+            maxSizeMB: 2,
+            useWebWorker: true,
+            initialQuality: 0.8,
+          });
+          // Use .jpg extension for compressed images
+          const ext = /\.jpe?g$/i.test(processedFile.name) ? ".jpg" : ".jpg";
+          const name = processedFile.name.replace(/\.(heic|heif|png|webp|gif)$/i, ext);
+          const finalFile = new File([compressed], name, { type: "image/jpeg" });
+          toUpload.push(finalFile);
+        } catch (err) {
+          setUploadError("Failed to compress image: " + err.message);
+        }
+      }
+    }
+    if (!toUpload.length) {
+      setUploadError("No valid images to upload.");
+      setUploading(false);
+      return;
+    }
+    // Upload all images to Supabase Storage (Gallery bucket) with progress
+    let successCount = 0;
+    setUploadProgress({ total: toUpload.length, done: 0 });
+    for (let i = 0; i < toUpload.length; i++) {
+      const file = toUpload[i];
+      const { error } = await supabase.storage.from(galleryBucket).upload(file.name, file, { upsert: true, contentType: file.type });
+      if (error) {
+        setUploadError(`Failed to upload ${file.name}: ${error.message}`);
+      } else {
+        successCount++;
+      }
+      setUploadProgress({ total: toUpload.length, done: i + 1 });
+    }
+    if (successCount) {
+      setUploadSuccess(`Uploaded ${successCount} image(s) successfully!`);
+      fetchGalleryImages();
+    }
+    setUploading(false);
+  }
+
+  // Delete image from Supabase Storage
+  async function handleDeleteImage(img) {
+    setDeletingImage(img.name);
+    setGalleryError("");
+    try {
+      const { error } = await supabase.storage.from(galleryBucket).remove([img.name]);
+      if (error) throw error;
+      setGalleryImages(prev => prev.filter(i => i.name !== img.name));
+      setUploadSuccess("Image deleted successfully!");
+    } catch (e) {
+      setGalleryError(e.message || String(e));
+    }
+    setDeletingImage(null);
+    setDeleteConfirm(null);
+  }
+
+  // Clear gallery/upload messages when opening Edit Gallery
+  useEffect(() => {
+    if (showGallery) {
+      setUploadError("");
+      setUploadSuccess("");
+      setGalleryError("");
+      setUploadProgress({ total: 0, done: 0 });
+      fetchGalleryImages();
+    }
+  }, [showGallery]);
+
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-          <div>
+          <h1 className="text-3xl font-bold text-center md:text-right" style={{ color: '#000' }}>Admin Dashboard</h1>
+          <div className="flex gap-2">
             <Link
               href="/admin-services"
               className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm transition-colors hover:bg-blue-50"
             >
               Edit Services and Prices
             </Link>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-lg border border-green-200 bg-white px-4 py-2 text-sm font-semibold text-green-700 shadow-sm transition-colors hover:bg-green-50"
+              onClick={() => setShowGallery(true)}
+            >
+              Edit Gallery
+            </button>
           </div>
-          <h1 className="text-3xl font-bold text-center md:text-right" style={{ color: '#000' }}>Admin Booking Dashboard</h1>
         </div>
+        {/* Gallery Modal */}
+        {showGallery && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto relative">
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-blue-700 font-semibold"
+                  onClick={() => setShowGallery(false)}
+                >
+                  Back
+                </button>
+                <div className="flex-1 text-center font-bold text-xl" style={{ color: '#000' }}>Edit Gallery</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-lg border border-green-200 bg-white px-4 py-2 text-sm font-semibold text-green-700 shadow-sm transition-colors hover:bg-green-50"
+                    onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                    disabled={uploading}
+                  >
+                    {uploading && uploadProgress.total > 0
+                      ? `${uploadProgress.done}/${uploadProgress.total}✔️`
+                      : "Upload Images"}
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/heic"
+                    multiple
+                    style={{ display: "none" }}
+                    onChange={handleGalleryImageUpload}
+                    aria-label="Upload images to gallery"
+                  />
+                </div>
+              </div>
+              {galleryError && <div className="mb-2 text-red-600 font-semibold">{galleryError}</div>}
+              {uploadError && <div className="mb-2 text-red-600 font-semibold">{uploadError}</div>}
+              {uploadSuccess && <div className="mb-2 text-green-700 font-semibold">{uploadSuccess}</div>}
+              {galleryLoading ? (
+                <div className="py-10 text-center text-blue-600 font-semibold text-lg">Loading images...</div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {galleryImages.map((img) => (
+                    <div key={img.name} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                      <img
+                        src={img.url}
+                        alt={img.name}
+                        className="w-full h-64 object-cover object-center rounded-xl"
+                        style={{ minHeight: 180, maxHeight: 260 }}
+                      />
+                      <button
+                        className="absolute top-2 right-2 bg-white/80 hover:bg-red-600 hover:text-white text-red-600 rounded-full p-1 shadow transition-colors z-10"
+                        title="Delete image"
+                        onClick={() => setDeleteConfirm(img)}
+                        disabled={deletingImage === img.name}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Delete confirmation modal */}
+              {deleteConfirm && (
+                <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
+                  <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-xs flex flex-col items-center">
+                    <div className="font-bold text-lg mb-4 text-center">Delete this image?</div>
+                    <img src={deleteConfirm.url} alt="Preview" className="w-40 h-32 object-cover rounded mb-4" />
+                    <div className="flex gap-3 w-full">
+                      <button
+                        className="w-1/2 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-blue-700 font-semibold"
+                        onClick={() => setDeleteConfirm(null)}
+                        disabled={deletingImage === deleteConfirm.name}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="w-1/2 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-50"
+                        onClick={() => handleDeleteImage(deleteConfirm)}
+                        disabled={deletingImage === deleteConfirm.name}
+                      >
+                        {deletingImage === deleteConfirm.name ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {/* Revenue summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <div className="bg-gradient-to-br from-blue-600 to-blue-400 text-white rounded-xl shadow p-6 flex flex-col">

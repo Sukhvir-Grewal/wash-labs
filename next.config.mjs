@@ -2,7 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ["images.unsplash.com"], // allow Unsplash images
+    domains: [
+      "images.unsplash.com",
+      "uqqunhpfgnqrkalycrbr.supabase.co",
+    ], // allow Unsplash and Supabase storage images
   },
 };
 

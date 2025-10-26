@@ -1,0 +1,18 @@
+{
+    "sourceFile": "pages/api/db-check.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1761437735031,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1761437735031,
+            "name": "Commit-0",
+            "content": "import { Client } from 'pg';\r\n\r\nexport default async function handler(req, res) {\r\n  if (req.method !== 'GET') {\r\n    res.setHeader('Allow', ['GET']);\r\n    return res.status(405).json({ error: 'Method not allowed' });\r\n  }\r\n\r\n  const connectionString = process.env.DATABASE_URL;\r\n  if (!connectionString) {\r\n    return res.status(400).json({ error: 'DATABASE_URL is not set in your environment' });\r\n  }\r\n\r\n  const client = new Client({ connectionString, ssl: { rejectUnauthorized: false } });\r\n\r\n  try {\r\n    await client.connect();\r\n    const result = await client.query('select now() as now, current_user as user');\r\n    const row = result.rows?.[0] || {};\r\n    return res.status(200).json({ ok: true, now: row.now, user: row.user });\r\n  } catch (error) {\r\n    return res.status(500).json({ ok: false, error: error.message || 'Failed to connect' });\r\n  } finally {\r\n    try { await client.end(); } catch {}\r\n  }\r\n}\r\n"
+        }
+    ]
+}

@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 3,
+            "activePatchIndex": 5,
             "patches": [
                 {
                     "date": 1758557481838,
@@ -20,6 +20,14 @@
                 {
                     "date": 1760682512898,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -18,8 +18,9 @@\n     \"mongodb\": \"^6.9.0\",\r\n     \"next\": \"15.5.2\",\r\n     \"next-seo\": \"^6.8.0\",\r\n     \"next-sitemap\": \"^4.2.3\",\r\n+  \"@google-analytics/data\": \"^4.3.0\",\r\n     \"nodemailer\": \"^7.0.6\",\r\n     \"react\": \"19.1.0\",\r\n     \"react-calendar\": \"^6.0.0\",\r\n     \"react-chartjs-2\": \"^5.3.0\",\r\n"
+                },
+                {
+                    "date": 1761437399288,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -25,9 +25,10 @@\n     \"react-calendar\": \"^6.0.0\",\r\n     \"react-chartjs-2\": \"^5.3.0\",\r\n     \"react-day-picker\": \"^9.10.0\",\r\n     \"react-dom\": \"19.1.0\",\r\n-    \"react-icons\": \"^5.5.0\"\r\n+    \"react-icons\": \"^5.5.0\",\r\n+    \"@supabase/supabase-js\": \"^2.46.1\"\r\n   },\r\n   \"devDependencies\": {\r\n     \"@eslint/eslintrc\": \"^3\",\r\n     \"@tailwindcss/postcss\": \"^4\",\r\n"
+                },
+                {
+                    "date": 1761437735019,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -26,9 +26,10 @@\n     \"react-chartjs-2\": \"^5.3.0\",\r\n     \"react-day-picker\": \"^9.10.0\",\r\n     \"react-dom\": \"19.1.0\",\r\n     \"react-icons\": \"^5.5.0\",\r\n-    \"@supabase/supabase-js\": \"^2.46.1\"\r\n+    \"@supabase/supabase-js\": \"^2.46.1\",\r\n+    \"pg\": \"^8.12.0\"\r\n   },\r\n   \"devDependencies\": {\r\n     \"@eslint/eslintrc\": \"^3\",\r\n     \"@tailwindcss/postcss\": \"^4\",\r\n"
                 }
             ],
             "date": 1758557481838,

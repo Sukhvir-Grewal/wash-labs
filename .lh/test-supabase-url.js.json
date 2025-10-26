@@ -1,0 +1,18 @@
+{
+    "sourceFile": "test-supabase-url.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1761443025542,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1761443025542,
+            "name": "Commit-0",
+            "content": "require('dotenv').config({ path: '.env.local' });\r\nconst { createClient } = require('@supabase/supabase-js');\r\n\r\nconst supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);\r\nconst bucket = process.env.SUPABASE_GALLERY_BUCKET || 'Gallery';\r\n\r\n// Test with the exact filename from your screenshot\r\nconst filename = '5035f2cf008c38e4eeb86d0b9802d10c.jpg';\r\n\r\nconst { data: publicUrlData } = supabase.storage\r\n  .from(bucket)\r\n  .getPublicUrl(filename);\r\n\r\nconsole.log('Testing public URL for:', filename);\r\nconsole.log('Public URL:', publicUrlData.publicUrl);\r\nconsole.log('');\r\nconsole.log('Try opening this URL in your browser to see if the image loads.');\r\n"
+        }
+    ]
+}

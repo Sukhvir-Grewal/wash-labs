@@ -1,0 +1,18 @@
+{
+    "sourceFile": "test-migrate-services.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1761450522674,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1761450522674,
+            "name": "Commit-0",
+            "content": "// test-migrate-services.js\r\n// Script to migrate local services data to Supabase 'services' table\r\n\r\nimport fs from 'fs';\r\nimport path from 'path';\r\nimport dotenv from 'dotenv';\r\nimport { createClient } from '@supabase/supabase-js';\r\nimport { SERVICES } from './data/services.js';\r\n\r\n// Load environment variables from .env and .env.local (override)\r\nfunction loadEnvFiles() {\r\n  const cwd = process.cwd();\r\n  const envPath = path.join(cwd, '.env');\r\n  const envLocalPath = path.join(cwd, '.env.local');\r\n  if (fs.existsSync(envPath)) dotenv.config({ path: envPath });\r\n  if (fs.existsSync(envLocalPath)) dotenv.config({ path: envLocalPath, override: true });\r\n}\r\n\r\nloadEnvFiles();\r\n\r\nconst supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;\r\nconst supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;\r\n\r\nif (!supabaseUrl) {\r\n  console.error('Missing Supabase URL. Set NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL) in your .env/.env.local.');\r\n  process.exit(1);\r\n}\r\nif (!supabaseKey) {\r\n  console.error('Missing Supabase key. Prefer SUPABASE_SERVICE_ROLE_KEY in .env.local for write access.');\r\n  process.exit(1);\r\n}\r\n\r\nconst supabase = createClient(supabaseUrl, supabaseKey);\r\n\r\nasync function migrateServices() {\r\n  console.log('Using Supabase URL:', supabaseUrl);\r\n  console.log('Starting migration of', SERVICES.length, 'services...');\r\n  let ok = 0;\r\n  for (const service of SERVICES) {\r\n    // Upsert by primary/unique key 'id'\r\n    const { error } = await supabase\r\n      .from('services')\r\n      .upsert(service, { onConflict: 'id' });\r\n    if (error) {\r\n      console.error(`Error migrating service ${service.id}:`, error.message);\r\n    } else {\r\n      ok += 1;\r\n      console.log(`✔ Inserted/Updated: ${service.id}`);\r\n    }\r\n  }\r\n  console.log(`Migration complete. Success: ${ok}/${SERVICES.length}`);\r\n}\r\n\r\nmigrateServices().catch((e) => {\r\n  console.error('Migration failed:', e);\r\n  process.exit(1);\r\n});\r\n"
+        }
+    ]
+}

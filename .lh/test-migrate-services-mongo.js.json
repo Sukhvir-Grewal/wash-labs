@@ -1,0 +1,18 @@
+{
+    "sourceFile": "test-migrate-services-mongo.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1761450522703,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1761450522703,
+            "name": "Commit-0",
+            "content": "// test-migrate-services-mongo.js\r\n// Migrate local SERVICES data into MongoDB 'services' collection (upsert by id)\r\n\r\nimport fs from 'fs';\r\nimport path from 'path';\r\nimport dotenv from 'dotenv';\r\nimport { MongoClient } from 'mongodb';\r\nimport { SERVICES } from './data/services.js';\r\n\r\nfunction loadEnvFiles() {\r\n  const cwd = process.cwd();\r\n  const envPath = path.join(cwd, '.env');\r\n  const envLocalPath = path.join(cwd, '.env.local');\r\n  if (fs.existsSync(envPath)) dotenv.config({ path: envPath });\r\n  if (fs.existsSync(envLocalPath)) dotenv.config({ path: envLocalPath, override: true });\r\n}\r\n\r\nloadEnvFiles();\r\n\r\nconst mongoUri = process.env.MONGODB_URI || process.env.MONGODB_URL;\r\nconst dbName = process.env.MONGODB_DB || process.env.DB_NAME || 'washlabs';\r\n\r\nif (!mongoUri) {\r\n  console.error('Missing MONGODB_URI. Add it to .env.local');\r\n  process.exit(1);\r\n}\r\n\r\nasync function migrateMongo() {\r\n  console.log('Connecting to MongoDB...');\r\n  const client = new MongoClient(mongoUri);\r\n  try {\r\n    await client.connect();\r\n    const db = client.db(dbName);\r\n    const col = db.collection('services');\r\n\r\n    // Ensure unique index on id\r\n    await col.createIndex({ id: 1 }, { unique: true });\r\n\r\n    console.log('Upserting', SERVICES.length, 'services...');\r\n    let ok = 0;\r\n    for (const svc of SERVICES) {\r\n      const res = await col.updateOne(\r\n        { id: svc.id },\r\n        { $set: svc },\r\n        { upsert: true }\r\n      );\r\n      if (res.upsertedCount === 1 || res.modifiedCount === 1 || res.matchedCount === 1) {\r\n        ok += 1;\r\n        console.log(`✔ Upserted: ${svc.id}`);\r\n      } else {\r\n        console.warn(`? No change for: ${svc.id}`);\r\n      }\r\n    }\r\n    console.log(`Mongo migration complete. Success: ${ok}/${SERVICES.length}`);\r\n  } catch (e) {\r\n    console.error('Mongo migration failed:', e);\r\n    process.exit(1);\r\n  } finally {\r\n    await client.close();\r\n  }\r\n}\r\n\r\nmigrateMongo();\r\n"
+        }
+    ]
+}
