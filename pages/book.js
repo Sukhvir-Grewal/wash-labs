@@ -80,10 +80,20 @@ export default function BookPage() {
     [vehicleType]
   );
 
+  const selectedVehicleIndex = useMemo(() => {
+    const idx = VEHICLE_OPTIONS.findIndex((o) => o.id === vehicleType);
+    return idx >= 0 ? idx : 0;
+  }, [vehicleType]);
+
   const totalPrice = useMemo(() => {
     if (typeof basePlanPrice !== "number") return null;
     return basePlanPrice + vehicleOption.adjustment;
   }, [basePlanPrice, vehicleOption.adjustment]);
+
+  const isSubscription = useMemo(() => {
+    const t = (selectedService?.title || '').toLowerCase();
+    return selectedService?.id === 'subscription' || t.includes('subscription');
+  }, [selectedService?.id, selectedService?.title]);
 
   useEffect(() => {
     setPlan("base");
@@ -123,12 +133,23 @@ export default function BookPage() {
         {loading ? (
           <div className="bg-white/95 border rounded-3xl shadow-xl overflow-hidden text-center p-10 text-blue-600">Loading services...</div>
         ) : selectedService ? (
-          <div className="bg-white/95 border rounded-3xl shadow-xl overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e5e7eb' }}>
+          <div
+            className={`border rounded-3xl shadow-xl overflow-hidden ${isSubscription ? 'subscription-card relative' : ''}`}
+            style={
+              isSubscription
+                ? {
+                    background: 'linear-gradient(135deg, #FFF7E6 0%, #FFE8A3 35%, #F9D976 65%, #F5B942 100%)',
+                    borderColor: '#F5B942'
+                  }
+                : { backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e5e7eb' }
+            }
+          >
+            {isSubscription && <div className="shine" aria-hidden="true" />}
             <div className="px-6 sm:px-10 py-10 space-y-6">
               <span className="inline-flex px-4 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold uppercase tracking-widest">
                 {selectedService.comingSoon ? "Coming Soon" : "Book Now"}
               </span>
-              <h1 className="text-3xl sm:text-4xl font-bold" style={{ color: '#0A0A0A' }}>
+              <h1 className="text-3xl sm:text-4xl font-bold" style={{ color: isSubscription ? '#7C2D12' : '#0A0A0A' }}>
                 {selectedService.title}
               </h1>
               <div className="relative grid grid-cols-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden w-full sm:w-auto">
@@ -162,22 +183,26 @@ export default function BookPage() {
                   Revive
                 </button>
               </div>
-              <div className="bg-slate-100 border border-slate-200 rounded-2xl p-1">
-                <div className="grid grid-cols-3 gap-2">
-                  {VEHICLE_OPTIONS.map((option, index) => {
+              <div className="relative bg-slate-100 border border-slate-200 rounded-2xl p-1">
+                {/* Sliding highlight that moves from A to B when vehicle type changes */}
+                <div
+                  className="absolute inset-y-1 left-1 w-1/3 rounded-full bg-white shadow transition-transform duration-300 ease-out"
+                  style={{ transform: `translateX(${selectedVehicleIndex * 100}%)` }}
+                  aria-hidden="true"
+                />
+                <div className="relative flex">
+                  {VEHICLE_OPTIONS.map((option) => {
                     const isSelected = vehicleType === option.id;
-                    const alignment = index === 0 ? "justify-start" : index === 1 ? "justify-center" : "justify-end";
                     return (
-                      <div key={option.id} className={`flex ${alignment}`}>
-                        <button
-                          type="button"
-                          onClick={() => setVehicleType(option.id)}
-                          className={`px-4 py-2 text-sm font-semibold rounded-full transition-colors ${isSelected ? 'bg-white shadow' : ''}`}
-                          style={{ color: isSelected ? '#0A0A0A' : '#111827' }}
-                        >
-                          {option.label}
-                        </button>
-                      </div>
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setVehicleType(option.id)}
+                        className={`flex-1 relative z-10 px-4 py-2 text-sm font-semibold rounded-full transition-colors`}
+                        style={{ color: isSelected ? '#0A0A0A' : '#111827' }}
+                      >
+                        {option.label}
+                      </button>
                     );
                   })}
                 </div>
@@ -219,7 +244,14 @@ export default function BookPage() {
                 </div>
               )}
               {selectedService.comingSoon && (
-                <div className="rounded-xl border border-dashed border-blue-200 bg-blue-50/70 px-4 py-6 text-blue-700 text-sm">
+                <div
+                  className="rounded-xl border border-dashed px-4 py-6 text-sm"
+                  style={{
+                    borderColor: isSubscription ? '#F5B942' : '#BFDBFE',
+                    background: isSubscription ? '#FEF3C7' : 'rgba(239,246,255,0.7)',
+                    color: isSubscription ? '#7C2D12' : '#1D4ED8'
+                  }}
+                >
                   Subscriptions are almost here. We’ll share flexible plans that keep your vehicle spotless on your schedule.
                 </div>
               )}
@@ -250,4 +282,23 @@ export default function BookPage() {
     </main>
   );
 }
+<style jsx>{`
+  .subscription-card { position: relative; overflow: hidden; }
+  .subscription-card .shine {
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    left: -30%;
+    width: 50%;
+    background: linear-gradient(60deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 100%);
+    transform: translateX(-120%) rotate(8deg);
+    animation: shine 2.75s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes shine {
+    0% { transform: translateX(-120%) rotate(8deg); }
+    60% { transform: translateX(160%) rotate(8deg); }
+    100% { transform: translateX(160%) rotate(8deg); }
+  }
+`}</style>
        
