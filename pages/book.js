@@ -152,54 +152,70 @@ export default function BookPage() {
               <h1 className="text-3xl sm:text-4xl font-bold" style={{ color: isSubscription ? '#7C2D12' : '#0A0A0A' }}>
                 {selectedService.title}
               </h1>
-              <div className="relative grid grid-cols-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden w-full sm:w-auto">
-                <div
-                  className="absolute inset-y-0 w-1/2 rounded-full bg-white shadow transition-transform duration-300 ease-out"
-                  style={{ transform: plan === "revive" ? "translateX(100%)" : "translateX(0%)" }}
-                  aria-hidden="true"
-                />
-                <button
-                  type="button"
-                  onClick={() => setPlan("base")}
-                  className={`relative z-10 px-5 py-2 text-sm font-semibold transition-colors`}
-                  style={{ color: plan === 'base' ? '#0A0A0A' : '#111827' }}
-                >
-                  Base
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedService.comingSoon || typeof selectedService.revivePrice !== "number") return;
-                    setPlan("revive");
-                  }}
-                  className={`relative z-10 px-5 py-2 text-sm font-semibold transition-colors ${
-                    selectedService.comingSoon || typeof selectedService.revivePrice !== "number"
-                      ? "opacity-50 cursor-not-allowed"
-                      : ""
-                  }`}
-                  style={{ color: plan === 'revive' ? '#0A0A0A' : '#111827' }}
-                  disabled={selectedService.comingSoon || typeof selectedService.revivePrice !== "number"}
-                >
-                  Revive
-                </button>
-              </div>
-              <div className="relative bg-slate-100 border border-slate-200 rounded-2xl p-1">
+              {!isSubscription && (
+                <div className="relative grid grid-cols-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden w-full sm:w-auto">
+                  <div
+                    className="absolute inset-y-0 w-1/2 rounded-full bg-white shadow transition-transform duration-300 ease-out"
+                    style={{ transform: plan === "revive" ? "translateX(100%)" : "translateX(0%)" }}
+                    aria-hidden="true"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPlan("base")}
+                    className={`relative z-10 px-5 py-2 text-sm font-semibold transition-colors`}
+                    style={{ color: plan === 'base' ? '#0A0A0A' : '#111827' }}
+                  >
+                    Base
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedService.comingSoon || typeof selectedService.revivePrice !== "number") return;
+                      setPlan("revive");
+                    }}
+                    className={`relative z-10 px-5 py-2 text-sm font-semibold transition-colors ${
+                      selectedService.comingSoon || typeof selectedService.revivePrice !== "number"
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
+                    style={{ color: plan === 'revive' ? '#0A0A0A' : '#111827' }}
+                    disabled={selectedService.comingSoon || typeof selectedService.revivePrice !== "number"}
+                  >
+                    Revive
+                  </button>
+                </div>
+              )}
+              <div
+                className="relative rounded-2xl p-1 border"
+                style={{
+                  background: isSubscription ? 'rgba(254, 243, 199, 0.6)' : undefined,
+                  borderColor: isSubscription ? '#F5B942' : '#e5e7eb'
+                }}
+              >
                 {/* Sliding highlight that moves from A to B when vehicle type changes */}
                 <div
-                  className="absolute inset-y-1 left-1 w-1/3 rounded-full bg-white shadow transition-transform duration-300 ease-out"
-                  style={{ transform: `translateX(${selectedVehicleIndex * 100}%)` }}
+                  className={`absolute inset-y-1 left-1 w-1/3 rounded-full transition-transform duration-300 ease-out ${
+                    isSubscription ? 'bg-white border shadow-[0_1px_4px_rgba(245,185,66,0.35)]' : 'bg-white shadow'
+                  }`}
+                  style={{
+                    transform: `translateX(${selectedVehicleIndex * 100}%)`,
+                    borderColor: isSubscription ? '#F5B942' : undefined,
+                    borderWidth: isSubscription ? 1 : 0
+                  }}
                   aria-hidden="true"
                 />
                 <div className="relative flex">
                   {VEHICLE_OPTIONS.map((option) => {
                     const isSelected = vehicleType === option.id;
+                    const selectedColor = isSubscription ? '#7C2D12' : '#0A0A0A';
+                    const unselectedColor = isSubscription ? '#7C2D12CC' : '#111827';
                     return (
                       <button
                         key={option.id}
                         type="button"
                         onClick={() => setVehicleType(option.id)}
                         className={`flex-1 relative z-10 px-4 py-2 text-sm font-semibold rounded-full transition-colors`}
-                        style={{ color: isSelected ? '#0A0A0A' : '#111827' }}
+                        style={{ color: isSelected ? selectedColor : unselectedColor }}
                       >
                         {option.label}
                       </button>
