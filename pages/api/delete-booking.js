@@ -1,9 +1,10 @@
 import { MongoClient, ObjectId } from "mongodb";
+import { requireAuth } from "../../lib/auth";
 
 const uri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_DB;
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "DELETE") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -31,3 +32,6 @@ export default async function handler(req, res) {
     if (client) await client.close();
   }
 }
+
+// Wrap with authentication
+export default requireAuth(handler);

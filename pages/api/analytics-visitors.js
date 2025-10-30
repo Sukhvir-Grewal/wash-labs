@@ -3,6 +3,7 @@
 // This endpoint returns last 30 days total users and daily users.
 
 import { BetaAnalyticsDataClient } from '@google-analytics/data';
+import { requireAuth } from '../../lib/auth';
 
 function normalizePrivateKey(raw) {
   if (!raw) return raw;
@@ -34,7 +35,7 @@ function getAnalyticsClient() {
   return { client, propertyId };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
   try {
     const { client, propertyId } = getAnalyticsClient();
@@ -69,3 +70,6 @@ export default async function handler(req, res) {
     res.status(500).json({ success: false, error: `${name}: ${message}`, details });
   }
 }
+
+// Wrap with authentication
+export default requireAuth(handler);

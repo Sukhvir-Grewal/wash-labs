@@ -1,8 +1,9 @@
 import { getDb } from "../../lib/mongodb";
 import { ObjectId } from "mongodb";
+import { requireAuth } from "../../lib/auth";
 
 // Expected expense shape: { date: 'YYYY-MM-DD', amount: number, category: 'one-time'|'chemicals'|'other', note?: string }
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const db = await getDb();
     const col = db.collection('expenses');
@@ -63,3 +64,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, error: e?.message || 'Server error' });
   }
 }
+
+// Wrap with authentication
+export default requireAuth(handler);

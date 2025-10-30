@@ -1,4 +1,5 @@
 import { BetaAnalyticsDataClient } from '@google-analytics/data';
+import { requireAuth } from '../../lib/auth';
 
 function normalizePrivateKey(raw) {
   if (!raw) return raw;
@@ -25,7 +26,7 @@ function getClientAndProperty() {
   return { client, propertyId };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const { client, propertyId } = getClientAndProperty();
     const { excludeMe } = req.query || {};
@@ -54,3 +55,6 @@ export default async function handler(req, res) {
     res.status(500).json({ success: false, error: `${name}: ${message}`, details });
   }
 }
+
+// Wrap with authentication
+export default requireAuth(handler);

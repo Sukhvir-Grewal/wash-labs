@@ -15,6 +15,34 @@ import EyeToggle from "../components/EyeToggle";
 import dynamic from 'next/dynamic';
 const VisitorsCard = dynamic(() => import('../components/VisitorsCard'), { ssr: false });
 import { useRouter } from "next/router";
+import { isAuthenticated } from "../lib/auth";
+
+/**
+ * Server-side authentication check
+ * Redirect to login if not authenticated
+ */
+export async function getServerSideProps(context) {
+  console.log('[adminDashboard] getServerSideProps called');
+  console.log('[adminDashboard] Cookies:', context.req.headers.cookie);
+  
+  const authenticated = isAuthenticated(context.req);
+  console.log('[adminDashboard] Authenticated:', authenticated);
+  
+  if (!authenticated) {
+    console.log('[adminDashboard] Not authenticated, redirecting to /admin');
+    return {
+      redirect: {
+        destination: '/admin',
+        permanent: false,
+      },
+    };
+  }
+  
+  console.log('[adminDashboard] Authentication successful, rendering dashboard');
+  return {
+    props: {},
+  };
+}
 
 export default function AdminDashboard() {
   // Format date as 'oct-19'
@@ -383,7 +411,7 @@ export default function AdminDashboard() {
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <h1 className="text-3xl font-bold text-center md:text-right" style={{ color: '#000' }}>Admin Dashboard</h1>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Link
               href="/admin-services"
               className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm transition-colors hover:bg-blue-50"
@@ -396,6 +424,21 @@ export default function AdminDashboard() {
               onClick={() => setShowGallery(true)}
             >
               Edit Gallery
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 shadow-sm transition-colors hover:bg-red-50"
+              onClick={async () => {
+                try {
+                  await fetch('/api/auth/logout', { method: 'POST' });
+                  router.replace('/admin');
+                } catch (err) {
+                  console.error('Logout error:', err);
+                  router.replace('/admin');
+                }
+              }}
+            >
+              Logout
             </button>
           </div>
         </div>

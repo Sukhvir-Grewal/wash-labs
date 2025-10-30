@@ -1,4 +1,5 @@
 import { getDb } from "../../lib/mongodb";
+import { isAuthenticated } from "../../lib/auth";
 
 export default async function handler(req, res) {
   const method = req.method;
@@ -13,6 +14,11 @@ export default async function handler(req, res) {
     }
 
     if (method === "PUT") {
+      // Require authentication for PUT (admin only)
+      if (!isAuthenticated(req)) {
+        return res.status(401).json({ error: 'Unauthorized. Please login.' });
+      }
+      
       const body = req.body || {};
       const services = Array.isArray(body.services) ? body.services : [];
       if (!services.length) {

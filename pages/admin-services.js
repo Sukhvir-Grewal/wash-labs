@@ -1,5 +1,28 @@
 import { useMemo, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
+import { isAuthenticated } from "../lib/auth";
+
+/**
+ * Server-side authentication check
+ * Redirect to login if not authenticated
+ */
+export async function getServerSideProps(context) {
+  const authenticated = isAuthenticated(context.req);
+  
+  if (!authenticated) {
+    return {
+      redirect: {
+        destination: '/admin',
+        permanent: false,
+      },
+    };
+  }
+  
+  return {
+    props: {},
+  };
+}
 
 const emptyServiceTemplate = {
   id: "",
@@ -54,6 +77,7 @@ function FeatureListEditor({ label, features, onChange, onAdd, onRemove }) {
 }
 
 export default function AdminServicesPage() {
+  const router = useRouter();
   const [services, setServices] = useState([]);
   const [initialServices, setInitialServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -209,6 +233,21 @@ export default function AdminServicesPage() {
               style={{ borderRadius: 8, border: '1px solid #BBF7D0', background: '#ECFDF5', padding: '10px 20px', fontSize: 15, fontWeight: 600, color: '#059669', cursor: 'pointer', transition: 'background 0.2s' }}
             >
               Add New Service
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await fetch('/api/auth/logout', { method: 'POST' });
+                  router.replace('/admin');
+                } catch (err) {
+                  console.error('Logout error:', err);
+                  router.replace('/admin');
+                }
+              }}
+              style={{ borderRadius: 8, border: '1px solid #FCA5A5', background: '#FEF2F2', padding: '10px 20px', fontSize: 15, fontWeight: 600, color: '#DC2626', cursor: 'pointer', transition: 'background 0.2s' }}
+            >
+              Logout
             </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'row', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
