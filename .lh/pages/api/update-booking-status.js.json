@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 3,
+            "activePatchIndex": 4,
             "patches": [
                 {
                     "date": 1760675561388,
@@ -20,6 +20,10 @@
                 {
                     "date": 1760730803075,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,6 +1,5 @@\n import { MongoClient, ObjectId } from \"mongodb\";\r\n-import { getDb } from \"../../lib/mongodb\";\r\n \r\n const uri = process.env.MONGODB_URI;\r\n const dbName = process.env.MONGODB_DB;\r\n \r\n@@ -14,10 +13,12 @@\n   }\r\n   if (!id || !status) {\r\n     return res.status(400).json({ error: \"Missing id or status\" });\r\n   }\r\n+  let client;\r\n   try {\r\n-    const db = await getDb();\r\n+    client = await MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });\r\n+    const db = client.db(dbName);\r\n     const collection = db.collection(\"bookings\");\r\n     const result = await collection.updateOne(\r\n       { _id: new ObjectId(id) },\r\n       { $set: { status } }\r\n@@ -27,8 +28,9 @@\n     } else {\r\n       res.status(404).json({ error: \"Booking not found\" });\r\n     }\r\n   } catch (err) {\r\n-    console.error(\"/api/update-booking-status error:\", err);\r\n     res.status(500).json({ error: err.message });\r\n+  } finally {\r\n+    if (client) await client.close();\r\n   }\r\n }\r\n"
+                },
+                {
+                    "date": 1761927993146,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -0,0 +1,40 @@\n+import { MongoClient, ObjectId } from \"mongodb\";\r\n+import { requireAuth } from \"../../lib/auth\";\r\n+\r\n+const uri = process.env.MONGODB_URI;\r\n+const dbName = process.env.MONGODB_DB;\r\n+\r\n+async function handler(req, res) {\r\n+  if (req.method !== \"PATCH\") {\r\n+    return res.status(405).json({ error: \"Method not allowed\" });\r\n+  }\r\n+  const { id, status } = req.query;\r\n+  if (!uri || !dbName) {\r\n+    return res.status(500).json({ error: \"Missing MongoDB config\" });\r\n+  }\r\n+  if (!id || !status) {\r\n+    return res.status(400).json({ error: \"Missing id or status\" });\r\n+  }\r\n+  let client;\r\n+  try {\r\n+    client = await MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });\r\n+    const db = client.db(dbName);\r\n+    const collection = db.collection(\"bookings\");\r\n+    const result = await collection.updateOne(\r\n+      { _id: new ObjectId(id) },\r\n+      { $set: { status } }\r\n+    );\r\n+    if (result.matchedCount === 1) {\r\n+      res.status(200).json({ success: true });\r\n+    } else {\r\n+      res.status(404).json({ error: \"Booking not found\" });\r\n+    }\r\n+  } catch (err) {\r\n+    res.status(500).json({ error: err.message });\r\n+  } finally {\r\n+    if (client) await client.close();\r\n+  }\r\n+}\r\n+\r\n+// Wrap with authentication\r\n+export default requireAuth(handler);\r\n"
                 }
             ],
             "date": 1760675561388,

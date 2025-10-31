@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 4,
+            "activePatchIndex": 5,
             "patches": [
                 {
                     "date": 1760674580459,
@@ -24,6 +24,10 @@
                 {
                     "date": 1760730803035,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,6 +1,5 @@\n import { MongoClient } from \"mongodb\";\r\n-import { getDb } from \"../../lib/mongodb\";\r\n \r\n const uri = process.env.MONGODB_URI;\r\n const dbName = process.env.MONGODB_DB;\r\n \r\n@@ -11,13 +10,17 @@\n   const booking = req.body;\r\n   if (!uri || !dbName) {\r\n     return res.status(500).json({ error: \"Missing MongoDB config\" });\r\n   }\r\n+  let client;\r\n   try {\r\n-    const db = await getDb();\r\n+    client = await MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });\r\n+    const db = client.db(dbName);\r\n     const collection = db.collection(\"bookings\");\r\n     const result = await collection.insertOne(booking);\r\n     res.status(200).json({ success: true, insertedId: result.insertedId });\r\n   } catch (err) {\r\n     res.status(500).json({ error: err.message });\r\n+  } finally {\r\n+    if (client) await client.close();\r\n   }\r\n }\r\n"
+                },
+                {
+                    "date": 1761927992717,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -0,0 +1,30 @@\n+import { MongoClient } from \"mongodb\";\r\n+import { requireAuth } from \"../../lib/auth\";\r\n+\r\n+const uri = process.env.MONGODB_URI;\r\n+const dbName = process.env.MONGODB_DB;\r\n+\r\n+async function handler(req, res) {\r\n+  if (req.method !== \"POST\") {\r\n+    return res.status(405).json({ error: \"Method not allowed\" });\r\n+  }\r\n+  const booking = req.body;\r\n+  if (!uri || !dbName) {\r\n+    return res.status(500).json({ error: \"Missing MongoDB config\" });\r\n+  }\r\n+  let client;\r\n+  try {\r\n+    client = await MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });\r\n+    const db = client.db(dbName);\r\n+    const collection = db.collection(\"bookings\");\r\n+    const result = await collection.insertOne(booking);\r\n+    res.status(200).json({ success: true, insertedId: result.insertedId });\r\n+  } catch (err) {\r\n+    res.status(500).json({ error: err.message });\r\n+  } finally {\r\n+    if (client) await client.close();\r\n+  }\r\n+}\r\n+\r\n+// Wrap with authentication\r\n+export default requireAuth(handler);\r\n"
                 }
             ],
             "date": 1760674580459,

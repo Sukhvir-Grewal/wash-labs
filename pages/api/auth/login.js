@@ -1,8 +1,7 @@
 import { 
   verifyAdminPassword, 
   createSessionToken, 
-  createSessionCookie, 
-  storeSession 
+  createSessionCookie
 } from '../../../lib/auth';
 
 /**
@@ -42,22 +41,13 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid password' });
     }
     
-    // Create session token
+    // Create JWT session token
     const token = createSessionToken();
-    console.log('[login] Session token created:', token.substring(0, 10) + '...');
-    
-    // Store session (in-memory for now, use Redis/DB in production)
-    storeSession(token, {
-      role: 'admin',
-      loginAt: new Date().toISOString(),
-    });
-    console.log('[login] Session stored');
-    
+    console.log('[login] JWT session token created:', token.substring(0, 10) + '...');
     // Set httpOnly cookie
     const cookie = createSessionCookie(token);
     res.setHeader('Set-Cookie', cookie);
     console.log('[login] Cookie set');
-    
     // Return success (DO NOT send token to client)
     return res.status(200).json({ 
       success: true,

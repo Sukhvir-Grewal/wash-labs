@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 1,
+            "activePatchIndex": 2,
             "patches": [
                 {
                     "date": 1760845224362,
@@ -12,6 +12,10 @@
                 {
                     "date": 1760845604106,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -27,9 +27,9 @@\n \r\n export default async function handler(req, res) {\r\n   try {\r\n     const { client, propertyId } = getClientAndProperty();\r\n-    const { excludeMe, topPages } = req.query || {};\r\n+    const { excludeMe } = req.query || {};\r\n \r\n     // 1) Total active users (no dimensions)\r\n     const [totalResp] = await client.runRealtimeReport({\r\n       property: `properties/${propertyId}`,\r\n@@ -45,25 +45,9 @@\n \r\n     if (excludeMe && totalActive > 0) totalActive = totalActive - 1;\r\n     if (totalActive < 0) totalActive = 0;\r\n \r\n-    let pages = [];\r\n-    if (topPages) {\r\n-      // 2) Top pages by active users\r\n-      const [pagesResp] = await client.runRealtimeReport({\r\n-        property: `properties/${propertyId}`,\r\n-        metrics: [{ name: 'activeUsers' }],\r\n-        dimensions: [{ name: 'pagePathPlusQueryString' }],\r\n-        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],\r\n-        limit: 10,\r\n-      });\r\n-      pages = (pagesResp?.rows || []).map(r => ({\r\n-        path: r.dimensionValues?.[0]?.value || '/',\r\n-        active: Number(r.metricValues?.[0]?.value || 0),\r\n-      }));\r\n-    }\r\n-\r\n-    res.status(200).json({ success: true, totalActive, pages });\r\n+    res.status(200).json({ success: true, totalActive });\r\n   } catch (e) {\r\n     const name = e?.name || 'Error';\r\n     const message = e?.message || 'Unknown error';\r\n     const details = Array.isArray(e?.errors) && e.errors.length ? e.errors[0]?.message : undefined;\r\n"
+                },
+                {
+                    "date": 1761927993776,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,5 +1,6 @@\n import { BetaAnalyticsDataClient } from '@google-analytics/data';\r\n+import { requireAuth } from '../../lib/auth';\r\n \r\n function normalizePrivateKey(raw) {\r\n   if (!raw) return raw;\r\n   let key = raw.trim();\r\n@@ -24,9 +25,9 @@\n   });\r\n   return { client, propertyId };\r\n }\r\n \r\n-export default async function handler(req, res) {\r\n+async function handler(req, res) {\r\n   try {\r\n     const { client, propertyId } = getClientAndProperty();\r\n     const { excludeMe } = req.query || {};\r\n \r\n@@ -53,4 +54,7 @@\n     const details = Array.isArray(e?.errors) && e.errors.length ? e.errors[0]?.message : undefined;\r\n     res.status(500).json({ success: false, error: `${name}: ${message}`, details });\r\n   }\r\n }\r\n+\r\n+// Wrap with authentication\r\n+export default requireAuth(handler);\r\n"
                 }
             ],
             "date": 1760845224362,

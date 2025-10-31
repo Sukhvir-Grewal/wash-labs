@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 3,
+            "activePatchIndex": 4,
             "patches": [
                 {
                     "date": 1760675211174,
@@ -20,6 +20,10 @@
                 {
                     "date": 1760730803036,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,6 +1,5 @@\n import { MongoClient } from \"mongodb\";\r\n-import { getDb } from \"../../lib/mongodb\";\r\n \r\n const uri = process.env.MONGODB_URI;\r\n const dbName = process.env.MONGODB_DB;\r\n \r\n@@ -10,14 +9,17 @@\n   }\r\n   if (!uri || !dbName) {\r\n     return res.status(500).json({ error: \"Missing MongoDB config\" });\r\n   }\r\n+  let client;\r\n   try {\r\n-    const db = await getDb();\r\n+    client = await MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });\r\n+    const db = client.db(dbName);\r\n     const collection = db.collection(\"bookings\");\r\n     const bookings = await collection.find({}).sort({ date: -1, time: -1 }).toArray();\r\n     res.status(200).json({ success: true, bookings });\r\n   } catch (err) {\r\n-    console.error(\"/api/get-bookings error:\", err);\r\n-    res.status(500).json({ error: err.message || 'Internal Server Error' });\r\n+    res.status(500).json({ error: err.message });\r\n+  } finally {\r\n+    if (client) await client.close();\r\n   }\r\n }\r\n"
+                },
+                {
+                    "date": 1761927992865,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -0,0 +1,24 @@\n+import { getDb } from \"../../lib/mongodb\";\r\n+import { requireAuth } from \"../../lib/auth\";\r\n+\r\n+async function handler(req, res) {\r\n+  if (req.method !== \"GET\") {\r\n+    return res.status(405).json({ error: \"Method not allowed\" });\r\n+  }\r\n+  try {\r\n+    const db = await getDb();\r\n+    const bookings = await db\r\n+      .collection(\"bookings\")\r\n+      .find({})\r\n+      .sort({ date: -1, time: -1 })\r\n+      .toArray();\r\n+    return res.status(200).json({ success: true, bookings });\r\n+  } catch (err) {\r\n+    console.error(\"[get-bookings] error:\", err);\r\n+    const message = err && (err.message || err.name) ? `${err.name || \"Error\"}: ${err.message || \"Unknown\"}` : \"Unknown error\";\r\n+    return res.status(500).json({ error: message });\r\n+  }\r\n+}\r\n+\r\n+// Wrap with authentication\r\n+export default requireAuth(handler);\r\n"
                 }
             ],
             "date": 1760675211174,

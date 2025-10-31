@@ -3,11 +3,15 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 0,
+            "activePatchIndex": 1,
             "patches": [
                 {
                     "date": 1760844547517,
                     "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1761927993646,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,5 +1,6 @@\n import { BetaAnalyticsDataClient } from '@google-analytics/data';\r\n+import { requireAuth } from '../../lib/auth';\r\n \r\n function summarizeEnv() {\r\n   const clientEmail = process.env.GA4_CLIENT_EMAIL || '';\r\n   const privateKey = process.env.GA4_PRIVATE_KEY || '';\r\n@@ -30,9 +31,9 @@\n     },\r\n   };\r\n }\r\n \r\n-export default async function handler(req, res) {\r\n+async function handler(req, res) {\r\n   try {\r\n     const envSummary = summarizeEnv();\r\n     let canInitClient = false;\r\n     if (envSummary.hasClientEmail && envSummary.hasPrivateKey) {\r\n@@ -67,4 +68,7 @@\n   } catch (e) {\r\n     res.status(500).json({ success: false, error: e?.message || 'Unknown error' });\r\n   }\r\n }\r\n+\r\n+// Wrap with authentication\r\n+export default requireAuth(handler);\r\n"
                 }
             ],
             "date": 1760844547517,

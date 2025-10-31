@@ -1,4 +1,4 @@
-import { getSessionToken, deleteSession, createLogoutCookie } from '../../../lib/auth';
+import { createLogoutCookie } from '../../../lib/auth';
 
 /**
  * Admin Logout API
@@ -13,18 +13,9 @@ export default async function handler(req, res) {
   }
   
   try {
-    // Get session token
-    const token = getSessionToken(req);
-    
-    // Delete session if exists
-    if (token) {
-      deleteSession(token);
-    }
-    
-    // Clear cookie
+    // Clear cookie (JWT logout)
     const cookie = createLogoutCookie();
     res.setHeader('Set-Cookie', cookie);
-    
     return res.status(200).json({ 
       success: true,
       message: 'Logout successful'

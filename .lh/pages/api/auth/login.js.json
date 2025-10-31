@@ -1,0 +1,18 @@
+{
+    "sourceFile": "pages/api/auth/login.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1761927994820,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1761927994820,
+            "name": "Commit-0",
+            "content": "import { \r\n  verifyAdminPassword, \r\n  createSessionToken, \r\n  createSessionCookie, \r\n  storeSession \r\n} from '../../../lib/auth';\r\n\r\n/**\r\n * Admin Login API\r\n * POST /api/auth/login\r\n * \r\n * Server-side password verification only\r\n * Sets httpOnly session cookie on success\r\n */\r\nexport default async function handler(req, res) {\r\n  // Only allow POST\r\n  if (req.method !== 'POST') {\r\n    console.log('[login] Method not allowed:', req.method);\r\n    return res.status(405).json({ error: 'Method not allowed' });\r\n  }\r\n  \r\n  try {\r\n    const { password } = req.body;\r\n    console.log('[login] Received login request');\r\n    console.log('[login] Password received:', password ? 'Yes' : 'No');\r\n    console.log('[login] Password length:', password?.length || 0);\r\n    \r\n    // Validate input\r\n    if (!password || typeof password !== 'string') {\r\n      console.log('[login] Invalid password input');\r\n      return res.status(400).json({ error: 'Password is required' });\r\n    }\r\n    \r\n    // Verify password (server-side only)\r\n    const isValid = verifyAdminPassword(password);\r\n    console.log('[login] Password verification result:', isValid);\r\n    \r\n    if (!isValid) {\r\n      console.log('[login] Invalid password attempt');\r\n      // Add delay to prevent brute force attacks\r\n      await new Promise(resolve => setTimeout(resolve, 1000));\r\n      return res.status(401).json({ error: 'Invalid password' });\r\n    }\r\n    \r\n    // Create session token\r\n    const token = createSessionToken();\r\n    console.log('[login] Session token created:', token.substring(0, 10) + '...');\r\n    \r\n    // Store session (in-memory for now, use Redis/DB in production)\r\n    storeSession(token, {\r\n      role: 'admin',\r\n      loginAt: new Date().toISOString(),\r\n    });\r\n    console.log('[login] Session stored');\r\n    \r\n    // Set httpOnly cookie\r\n    const cookie = createSessionCookie(token);\r\n    res.setHeader('Set-Cookie', cookie);\r\n    console.log('[login] Cookie set');\r\n    \r\n    // Return success (DO NOT send token to client)\r\n    return res.status(200).json({ \r\n      success: true,\r\n      message: 'Login successful'\r\n    });\r\n    \r\n  } catch (error) {\r\n    console.error('[auth/login] error:', error);\r\n    return res.status(500).json({ error: 'Internal server error' });\r\n  }\r\n}\r\n"
+        }
+    ]
+}
