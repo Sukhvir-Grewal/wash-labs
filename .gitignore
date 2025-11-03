@@ -40,9 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# lib folder
-/lib
-
 # Local History folder (VS Code extension)
 .lh/
 
