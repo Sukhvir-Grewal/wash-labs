@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { MongoClient } from "mongodb";
+import { addBookingToCalendar } from '../../lib/googleCalendar';
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
@@ -362,7 +363,7 @@ export default async function handler(req, res) {
     let insertedId = null;
     if (uri && dbName) {
       try {
-        client = await MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+  client = await MongoClient.connect(uri);
         const db = client.db(dbName);
         const collection = db.collection("bookings");
         const doc = {
@@ -393,6 +394,50 @@ export default async function handler(req, res) {
       console.warn("[booking] Skipping DB insert: missing MONGODB config");
     }
 
+    // Add to Google Calendar (best-effort, after DB insert)
+    try {
+      const {
+        GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET,
+        GOOGLE_REDIRECT_URI,
+        GOOGLE_CALENDAR_ID
+      } = process.env;
+      if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_REDIRECT_URI && GOOGLE_CALENDAR_ID) {
+        if (dateTime.date && dateTime.time) {
+          const startDateTime = new Date(`${dateTime.date}T${dateTime.time}`);
+          if (!isNaN(startDateTime.getTime())) {
+            // Fetch the service duration from MongoDB
+            let durationHours = 2; // fallback default
+            try {
+              const db = await (await import("../../lib/mongodb")).getDb();
+              const svcCol = db.collection("services");
+              // Try to match by title (case-insensitive)
+              const svcDoc = await svcCol.findOne({ title: { $regex: `^${service.title}$`, $options: "i" } });
+              if (svcDoc && typeof svcDoc.duration === "number" && svcDoc.duration > 0) {
+                durationHours = svcDoc.duration;
+              }
+            } catch (svcErr) {
+              console.error("[booking] Failed to fetch service duration from DB", svcErr);
+            }
+            const endDateTime = new Date(startDateTime.getTime() + durationHours * 60 * 60 * 1000);
+            await addBookingToCalendar({
+              summary: `${service.title} for ${userInfo.name}`,
+              description: `Service: ${service.title}\nVehicle: ${vehicleDisplay}\nPhone: ${userInfo.phone}\nEmail: ${userInfo.email}\nNotes: ${userInfo.message}`,
+              location: location?.address || '',
+              startDateTime: startDateTime.toISOString(),
+              endDateTime: endDateTime.toISOString(),
+              calendarId: GOOGLE_CALENDAR_ID
+            });
+          } else {
+            console.error('[booking] Invalid start date/time for Google Calendar event:', dateTime);
+          }
+        } else {
+          console.error('[booking] Missing date or time for Google Calendar event:', dateTime);
+        }
+      }
+    } catch (calendarErr) {
+      console.error('[booking] Failed to add to Google Calendar', calendarErr);
+    }
     const responseMsg = isValidEmail(rawEmail)
       ? "Booking and confirmation sent successfully"
       : "Booking saved and admin notified; customer email not sent (no valid email)";

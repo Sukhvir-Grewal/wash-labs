@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# lib folder
+/lib
+
+# Local History folder (VS Code extension)
+.lh/
+
+# Sensitive and important files to ignore

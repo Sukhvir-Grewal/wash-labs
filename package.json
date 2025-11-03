@@ -20,6 +20,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "framer-motion": "^12.23.12",
+    "googleapis": "^164.1.0",
     "heic2any": "^0.0.4",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.9.0",

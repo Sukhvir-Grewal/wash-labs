@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FiCheck, FiPlus, FiMinus, FiArrowRight, FiPhone, FiShield } from "react-icons/fi";
+import Image from "next/image";
 import { useRouter } from "next/router";
 // Dynamically load services from MongoDB via API
 
@@ -88,18 +89,19 @@ function ServiceCard({ service, isOpen, onToggle, onBook }) {
                     borderRadius: 'inherit',
                     overflow: 'hidden',
                 }}>
-                    <img
+                    <Image
                         src={imageSrc}
                         alt="Service visual"
+                        fill
                         style={{
-                            width: '100%',
-                            height: '100%',
                             objectFit: 'cover',
                             borderRadius: 'inherit',
                             opacity: imageOpacity,
                             background: isSubscription ? undefined : 'rgba(255,255,255,0.90)'
                         }}
-                        onError={e => { e.target.style.display = 'none'; }}
+                        sizes="(max-width: 768px) 100vw, 600px"
+                        priority
+                        unoptimized={false}
                     />
                 </div>
             )}
@@ -297,7 +299,7 @@ export default function Services() {
                         Curated services that protect your finish and elevate the look. Open a card to book instantly.
                     </p>
                 </div>
-                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+                <div className="flex flex-col gap-6">
                     {loading && (
                         <div className="col-span-full text-center text-blue-600">Loading services...</div>
                     )}
