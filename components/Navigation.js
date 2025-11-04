@@ -32,7 +32,7 @@ export default function Navigation() {
             : baseItems;
 
     return (
-        <header className="sticky top-0 z-50 bg-blue-50 border-b border-gray-200 shadow">
+        <header className="sticky top-0 z-50 bg-red-500 border-b border-gray-200 shadow">
             <a
                 href="#main"
                 className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-blue-600 text-white px-3 py-2 rounded"
@@ -119,7 +119,7 @@ export default function Navigation() {
             </div>
             {/* Mobile Menu (smooth fade & slide, light theme) */}
             <div
-                className={`md:hidden w-full overflow-hidden bg-blue-50 
+                className={`md:hidden w-full overflow-hidden bg-red-500 
                     transition-all duration-500 ease-in-out
                     ${menuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}
                 `}
