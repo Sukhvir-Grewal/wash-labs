@@ -20,19 +20,20 @@ export default function Hero() {
       id="hero"
       className="relative h-[90vh] md:h-screen flex items-center justify-center overflow-hidden bg-transparent"
     >
-      {/* Background image within hero only (non-fixed) */}
+      {/* Background video within hero only (non-fixed) */}
       <div className="absolute inset-0 -z-10 pointer-events-none">
-        <Image
-          src="/images/hero/car-detailing.jpg"
-          alt="Car Detailing"
-          fill
-          priority
-          className="object-cover [object-position:center_70%] brightness-95 blur-[0.25px] transition-all duration-700"
+        <video
+          src="/videos/main.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="object-cover w-full h-full [object-position:center_70%] brightness-95 blur-[0.25px] transition-all duration-700"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 70%' }}
         />
       </div>
 
-      {/* Elegant light overlay for readability */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[rgba(255,255,255,0.15)] via-[rgba(0,0,0,0.25)] to-[rgba(0,0,0,0.55)] backdrop-blur-[2px]" />
+  {/* Removed blur overlay for video background */}
 
       {/* Subtle bottom vignette */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[rgba(0,0,0,0.18)] to-transparent" />
