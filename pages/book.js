@@ -15,7 +15,6 @@ const VEHICLE_OPTIONS = [
 
 export default function BookPage() {
   const router = useRouter();
-  const { service: serviceId } = router.query;
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedService, setSelectedService] = useState(null);
@@ -25,32 +24,43 @@ export default function BookPage() {
 
   useEffect(() => {
     let cancelled = false;
+    let timeoutId;
     async function fetchServices() {
       setLoading(true);
       try {
         const resp = await fetch('/api/services');
         const data = await resp.json().catch(() => ({ services: [] }));
         const list = Array.isArray(data.services) ? data.services : [];
-        setServices(list);
-        setLoading(false);
         if (!cancelled) {
-          // Find the selected service by id
-          if (typeof serviceId === "string") {
-            const svc = list.find((s) => s.id === serviceId);
-            setSelectedService(svc || null);
-          } else {
-            setSelectedService(null);
+          setServices(list);
+          if (router.isReady) {
+            const { service: serviceId } = router.query;
+            if (typeof serviceId === "string") {
+              const svc = list.find((s) => s.id === serviceId);
+              setSelectedService(svc || null);
+            } else {
+              setSelectedService(list.length > 0 ? list[0] : null);
+            }
           }
+          setLoading(false);
         }
       } catch {
-        setServices([]);
-        setSelectedService(null);
-        setLoading(false);
+        if (!cancelled) {
+          setServices([]);
+          setSelectedService(null);
+          setLoading(false);
+        }
       }
     }
-    fetchServices();
-    return () => { cancelled = true; };
-  }, [serviceId]);
+    if (router.isReady) {
+      fetchServices();
+      // Fallback: clear loading after 7 seconds if fetch hangs
+      timeoutId = setTimeout(() => {
+        if (!cancelled) setLoading(false);
+      }, 7000);
+    }
+    return () => { cancelled = true; if (timeoutId) clearTimeout(timeoutId); };
+  }, [router.isReady, router.query.service]);
 
   const planFeatures = useMemo(() => {
     if (!selectedService) return [];

@@ -404,7 +404,23 @@ export default async function handler(req, res) {
       } = process.env;
       if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_REDIRECT_URI && GOOGLE_CALENDAR_ID) {
         if (dateTime.date && dateTime.time) {
-          const startDateTime = new Date(`${dateTime.date}T${dateTime.time}`);
+          // Convert 12-hour format (e.g., "7:00 AM") to 24-hour format (e.g., "07:00")
+          let time24hr = dateTime.time;
+          if (dateTime.time.match(/AM|PM/i)) {
+            const [time, period] = dateTime.time.split(/\s+/);
+            let [hours, minutes] = time.split(':');
+            hours = parseInt(hours, 10);
+            
+            if (period.toUpperCase() === 'PM' && hours !== 12) {
+              hours += 12;
+            } else if (period.toUpperCase() === 'AM' && hours === 12) {
+              hours = 0;
+            }
+            
+            time24hr = `${hours.toString().padStart(2, '0')}:${minutes || '00'}`;
+          }
+          
+          const startDateTime = new Date(`${dateTime.date}T${time24hr}`);
           if (!isNaN(startDateTime.getTime())) {
             // Fetch the service duration from MongoDB
             let durationHours = 2; // fallback default
