@@ -21,6 +21,7 @@ export default function BookPage() {
   const [showBooking, setShowBooking] = useState(false);
   const [plan, setPlan] = useState("base");
   const [vehicleType, setVehicleType] = useState(VEHICLE_OPTIONS[0].id);
+  const [selectedAddons, setSelectedAddons] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,8 +98,16 @@ export default function BookPage() {
 
   const totalPrice = useMemo(() => {
     if (typeof basePlanPrice !== "number") return null;
-    return basePlanPrice + vehicleOption.adjustment;
-  }, [basePlanPrice, vehicleOption.adjustment]);
+    
+    // Calculate add-ons total
+    const addonsTotal = selectedService?.addOns
+      ? selectedService.addOns
+          .filter(addon => selectedAddons.includes(addon.name))
+          .reduce((sum, addon) => sum + addon.price, 0)
+      : 0;
+    
+    return basePlanPrice + vehicleOption.adjustment + addonsTotal;
+  }, [basePlanPrice, vehicleOption.adjustment, selectedService?.addOns, selectedAddons]);
 
   const isSubscription = useMemo(() => {
     const t = (selectedService?.title || '').toLowerCase();
@@ -108,6 +117,7 @@ export default function BookPage() {
   useEffect(() => {
     setPlan("base");
     setVehicleType(VEHICLE_OPTIONS[0].id);
+    setSelectedAddons([]);
   }, [selectedService?.id]);
 
   useEffect(() => {
@@ -257,18 +267,49 @@ export default function BookPage() {
                 </div>
               </div>
               {planFeatures.length ? (
-                <ul className="grid sm:grid-cols-2 gap-3 text-sm sm:text-base" style={{ color: '#111827' }}>
-                  {planFeatures.map((feature) => (
-                    <li key={feature.text} className="flex items-start gap-3">
-                      {feature.status === "✅" ? (
-                        <FiCheck className="mt-0.5" style={{ color: '#16A34A' }} aria-hidden="true" />
-                      ) : (
-                        <FiX className="mt-0.5" style={{ color: '#9CA3AF' }} aria-hidden="true" />
-                      )}
-                      <span>{feature.text}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-6">
+                  <ul className="grid sm:grid-cols-2 gap-3 text-sm sm:text-base" style={{ color: '#111827' }}>
+                    {planFeatures.map((feature) => (
+                      <li key={feature.text} className="flex items-start gap-3">
+                        {feature.status === "✅" ? (
+                          <FiCheck className="mt-0.5" style={{ color: '#16A34A' }} aria-hidden="true" />
+                        ) : (
+                          <FiX className="mt-0.5" style={{ color: '#9CA3AF' }} aria-hidden="true" />
+                        )}
+                        <span>{feature.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  
+                  {/* Add-ons section */}
+                  {selectedService.addOns && selectedService.addOns.length > 0 && (
+                    <div className="pt-4 border-t border-gray-200">
+                      <h3 className="text-lg font-semibold mb-3" style={{ color: '#1F2937' }}>Available Add-ons:</h3>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        {selectedService.addOns.map((addon) => (
+                          <label key={addon.name} className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-blue-300 cursor-pointer transition-colors">
+                            <input
+                              type="checkbox"
+                              className="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                              checked={selectedAddons.includes(addon.name)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedAddons([...selectedAddons, addon.name]);
+                                } else {
+                                  setSelectedAddons(selectedAddons.filter(a => a !== addon.name));
+                                }
+                              }}
+                            />
+                            <div>
+                              <span className="font-medium">{addon.name}</span>
+                              <span className="ml-2 text-sm text-gray-600">(+${addon.price})</span>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : null}
               {!selectedService.comingSoon && (
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
@@ -321,7 +362,16 @@ export default function BookPage() {
       </section>
       <Footer />
       {showBooking && selectedService && !selectedService.comingSoon && (
-        <Booking service={selectedService} onClose={handleCloseBooking} />
+        <Booking
+          service={{
+            ...selectedService,
+            selectedAddOns: selectedService.addOns
+              ?.filter(addon => selectedAddons.includes(addon.name))
+              .map(addon => ({ name: addon.name, price: addon.price })) || [],
+            totalPrice: totalPrice
+          }}
+          onClose={handleCloseBooking}
+        />
       )}
     </main>
   );
