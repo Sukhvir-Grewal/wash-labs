@@ -2,14 +2,15 @@
 import { motion } from "framer-motion";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
-import { isBefore, startOfToday } from "date-fns";
-import { useState } from "react";
+import { isBefore, startOfToday, addMinutes } from "date-fns";
+import { useState, useEffect, useMemo } from "react";
 
 export default function DateTimePicker({
     dateTime,
     setDateTime,
     onNext,
     onBack,
+    durationMinutes = 60,
 }) {
     const today = startOfToday();
     // Do not select any date by default
@@ -17,38 +18,157 @@ export default function DateTimePicker({
     const [selectedTime, setSelectedTime] = useState(dateTime.time || "");
     const [showValidation, setShowValidation] = useState(false);
 
-    // Static times for each day (easy to read)
-    const STATIC_TIMES = {
-        // 0 = Sunday, 1 = Monday, ...
-        0: [ // Sunday
-            "7:00 AM", "7:30 AM", "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM",
-            "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM",
-            "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM",
-            "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM", "6:00 PM", "6:30 PM", "7:00 PM"
-        ],
-        1: [ // Monday
-            "7:00 AM", "7:30 AM", "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM"
-        ],
-        2: [], // Tuesday (blocked)
-        3: [ // Wednesday
-            "7:00 AM", "8:00 AM", "8:30 AM"
-        ],
-        4: [ // Thursday
-            "7:00 AM", "8:00 AM", "8:30 AM"
-        ],
-        5: [], // Friday (blocked)
-        6: [ // Saturday
-            "7:00 AM", "7:30 AM", "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM",
-            "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", 
-            "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM",
-            "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM", "6:00 PM", "6:30 PM", "7:00 PM"
-        ]
-    };
+    // Business rules
+    const BUSINESS_START_HOUR = 8; // 8:00 AM
+    const BUSINESS_END_HOUR = 18; // 6:00 PM
+    const SLOT_INTERVAL_MIN = 30; // minutes
+    const BUFFER_MINUTES = 30; // buffer before/after existing appointments
 
-    let times = [];
-    if (selectedDay) {
+    const [occupiedSlots, setOccupiedSlots] = useState([]);
+    const [loadingSlots, setLoadingSlots] = useState(false);
+    const [visibleMonth, setVisibleMonth] = useState(() => new Date());
+    const [unavailableSet, setUnavailableSet] = useState(new Set());
+
+    // When a date is selected, query the server for occupied slots for that day
+    useEffect(() => {
+        if (!selectedDay) return;
+        const dateStr = selectedDay.toISOString().split('T')[0];
+        let cancelled = false;
+        async function load() {
+            setLoadingSlots(true);
+            try {
+                const resp = await fetch(`/api/availability?date=${encodeURIComponent(dateStr)}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (!cancelled) setOccupiedSlots(Array.isArray(data.occupied) ? data.occupied : []);
+                } else {
+                    if (!cancelled) setOccupiedSlots([]);
+                }
+            } catch (e) {
+                if (!cancelled) setOccupiedSlots([]);
+            } finally {
+                if (!cancelled) setLoadingSlots(false);
+            }
+        }
+        load();
+        return () => { cancelled = true; };
+    }, [selectedDay]);
+
+    // Prefetch availability for the visible month so we can disable full days with no slots
+    useEffect(() => {
+        if (!visibleMonth) return;
+        let cancelled = false;
+        async function loadMonth() {
+            const year = visibleMonth.getFullYear();
+            const month = visibleMonth.getMonth();
+            const first = new Date(year, month, 1);
+            const last = new Date(year, month + 1, 0);
+            const days = last.getDate();
+            const prefs = [];
+            for (let d = 1; d <= days; d++) {
+                const dt = new Date(year, month, d);
+                // skip past days
+                if (isBefore(dt, today) || dt.toDateString() === today.toDateString()) {
+                    prefs.push({ date: dt.toISOString().split('T')[0], available: false });
+                    continue;
+                }
+                const day = dt.getDay();
+                if (day === 2 || day === 5) {
+                    prefs.push({ date: dt.toISOString().split('T')[0], available: false });
+                    continue;
+                }
+                prefs.push({ date: dt.toISOString().split('T')[0], available: null });
+            }
+            // Parallel fetch availability for dates with available===null
+            await Promise.all(prefs.map(async (p) => {
+                if (p.available !== null) return;
+                try {
+                    const resp = await fetch(`/api/availability?date=${encodeURIComponent(p.date)}`);
+                    if (!resp.ok) { p.available = false; return; }
+                    const data = await resp.json();
+                    const occupied = Array.isArray(data.occupied) ? data.occupied : [];
+                    // compute candidate slots for that date and see if any fits
+                    const dtParts = p.date.split('-').map(Number);
+                    const dtObj = new Date(dtParts[0], dtParts[1]-1, dtParts[2]);
+                    // build candidate slots quickly (same logic as below)
+                    let found = false;
+                    for (let hour = BUSINESS_START_HOUR; hour <= BUSINESS_END_HOUR; hour++) {
+                        for (let minute = 0; minute < 60; minute += SLOT_INTERVAL_MIN) {
+                            const slotStart = new Date(dtObj);
+                            slotStart.setHours(hour, minute, 0, 0);
+                            const slotEnd = addMinutes(slotStart, durationMinutes);
+                            if (slotEnd.getHours() > BUSINESS_END_HOUR || (slotEnd.getHours() === BUSINESS_END_HOUR && slotEnd.getMinutes() > 0)) continue;
+                            // check conflicts
+                            let ok = true;
+                            for (const occ of occupied) {
+                                const occStart = new Date(occ.start);
+                                const occEnd = new Date(occ.end);
+                                const occStartWithBuffer = new Date(occStart.getTime() - BUFFER_MINUTES * 60 * 1000);
+                                const occEndWithBuffer = new Date(occEnd.getTime() + BUFFER_MINUTES * 60 * 1000);
+                                if (slotStart < occEndWithBuffer && slotEnd > occStartWithBuffer) { ok = false; break; }
+                            }
+                            if (ok) { found = true; break; }
+                        }
+                        if (found) break;
+                    }
+                    p.available = found;
+                } catch (e) {
+                    p.available = false;
+                }
+            }));
+            if (cancelled) return;
+            const disabledSet = new Set(prefs.filter(p => !p.available).map(p => p.date));
+            setUnavailableSet(disabledSet);
+        }
+        // only prefetch when durationMinutes is defined
+        loadMonth();
+        return () => { cancelled = true; };
+    }, [visibleMonth, durationMinutes]);
+
+    // Generate candidate slots between business hours
+    const candidateTimes = useMemo(() => {
+        if (!selectedDay) return [];
         const day = selectedDay.getDay();
-        times = STATIC_TIMES[day] || [];
+        // Exclude Tuesdays (2) and Fridays (5)
+        if (day === 2 || day === 5) return [];
+        const slots = [];
+        for (let hour = BUSINESS_START_HOUR; hour <= BUSINESS_END_HOUR; hour++) {
+            for (let minute = 0; minute < 60; minute += SLOT_INTERVAL_MIN) {
+                const slotStart = new Date(selectedDay);
+                slotStart.setHours(hour, minute, 0, 0);
+                const slotEnd = addMinutes(slotStart, SLOT_INTERVAL_MIN);
+                // Only include start times where the appointment would end within business hours
+                if (slotEnd.getHours() > BUSINESS_END_HOUR || (slotEnd.getHours() === BUSINESS_END_HOUR && slotEnd.getMinutes() > 0)) continue;
+                const label = slotStart.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                slots.push({ label, iso: slotStart.toISOString(), start: slotStart, end: slotEnd });
+            }
+        }
+        return slots;
+    }, [selectedDay]);
+
+    // Filter candidate times against occupiedSlots and requested duration (prop)
+    let times = [];
+    let availableLabelsSet = new Set();
+    if (selectedDay) {
+        const duration = Number((typeof durationMinutes === 'number' ? durationMinutes : 60));
+        candidateTimes.forEach((slot) => {
+            const slotStart = new Date(slot.iso);
+            const slotEnd = addMinutes(slotStart, duration);
+            if (slotEnd.getHours() > BUSINESS_END_HOUR || (slotEnd.getHours() === BUSINESS_END_HOUR && slotEnd.getMinutes() > 0)) return;
+            for (const occ of occupiedSlots) {
+                const occStart = new Date(occ.start);
+                const occEnd = new Date(occ.end);
+                const occStartWithBuffer = new Date(occStart.getTime() - BUFFER_MINUTES * 60 * 1000);
+                const occEndWithBuffer = new Date(occEnd.getTime() + BUFFER_MINUTES * 60 * 1000);
+                if (slotStart < occEndWithBuffer && slotEnd > occStartWithBuffer) return;
+            }
+            availableLabelsSet.add(slot.label);
+        });
+        times = Array.from(availableLabelsSet).sort((a,b)=>{
+            const ta = new Date(`${selectedDay.toISOString().split('T')[0]}T${new Date('1970-01-01 ' + a).toTimeString().split(' ')[0]}`);
+            const tb = new Date(`${selectedDay.toISOString().split('T')[0]}T${new Date('1970-01-01 ' + b).toTimeString().split(' ')[0]}`);
+            return ta - tb;
+        });
     }
 
     const isValid = selectedDay && selectedTime;
@@ -74,10 +194,10 @@ export default function DateTimePicker({
     return (
         <motion.div
             key="date-time-step"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ duration: 0.4 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
             className="space-y-6"
         >
             {/* Calendar */}
@@ -100,8 +220,11 @@ export default function DateTimePicker({
                         if (date.toDateString() === today.toDateString()) return true;
                         const day = date.getDay();
                         if (day === 2 || day === 5) return true;
+                        const dateStr = date.toISOString().split('T')[0];
+                        if (unavailableSet && unavailableSet.has && unavailableSet.has(dateStr)) return true;
                         return false;
                     }}
+                    onMonthChange={(month) => setVisibleMonth(month)}
                     weekStartsOn={1}
                     modifiers={{}}
                     modifiersClassNames={{
@@ -112,10 +235,6 @@ export default function DateTimePicker({
                         color: "#222",
                     }}
                 />
-                <p className="text-xs text-gray-500 mt-2">
-                    Bookings start from today onward. We&apos;ll confirm any same-day
-                    requests as soon as possible.
-                </p>
                 {showValidation && !selectedDay && (
                     <p className="text-sm text-red-600 mt-2">
                         Please choose a future appointment date.
@@ -129,28 +248,32 @@ export default function DateTimePicker({
                     Select Time
                 </label>
 
-                <select
-                    value={selectedTime}
-                    onChange={(e) => {
-                        const value = e.target.value;
-                        setSelectedTime(value);
-                        if (value && selectedDay) {
-                            setShowValidation(false);
-                        }
-                    }}
-                    className="w-full px-4 py-3 rounded-lg bg-white border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
-                >
-                    <option value="">-- Select Time --</option>
-                    {times.map((t) => (
-                        <option key={t} value={t}>
-                            {t}
-                        </option>
-                    ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-2">
-                    Times are available in 30-minute intervals between 7:00 AM and
-                    7:00 PM.
-                </p>
+                                {/* Time slots as clickable buttons */}
+                                <div className="grid grid-cols-3 gap-2">
+                                        {candidateTimes.length === 0 && (
+                                                <div className="text-sm text-gray-500">No candidate slots for this day.</div>
+                                        )}
+                                        {candidateTimes.map((slot) => {
+                                                const disabled = !availableLabelsSet.has(slot.label) || loadingSlots;
+                                                const isSelected = slot.label === selectedTime;
+                                                return (
+                                                        <button
+                                                                key={slot.label}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                        if (disabled) return;
+                                                                        setSelectedTime(slot.label);
+                                                                        setShowValidation(false);
+                                                                }}
+                                                                disabled={disabled}
+                                                                className={`py-2 px-3 rounded-full text-sm font-medium transition ${disabled ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed' : isSelected ? 'bg-blue-600 text-white' : 'bg-white text-gray-900 hover:bg-blue-50 border border-blue-100'}`}
+                                                        >
+                                                                {slot.label}
+                                                        </button>
+                                                );
+                                        })}
+                                </div>
+
                 {showValidation && !selectedTime && (
                     <p className="text-sm text-red-600 mt-2">
                         Please pick a time slot to continue.

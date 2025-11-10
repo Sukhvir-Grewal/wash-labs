@@ -65,27 +65,6 @@ export default function AdminDashboard() {
   const [bookings, setBookings] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  
-  // Auto refresh session
-  useEffect(() => {
-    const refreshSession = async () => {
-      try {
-        const resp = await fetch('/api/auth/refresh');
-        if (!resp.ok) {
-          console.log('Session expired, redirecting to login...');
-          router.replace('/admin');
-        }
-      } catch (err) {
-        console.error('Failed to refresh session:', err);
-      }
-    };
-    
-    refreshSession();
-    // Refresh session every 6 hours
-    const intervalId = setInterval(refreshSession, 6 * 60 * 60 * 1000);
-    return () => clearInterval(intervalId);
-  }, [router]);
   const [showAdd, setShowAdd] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const [detailBooking, setDetailBooking] = useState(null);
@@ -199,6 +178,11 @@ export default function AdminDashboard() {
       setLoading(false);
     }
     fetchBookingsAndUpdate();
+    
+    // Set up an interval to check for completed bookings every minute
+    const intervalId = setInterval(fetchBookingsAndUpdate, 60000);
+    
+    return () => clearInterval(intervalId);
   }, [updatePendingToComplete]);
 
   useEffect(() => {

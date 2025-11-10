@@ -5,17 +5,54 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
   const [submitMsg, setSubmitMsg] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [overrideAmount, setOverrideAmount] = useState(false);
-  const serviceOptions = [
-    { title: "Premium Exterior Wash", basePrice: 50, hasAddOns: true },
-    { title: "Complete Interior Detail", basePrice: 110, hasAddOns: true },
-    { title: "Ultimate Full Detail", basePrice: 150, hasAddOns: true },
-  ];
-  const addOnOptions = [
-    { label: "Pet Hair Removal", price: 20 },
-    { label: "Clay Bar", price: 20 },
-    { label: "Iron Removal", price: 25 },
-    { label: "Ceramic Sealant", price: 10 },
-  ];
+  const [serviceOptions, setServiceOptions] = useState([]);
+  const [addOnOptions, setAddOnOptions] = useState([]);
+
+  // Load services data from MongoDB
+  useEffect(() => {
+    async function loadServices() {
+      try {
+        const resp = await fetch('/api/services');
+        const data = await resp.json();
+        if (Array.isArray(data.services)) {
+          const servicesData = data.services.map(s => ({
+            title: s.title,
+            basePrice: s.basePrice,
+            hasAddOns: Array.isArray(s.addOns) && s.addOns.length > 0,
+            addOns: s.addOns
+          }));
+          setServiceOptions(servicesData);
+          
+          // Update newBooking with initial service data if available
+          if (servicesData.length > 0) {
+            setNewBooking(prev => ({
+              ...prev,
+              service: servicesData[0].title,
+              amount: servicesData[0].basePrice
+            }));
+          }
+          
+          // Collect all unique add-ons
+          const allAddOns = new Set();
+          data.services.forEach(service => {
+            if (Array.isArray(service.addOns)) {
+              service.addOns.forEach(addon => {
+                allAddOns.add(JSON.stringify({
+                  label: addon.name,
+                  price: addon.price
+                }));
+              });
+            }
+          });
+          setAddOnOptions(Array.from(allAddOns).map(str => JSON.parse(str)));
+        }
+      } catch (err) {
+        console.error('Failed to load services:', err);
+      }
+    }
+    loadServices();
+  }, []);
+
   const carTypeOptions = [
     { label: "Sedan", price: 0 },
     { label: "SUV", price: 20 },
@@ -24,10 +61,10 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
   const [newBooking, setNewBooking] = useState({
     name: "",
     carName: "",
-    service: serviceOptions[0].title,
+    service: "",
     date: "",
     time: "",
-    amount: serviceOptions[0].basePrice,
+    amount: 0,
     status: "pending",
     phone: "",
     email: "",
@@ -64,31 +101,26 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
   if (!open) return null;
   const calculatePrice = (serviceTitle, addOns, carTypeLabel) => {
     const service = serviceOptions.find(s => s.title === serviceTitle);
-    let base = service ? service.basePrice : 0;
-    if (serviceTitle === "Complete Interior Detail") {
-      base = 110; // base price for sedan
-      // Add vehicle type adjustment
-      if (carTypeLabel === "SUV") base += 20;
-      else if (carTypeLabel === "Truck") base += 40;
-    } else {
-      const carType = carTypeOptions.find(c => c.label === carTypeLabel);
-      if (carType) base += carType.price;
-    }
+    if (!service) return 0;
 
+    let base = service.basePrice || 0;
+    
+    // Add vehicle type price adjustment
+    const carType = carTypeOptions.find(c => c.label === carTypeLabel);
+    if (carType) base += carType.price;
+
+    // Calculate add-ons total
     let addOnTotal = 0;
-    if (service && service.hasAddOns && addOns.length) {
-      let filteredAddOns = [];
-      if (serviceTitle === "Premium Exterior Wash") {
-        filteredAddOns = addOns.filter(a => ["Clay Bar", "Iron Removal", "Ceramic Sealant"].includes(a.label));
-      } else if (serviceTitle === "Complete Interior Detail") {
-        filteredAddOns = addOns.filter(a => a.label === "Pet Hair Removal");
-      } else if (serviceTitle === "Ultimate Full Detail") {
-        filteredAddOns = addOns;
-      }
-      addOnTotal = filteredAddOns.reduce((sum, a) => sum + a.price, 0);
-      const clay = filteredAddOns.find(a => a.label === "Clay Bar");
-      const iron = filteredAddOns.find(a => a.label === "Iron Removal");
-      if (clay && iron) addOnTotal -= 5;
+    if (service.hasAddOns && addOns.length) {
+      // Get valid add-ons for this service
+      const validAddOnNames = (service.addOns || []).map(a => a.name);
+      const validAddOns = addOns.filter(a => validAddOnNames.includes(a.label));
+      
+      // Sum up add-on prices
+      addOnTotal = validAddOns.reduce((sum, addon) => {
+        const serviceAddon = service.addOns.find(a => a.name === addon.label);
+        return sum + (serviceAddon ? serviceAddon.price : 0);
+      }, 0);
     }
 
     return base + addOnTotal;
@@ -259,14 +291,11 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
               <div className="text-base font-semibold text-gray-700 mb-2 text-left">Add-Ons</div>
               <div className="flex flex-wrap gap-2 mb-2">
                 {(() => {
-                  let validAddOns = [];
-                  if (newBooking.service === "Premium Exterior Wash") {
-                    validAddOns = addOnOptions.filter(opt => ["Clay Bar", "Iron Removal", "Ceramic Sealant"].includes(opt.label));
-                  } else if (newBooking.service === "Complete Interior Detail") {
-                    validAddOns = addOnOptions.filter(opt => opt.label === "Pet Hair Removal");
-                  } else if (newBooking.service === "Ultimate Full Detail") {
-                    validAddOns = addOnOptions;
-                  }
+                  const currentService = serviceOptions.find(s => s.title === newBooking.service);
+                  const validAddOns = currentService?.addOns?.map(addon => ({
+                    label: addon.name,
+                    price: addon.price
+                  })) || [];
                   return validAddOns.map(opt => (
                     <button
                       key={opt.label}

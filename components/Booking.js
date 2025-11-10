@@ -112,27 +112,26 @@ export default function Booking({ service, onClose }) {
     };
 
     return (
-        <motion.div
-            className="fixed inset-0 flex items-center justify-center 
-             bg-black/20 backdrop-blur-md 
-             z-50 p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-        >
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key={service.title + step}
-                    className="relative bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl border border-blue-100"
-                    initial={{ y: 50, opacity: 0, scale: 0.95 }}
-                    animate={{ y: 0, opacity: 1, scale: 1 }}
-                    exit={{ y: 50, opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.4, ease: "easeInOut" }}
-                >
+        <div className="fixed inset-0 z-50 bg-black/20">
+            <div className="absolute inset-0 bg-white overflow-auto">
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={service.title + step}
+                        className="min-h-full"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                    >
+                    <div className="h-full w-full box-border">
+                        <div className="w-full px-6 py-6">
+
                     {/* Close Button */}
                     <button
                         onClick={resetAndClose}
-                        className="absolute top-4 right-4 text-blue-600 text-xl font-bold hover:text-blue-500"
+                        aria-label="Close booking modal"
+                        className="fixed top-4 right-4 text-blue-600 text-xl font-bold hover:text-blue-500"
+                        style={{ zIndex: 9999 }}
                     >
                         ✕
                     </button>
@@ -228,8 +227,11 @@ export default function Booking({ service, onClose }) {
                             </button>
                         </div>
                     )}
-                </motion.div>
-            </AnimatePresence>
-        </motion.div>
+                        </div>
+                    </div>
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+        </div>
     );
 }

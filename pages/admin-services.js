@@ -34,7 +34,55 @@ const emptyServiceTemplate = {
   comingSoon: false,
   baseFeatures: [],
   reviveFeatures: [],
+  addOns: [],
 };
+
+function AddOnEditor({ addOns, onChange, onAdd, onRemove }) {
+  return (
+    <div style={{ background: '#F8FAFC', borderRadius: 16, padding: 20, marginBottom: 8, border: '1px solid #E0E7EF' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <h4 style={{ fontSize: 16, fontWeight: 600, color: '#1E293B', margin: 0 }}>Add-ons</h4>
+        <button
+          type="button"
+          onClick={onAdd}
+          style={{ borderRadius: 20, border: '1px solid #60A5FA', padding: '6px 16px', fontSize: 13, fontWeight: 600, color: '#2563EB', background: '#EFF6FF', cursor: 'pointer' }}
+        >
+          + Add add-on
+        </button>
+      </div>
+      {addOns.length === 0 && (
+        <p style={{ fontSize: 13, color: '#2563EB', margin: 0 }}>No add-ons yet. Add one above.</p>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {addOns.map((addon, index) => (
+          <div key={index} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <input
+              value={addon.name || ''}
+              onChange={(event) => onChange(index, { ...addon, name: event.target.value })}
+              placeholder="Add-on name"
+              style={{ flex: 2, borderRadius: 8, border: '1px solid #CBD5E1', background: '#F1F5F9', padding: 10, fontSize: 14, color: '#1E293B' }}
+            />
+            <input
+              type="number"
+              value={addon.price || ''}
+              onChange={(event) => onChange(index, { ...addon, price: Number(event.target.value) })}
+              placeholder="Price"
+              min="0"
+              style={{ flex: 1, borderRadius: 8, border: '1px solid #CBD5E1', background: '#F1F5F9', padding: 10, fontSize: 14, color: '#1E293B' }}
+            />
+            <button
+              type="button"
+              onClick={() => onRemove(index)}
+              style={{ borderRadius: 8, border: '1px solid #FCA5A5', padding: '8px 12px', fontSize: 13, fontWeight: 600, color: '#DC2626', background: '#FEF2F2', cursor: 'pointer', marginTop: 2 }}
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function FeatureListEditor({ label, features, onChange, onAdd, onRemove }) {
   return (
@@ -80,6 +128,22 @@ export default function AdminServicesPage() {
   const router = useRouter();
   const [services, setServices] = useState([]);
   const [initialServices, setInitialServices] = useState([]);
+  
+  // Default add-ons for new services
+  const defaultAddOns = {
+    'Premium Exterior Wash': [
+      { name: 'Clay Bar', price: 40 }
+    ],
+    'Complete Interior Detail': [
+      { name: 'Interior Ceramic', price: 20 },
+      { name: 'Pet Hair Removal', price: 30 }
+    ],
+    'Ultimate Full Detail': [
+      { name: 'Clay Bar', price: 40 },
+      { name: 'Interior Ceramic', price: 20 },
+      { name: 'Pet Hair Removal', price: 30 }
+    ]
+  };
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -116,14 +180,20 @@ export default function AdminServicesPage() {
 
   const handleServiceChange = (index, key, value) => {
     setServices((prev) =>
-      prev.map((service, svcIndex) =>
-        svcIndex === index
-          ? {
-              ...service,
-              [key]: value,
-            }
-          : service
-      )
+      prev.map((service, svcIndex) => {
+        if (svcIndex !== index) return service;
+        const updates = { [key]: value };
+        
+        // If changing title, apply default add-ons if they exist
+        if (key === 'title' && defaultAddOns[value]) {
+          updates.addOns = defaultAddOns[value];
+        }
+        
+        return {
+          ...service,
+          ...updates,
+        };
+      })
     );
   };
 
@@ -398,6 +468,39 @@ export default function AdminServicesPage() {
                     onChange={(featureIndex, value) => handleFeatureChange(index, 'reviveFeatures', featureIndex, value)}
                     onAdd={() => handleFeatureAdd(index, 'reviveFeatures')}
                     onRemove={(featureIndex) => handleFeatureRemove(index, 'reviveFeatures', featureIndex)}
+                  />
+                  <AddOnEditor
+                    addOns={service.addOns || []}
+                    onChange={(addonIndex, newAddon) => {
+                      setServices(prev =>
+                        prev.map((s, svcIndex) => {
+                          if (svcIndex !== index) return s;
+                          const addOns = Array.isArray(s.addOns) ? [...s.addOns] : [];
+                          addOns[addonIndex] = newAddon;
+                          return { ...s, addOns };
+                        })
+                      );
+                    }}
+                    onAdd={() => {
+                      setServices(prev =>
+                        prev.map((s, svcIndex) => {
+                          if (svcIndex !== index) return s;
+                          const addOns = Array.isArray(s.addOns) ? [...s.addOns] : [];
+                          addOns.push({ name: '', price: 0 });
+                          return { ...s, addOns };
+                        })
+                      );
+                    }}
+                    onRemove={(addonIndex) => {
+                      setServices(prev =>
+                        prev.map((s, svcIndex) => {
+                          if (svcIndex !== index) return s;
+                          const addOns = Array.isArray(s.addOns) ? [...s.addOns] : [];
+                          addOns.splice(addonIndex, 1);
+                          return { ...s, addOns };
+                        })
+                      );
+                    }}
                   />
                 </div>
               </section>

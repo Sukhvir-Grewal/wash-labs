@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { MongoClient } from "mongodb";
 import { addBookingToCalendar } from '../../lib/googleCalendar';
+import { getOccupiedSlotsForDate, isSlotConflicting } from '../../lib/availability';
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
@@ -90,6 +91,45 @@ export default async function handler(req, res) {
         .join(" ");
     const safeDate = escapeHtml(dateTime?.date || "N/A");
     const safeTime = escapeHtml(dateTime?.time || "N/A");
+    // compute end time string if possible (use service.durationMinutes when available, else try DB)
+    let safeEndTimeStr = null;
+    try {
+      if (dateTime?.date && dateTime?.time) {
+        let durationMinutesForEmail = typeof service?.durationMinutes === 'number' ? service.durationMinutes : null;
+        if (!durationMinutesForEmail) {
+          try {
+            const db = await (await import("../../lib/mongodb")).getDb();
+            const svcDoc = await db.collection('services').findOne({ title: { $regex: `^${service.title}$`, $options: 'i' } });
+            if (svcDoc && typeof svcDoc.durationMinutes === 'number') durationMinutesForEmail = svcDoc.durationMinutes;
+          } catch (e) {
+            // ignore
+          }
+        }
+        if (!durationMinutesForEmail) durationMinutesForEmail = 60;
+        // parse provided time into 24h
+        const baseDate = new Date(`${dateTime.date}T00:00:00`);
+        const timeStr = String(dateTime.time || '').trim();
+        let hours = 0; let minutes = 0;
+        const ampmMatch = timeStr.match(/(AM|PM)$/i);
+        if (ampmMatch) {
+          const [timeOnly, period] = timeStr.split(/\s+/);
+          const [h, m] = timeOnly.split(':');
+          hours = parseInt(h || '0', 10);
+          minutes = parseInt(m || '0', 10);
+          if (/pm/i.test(period) && hours !== 12) hours += 12;
+          if (/am/i.test(period) && hours === 12) hours = 0;
+        } else {
+          const [h, m] = timeStr.split(':');
+          hours = parseInt(h || '0', 10);
+          minutes = parseInt(m || '0', 10);
+        }
+        baseDate.setHours(hours, minutes, 0, 0);
+        const endDate = new Date(baseDate.getTime() + durationMinutesForEmail * 60 * 1000);
+        safeEndTimeStr = endDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      }
+    } catch (e) {
+      safeEndTimeStr = null;
+    }
   const safeLocation = escapeHtml(location?.address || "N/A");
   const safeName = escapeHtml(userInfo?.name || "");
   const rawEmail = userInfo?.email || "";
@@ -107,6 +147,55 @@ export default async function handler(req, res) {
             : null;
     const formattedTotalPrice =
         typeof totalPrice === "number" ? `$${totalPrice}` : "Not specified";
+
+  // Server-side availability check (avoid race conditions)
+  try {
+    if (dateTime?.date && dateTime?.time) {
+      // Determine duration: try to fetch from services collection
+      let durationMinutes = 60;
+      try {
+        const db = await (await import("../../lib/mongodb")).getDb();
+        const svcDoc = await db.collection('services').findOne({ title: { $regex: `^${service.title}$`, $options: 'i' } });
+        if (svcDoc && typeof svcDoc.durationMinutes === 'number') durationMinutes = svcDoc.durationMinutes;
+      } catch (e) {}
+
+      // Parse provided time into 24h (same parser as availability)
+      const baseDate = new Date(`${dateTime.date}T00:00:00`);
+      const timeStr = String(dateTime.time || '').trim();
+      let hours = 0; let minutes = 0;
+      const ampmMatch = timeStr.match(/(AM|PM)$/i);
+      if (ampmMatch) {
+        const [timeOnly, period] = timeStr.split(/\s+/);
+        const [h, m] = timeOnly.split(':');
+        hours = parseInt(h || '0', 10);
+        minutes = parseInt(m || '0', 10);
+        if (/pm/i.test(period) && hours !== 12) hours += 12;
+        if (/am/i.test(period) && hours === 12) hours = 0;
+      } else {
+        const [h, m] = timeStr.split(':');
+        hours = parseInt(h || '0', 10);
+        minutes = parseInt(m || '0', 10);
+      }
+      baseDate.setHours(hours, minutes, 0, 0);
+      const slotStartISO = baseDate.toISOString();
+      const slotEndISO = new Date(baseDate.getTime() + durationMinutes * 60 * 1000).toISOString();
+
+      const occupied = await getOccupiedSlotsForDate(dateTime.date);
+        // Reject bookings on Tuesdays (2) and Fridays (5)
+        const checkDate = new Date(`${dateTime.date}T00:00:00`);
+        const w = checkDate.getDay();
+        if (w === 2 || w === 5) {
+          return res.status(400).json({ message: 'Bookings are not allowed on Tuesdays or Fridays.' });
+        }
+  const conflict = isSlotConflicting(slotStartISO, slotEndISO, occupied, 30);
+      if (conflict) {
+        return res.status(409).json({ message: 'Requested time slot is no longer available. Please choose another time.' });
+      }
+    }
+  } catch (e) {
+    // If availability check fails, continue but log (best-effort)
+    console.error('[booking] availability check failed', e?.message || e);
+  }
 
     const receivedAt = new Date().toLocaleString("en-CA", {
         timeZone: "America/Halifax",
@@ -147,8 +236,9 @@ export default async function handler(req, res) {
           '',
           `Service: ${service.title}`,
           `Total Price: ${formattedTotalPrice}`,
+          `Business hours: 8:00 AM – 6:00 PM (Tues & Fri closed)`,
           `Vehicle: ${vehicleDisplay}`,
-          hasValue(safeDate) || hasValue(safeTime) ? `Date & Time: ${safeDate} at ${safeTime}` : null,
+          hasValue(safeDate) || hasValue(safeTime) ? `Date & Time: ${safeDate} at ${safeTime}${safeEndTimeStr ? ` — Ends: ${safeEndTimeStr}` : ''}` : null,
           hasValue(location?.address) ? `Location: ${location?.address}` : null,
           '',
           'Client:',
@@ -259,8 +349,9 @@ export default async function handler(req, res) {
             'Booking Summary',
             `Service: ${service.title}`,
             `Total Price: ${formattedTotalPrice}`,
+            `Business hours: 8:00 AM – 6:00 PM (Tues & Fri closed)`,
             `Vehicle: ${vehicleDisplay}`,
-            (hasValue(safeDate) || hasValue(safeTime)) ? `Date & Time: ${safeDate} at ${safeTime}` : null,
+            (hasValue(safeDate) || hasValue(safeTime)) ? `Date & Time: ${safeDate} at ${safeTime}${safeEndTimeStr ? ` — Ends: ${safeEndTimeStr}` : ''}` : null,
             hasValue(location?.address) ? `Location: ${location.address}` : null,
             '',
             'Need anything else?',
