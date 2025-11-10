@@ -15,6 +15,18 @@ async function handler(req, res) {
   if (!id || !status) {
     return res.status(400).json({ error: "Missing id or status" });
   }
+
+  // Validate status against allowed values
+  const allowedStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
+  if (!allowedStatuses.includes(status.toLowerCase())) {
+    return res.status(400).json({ 
+      error: "Invalid status value",
+      message: `Status must be one of: ${allowedStatuses.join(', ')}`
+    });
+  }
+
+  // Normalize status to lowercase for consistency
+  const normalizedStatus = status.toLowerCase();
   let client;
   try {
     client = await MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
@@ -22,7 +34,7 @@ async function handler(req, res) {
     const collection = db.collection("bookings");
     const result = await collection.updateOne(
       { _id: new ObjectId(id) },
-      { $set: { status } }
+      { $set: { status: normalizedStatus } }
     );
     if (result.matchedCount === 1) {
       res.status(200).json({ success: true });

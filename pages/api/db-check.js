@@ -11,7 +11,19 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'DATABASE_URL is not set in your environment' });
   }
 
-  const client = new Client({ connectionString, ssl: { rejectUnauthorized: false } });
+  // Configure SSL/TLS settings based on environment
+  const sslConfig = {
+    ssl: {
+      // In production: Always validate certificates
+      // In development: Allow self-signed certificates for local testing
+      rejectUnauthorized: process.env.NODE_ENV === 'production'
+    }
+  };
+
+  const client = new Client({ 
+    connectionString,
+    ...sslConfig
+  });
 
   try {
     await client.connect();
