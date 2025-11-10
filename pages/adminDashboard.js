@@ -16,6 +16,7 @@ import dynamic from 'next/dynamic';
 const VisitorsCard = dynamic(() => import('../components/VisitorsCard'), { ssr: false });
 import { useRouter } from "next/router";
 import { isAuthenticated } from "../lib/auth";
+import { useSessionRefresh } from "../lib/useSessionRefresh";
 
 /**
  * Server-side authentication check
@@ -45,6 +46,8 @@ export async function getServerSideProps(context) {
 }
 
 export default function AdminDashboard() {
+  // Keep session fresh
+  useSessionRefresh();
   // Format date as 'oct-19'
   function formatDateShort(dateStr) {
     if (!dateStr) return "";
@@ -62,6 +65,27 @@ export default function AdminDashboard() {
   const [bookings, setBookings] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  
+  // Auto refresh session
+  useEffect(() => {
+    const refreshSession = async () => {
+      try {
+        const resp = await fetch('/api/auth/refresh');
+        if (!resp.ok) {
+          console.log('Session expired, redirecting to login...');
+          router.replace('/admin');
+        }
+      } catch (err) {
+        console.error('Failed to refresh session:', err);
+      }
+    };
+    
+    refreshSession();
+    // Refresh session every 6 hours
+    const intervalId = setInterval(refreshSession, 6 * 60 * 60 * 1000);
+    return () => clearInterval(intervalId);
+  }, [router]);
   const [showAdd, setShowAdd] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const [detailBooking, setDetailBooking] = useState(null);
