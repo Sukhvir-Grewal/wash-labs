@@ -18,8 +18,8 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
   ];
   const carTypeOptions = [
     { label: "Sedan", price: 0 },
-    { label: "SUV", price: 10 },
-    { label: "Truck", price: 20 },
+    { label: "SUV", price: 20 },
+    { label: "Truck", price: 40 },
   ];
   const [newBooking, setNewBooking] = useState({
     name: "",
@@ -66,9 +66,10 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
     const service = serviceOptions.find(s => s.title === serviceTitle);
     let base = service ? service.basePrice : 0;
     if (serviceTitle === "Complete Interior Detail") {
-      if (carTypeLabel === "SUV") base = 130;
-      else if (carTypeLabel === "Truck") base = 140;
-      else base = 110;
+      base = 110; // base price for sedan
+      // Add vehicle type adjustment
+      if (carTypeLabel === "SUV") base += 20;
+      else if (carTypeLabel === "Truck") base += 40;
     } else {
       const carType = carTypeOptions.find(c => c.label === carTypeLabel);
       if (carType) base += carType.price;
