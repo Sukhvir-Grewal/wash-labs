@@ -10,11 +10,11 @@ export default function AdminPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
+    setLoading(true); 
 
     try {
       // Only log in development
-      const isDev = process.env.NODE_ENV === 'development';
+      const isDev = process.env.NODE_ENV  === 'development';
       if (isDev) console.log("[admin] Attempting login...");
 
       const response = await fetch("/api/auth/login", {
