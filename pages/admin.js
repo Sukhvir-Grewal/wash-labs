@@ -10,35 +10,31 @@ export default function AdminPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setLoading(true); 
+    setLoading(true);
 
     try {
-      // Only log in development
-      const isDev = process.env.NODE_ENV  === 'development';
-      if (isDev) console.log("[admin] Attempting login...");
-
+      console.log("Attempting login...");
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
 
+      console.log("Response status:", response.status);
       const data = await response.json();
+      console.log("Response data:", data);
 
       if (response.ok && data.success) {
-        if (isDev) console.log("[admin] Login successful");
+        console.log("Login successful, redirecting to dashboard...");
         // Login successful - httpOnly cookie is set automatically
         await router.replace("/adminDashboard");
       } else {
-        if (isDev) console.log("[admin] Login failed:", data.error);
+        console.error("Login failed:", data.error);
         setError(data.error || "Invalid password. Please try again.");
         setLoading(false);
       }
     } catch (err) {
-      // Log errors in development, or if they're unexpected
-      if (isDev || !(err instanceof Error)) {
-        console.error("[admin] Login error:", err);
-      }
+      console.error("Login error:", err);
       setError("Failed to login. Please try again.");
       setLoading(false);
     }

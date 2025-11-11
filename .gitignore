@@ -44,3 +44,5 @@ next-env.d.ts
 .lh/
 
 # Sensitive and important files to ignore
+
+google_oauth_test.js

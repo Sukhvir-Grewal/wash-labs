@@ -99,9 +99,7 @@ export default async function handler(req, res) {
         if (!durationMinutesForEmail) {
           try {
             const db = await (await import("../../lib/mongodb")).getDb();
-            // Escape regex special characters in the service title
-            const escapedTitle = service.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const svcDoc = await db.collection('services').findOne({ title: { $regex: `^${escapedTitle}$`, $options: 'i' } });
+            const svcDoc = await db.collection('services').findOne({ title: { $regex: `^${service.title}$`, $options: 'i' } });
             if (svcDoc && typeof svcDoc.durationMinutes === 'number') durationMinutesForEmail = svcDoc.durationMinutes;
           } catch (e) {
             // ignore
@@ -521,9 +519,7 @@ export default async function handler(req, res) {
               const db = await (await import("../../lib/mongodb")).getDb();
               const svcCol = db.collection("services");
               // Try to match by title (case-insensitive)
-              // Escape regex special characters in the service title
-              const escapedTitle = service.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-              const svcDoc = await svcCol.findOne({ title: { $regex: `^${escapedTitle}$`, $options: "i" } });
+              const svcDoc = await svcCol.findOne({ title: { $regex: `^${service.title}$`, $options: "i" } });
               if (svcDoc && typeof svcDoc.duration === "number" && svcDoc.duration > 0) {
                 durationHours = svcDoc.duration;
               }

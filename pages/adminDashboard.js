@@ -23,18 +23,14 @@ import { useSessionRefresh } from "../lib/useSessionRefresh";
  * Redirect to login if not authenticated
  */
 export async function getServerSideProps(context) {
-  // Only log in development environment
-  const isDev = process.env.NODE_ENV !== 'production';
-  if (isDev) {
-    console.log('[adminDashboard] Request method:', context.req.method);
-  }
+  console.log('[adminDashboard] getServerSideProps called');
+  console.log('[adminDashboard] Cookies:', context.req.headers.cookie);
   
   const authenticated = isAuthenticated(context.req);
+  console.log('[adminDashboard] Authenticated:', authenticated);
   
   if (!authenticated) {
-    if (isDev) {
-      console.log('[adminDashboard] Authentication failed, redirecting to /admin');
-    }
+    console.log('[adminDashboard] Not authenticated, redirecting to /admin');
     return {
       redirect: {
         destination: '/admin',
@@ -43,9 +39,7 @@ export async function getServerSideProps(context) {
     };
   }
   
-  if (isDev) {
-    console.log('[adminDashboard] Authentication successful');
-  }
+  console.log('[adminDashboard] Authentication successful, rendering dashboard');
   return {
     props: {},
   };

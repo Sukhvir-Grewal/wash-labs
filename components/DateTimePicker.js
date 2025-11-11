@@ -148,26 +148,20 @@ export default function DateTimePicker({
 
     // Filter candidate times against occupiedSlots and requested duration (prop)
     let times = [];
-    let availableLabelsSet = new Set();
     if (selectedDay) {
         const duration = Number((typeof durationMinutes === 'number' ? durationMinutes : 60));
-        candidateTimes.forEach((slot) => {
+        times = candidateTimes.filter((slot) => {
             const slotStart = new Date(slot.iso);
             const slotEnd = addMinutes(slotStart, duration);
-            if (slotEnd.getHours() > BUSINESS_END_HOUR || (slotEnd.getHours() === BUSINESS_END_HOUR && slotEnd.getMinutes() > 0)) return;
+            if (slotEnd.getHours() > BUSINESS_END_HOUR || (slotEnd.getHours() === BUSINESS_END_HOUR && slotEnd.getMinutes() > 0)) return false;
             for (const occ of occupiedSlots) {
                 const occStart = new Date(occ.start);
                 const occEnd = new Date(occ.end);
                 const occStartWithBuffer = new Date(occStart.getTime() - BUFFER_MINUTES * 60 * 1000);
                 const occEndWithBuffer = new Date(occEnd.getTime() + BUFFER_MINUTES * 60 * 1000);
-                if (slotStart < occEndWithBuffer && slotEnd > occStartWithBuffer) return;
+                if (slotStart < occEndWithBuffer && slotEnd > occStartWithBuffer) return false;
             }
-            availableLabelsSet.add(slot.label);
-        });
-        times = Array.from(availableLabelsSet).sort((a,b)=>{
-            const ta = new Date(`${selectedDay.toISOString().split('T')[0]}T${new Date('1970-01-01 ' + a).toTimeString().split(' ')[0]}`);
-            const tb = new Date(`${selectedDay.toISOString().split('T')[0]}T${new Date('1970-01-01 ' + b).toTimeString().split(' ')[0]}`);
-            return ta - tb;
+            return true;
         });
     }
 
@@ -250,28 +244,28 @@ export default function DateTimePicker({
 
                                 {/* Time slots as clickable buttons */}
                                 <div className="grid grid-cols-3 gap-2">
-                                        {candidateTimes.length === 0 && (
-                                                <div className="text-sm text-gray-500">No candidate slots for this day.</div>
-                                        )}
-                                        {candidateTimes.map((slot) => {
-                                                const disabled = !availableLabelsSet.has(slot.label) || loadingSlots;
+                                        {loadingSlots ? (
+                                            <div className="text-sm text-gray-500">Loading...</div>
+                                        ) : times.length === 0 ? (
+                                            <div className="text-sm text-gray-500">No candidate slots for this day.</div>
+                                        ) : (
+                                            times.map((slot) => {
                                                 const isSelected = slot.label === selectedTime;
                                                 return (
-                                                        <button
-                                                                key={slot.label}
-                                                                type="button"
-                                                                onClick={() => {
-                                                                        if (disabled) return;
-                                                                        setSelectedTime(slot.label);
-                                                                        setShowValidation(false);
-                                                                }}
-                                                                disabled={disabled}
-                                                                className={`py-2 px-3 rounded-full text-sm font-medium transition ${disabled ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed' : isSelected ? 'bg-blue-600 text-white' : 'bg-white text-gray-900 hover:bg-blue-50 border border-blue-100'}`}
-                                                        >
-                                                                {slot.label}
-                                                        </button>
+                                                    <button
+                                                        key={slot.label}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSelectedTime(slot.label);
+                                                            setShowValidation(false);
+                                                        }}
+                                                        className={`py-2 px-3 rounded-full text-sm font-medium transition ${isSelected ? 'bg-blue-600 text-white' : 'bg-white text-gray-900 hover:bg-blue-50 border border-blue-100'}`}
+                                                    >
+                                                        {slot.label}
+                                                    </button>
                                                 );
-                                        })}
+                                            })
+                                        )}
                                 </div>
 
                 {showValidation && !selectedTime && (
