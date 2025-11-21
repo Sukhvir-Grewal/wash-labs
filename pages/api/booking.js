@@ -55,6 +55,12 @@ export default async function handler(req, res) {
     }
 
   const { service, vehicle, dateTime, location, userInfo, source: reqSource, status: reqStatus } = req.body;
+  // New admin fields (optional)
+  const vehicles = Array.isArray(req.body.vehicles) ? req.body.vehicles : null;
+  const perCarTotals = Array.isArray(req.body.perCarTotals) ? req.body.perCarTotals : null;
+  const baseSumRaw = typeof req.body.baseSum === 'number' ? req.body.baseSum : null;
+  const travelExpenseRaw = Number(req.body.travelExpense || 0);
+  const discountRaw = Number(req.body.discount || 0);
 
     if (!service || !vehicle || !dateTime || !userInfo) {
         return res.status(400).json({ message: "Missing booking details" });
@@ -139,18 +145,25 @@ export default async function handler(req, res) {
     )}`.trim();
     const safeNotes = escapeHtml(userInfo?.message || "");
 
-    const totalPrice =
-        typeof service.totalPrice === "number"
-            ? service.totalPrice
-            : typeof service.basePrice === "number"
-            ? service.basePrice
-            : null;
-    const formattedTotalPrice =
-        typeof totalPrice === "number" ? `$${totalPrice}` : "Not specified";
+    // Determine server-trusted pricing breakdown
+    const computedBaseSum = baseSumRaw ?? (Array.isArray(perCarTotals) ? perCarTotals.reduce((s,v)=>s+Number(v||0),0) : (typeof service.basePrice === 'number' ? service.basePrice : null));
+    const travelExpense = Number(travelExpenseRaw || 0);
+    const discount = Number(discountRaw || 0);
+    // If service.totalPrice is provided (client may set it), prefer that as final amount; otherwise compute
+    const finalAmount = typeof service.totalPrice === 'number'
+      ? service.totalPrice
+      : (typeof computedBaseSum === 'number' ? Math.max(0, computedBaseSum + travelExpense - discount) : null);
+
+    const formatMoney = (n) => (typeof n === 'number' ? `$${n.toFixed(2)}` : 'Not specified');
+    const formattedTotalPrice = formatMoney(finalAmount);
+    const formattedBaseSum = formatMoney(computedBaseSum);
+    const formattedTravel = formatMoney(travelExpense);
+    const formattedDiscount = formatMoney(discount);
 
   // Server-side availability check (avoid race conditions)
+  // Skip availability check for admin bookings to allow overrides
   try {
-    if (dateTime?.date && dateTime?.time) {
+    if (reqSource !== 'admin' && dateTime?.date && dateTime?.time) {
       // Determine duration: try to fetch from services collection
       let durationMinutes = 60;
       try {
@@ -220,6 +233,7 @@ export default async function handler(req, res) {
     };
 
   let client;
+  let calendarWarning = null;
   try {
         const transporter = nodemailer.createTransport({
             service: "gmail",
@@ -235,24 +249,36 @@ export default async function handler(req, res) {
           'New booking request',
           '',
           `Service: ${service.title}`,
-          `Total Price: ${formattedTotalPrice}`,
+          `Original total: ${formattedBaseSum}`,
+          `Travel expense: ${formattedTravel}`,
+          `Discount: ${formattedDiscount}`,
+          `Final Price: ${formattedTotalPrice}`,
           `Business hours: 8:00 AM – 6:00 PM (Tues & Fri closed)`,
-          `Vehicle: ${vehicleDisplay}`,
-          hasValue(safeDate) || hasValue(safeTime) ? `Date & Time: ${safeDate} at ${safeTime}${safeEndTimeStr ? ` — Ends: ${safeEndTimeStr}` : ''}` : null,
-          hasValue(location?.address) ? `Location: ${location?.address}` : null,
           '',
-          'Client:',
-          hasValue(userInfo.name) ? `Name: ${userInfo.name}` : null,
-          hasValue(rawEmail) ? `Email: ${rawEmail}` : null,
-          hasValue(userInfo.phone) || hasValue(userInfo.countryCode) ? `Phone: ${userInfo.countryCode || ''} ${userInfo.phone || ''}`.trim() : null,
-          userInfo.message && !isNA(userInfo.message) ? `Notes:\n${userInfo.message}\n` : null,
-          '---',
-          `Received: ${receivedAt}`,
-          `Client IP: ${clientId}`,
-          `User-Agent: ${userAgent}`,
-          `Referrer: ${referer}`,
-        ].filter(Boolean);
-        const adminText = adminTextLines.join('\n');
+          // List vehicles if provided
+          vehicles ? `Vehicles:` : `Vehicle: ${vehicleDisplay}`,
+        ];
+        if (vehicles) {
+          vehicles.forEach((v, i) => {
+            const name = escapeHtml(v.name || `Vehicle ${i+1}`);
+            const type = escapeHtml(v.type || 'N/A');
+            const lineTotal = typeof v.lineTotal === 'number' ? formatMoney(v.lineTotal) : (Array.isArray(perCarTotals) && typeof perCarTotals[i] === 'number' ? formatMoney(perCarTotals[i]) : 'N/A');
+            adminTextLines.push(` - ${name} (${type}) — ${lineTotal}`);
+          });
+        } else {
+          adminTextLines.push(`Vehicle: ${vehicleDisplay}`);
+        }
+        // Date/time and location
+        if (hasValue(safeDate) || hasValue(safeTime)) adminTextLines.push(`Date & Time: ${safeDate} at ${safeTime}${safeEndTimeStr ? ` — Ends: ${safeEndTimeStr}` : ''}`);
+        if (hasValue(location?.address)) adminTextLines.push(`Location: ${location?.address}`);
+        adminTextLines.push('', 'Client:');
+        if (hasValue(userInfo.name)) adminTextLines.push(`Name: ${userInfo.name}`);
+        if (hasValue(rawEmail)) adminTextLines.push(`Email: ${rawEmail}`);
+        if (hasValue(userInfo.phone) || hasValue(userInfo.countryCode)) adminTextLines.push(`Phone: ${userInfo.countryCode || ''} ${userInfo.phone || ''}`.trim());
+        if (userInfo.message && !isNA(userInfo.message)) adminTextLines.push(`Notes:\n${userInfo.message}\n`);
+        adminTextLines.push('---', `Received: ${receivedAt}`, `Client IP: ${clientId}`, `User-Agent: ${userAgent}`, `Referrer: ${referer}`);
+        // filter
+        const adminText = adminTextLines.filter(Boolean).join('\n');
 
         const adminHtml = `
 <!doctype html>
@@ -295,8 +321,12 @@ export default async function handler(req, res) {
               <td style="padding:8px 24px 0 24px;">
                 <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:#0f172a;">
                   <tr><td style="padding:6px 0;"><strong>Service:</strong> ${safeService.title}</td></tr>
-                  <tr><td style="padding:6px 0;"><strong>Total Price:</strong> ${escapeHtml(formattedTotalPrice)}</td></tr>
-                  <tr><td style="padding:6px 0;"><strong>Vehicle:</strong> ${vehicleDisplay}</td></tr>
+                  ${typeof computedBaseSum === 'number' ? `<tr><td style="padding:6px 0;"><strong>Original Total:</strong> ${escapeHtml(formattedBaseSum)}</td></tr>
+                  <tr><td style="padding:6px 0;"><strong>Travel expense:</strong> ${escapeHtml(formattedTravel)}</td></tr>
+                  <tr><td style="padding:6px 0;"><strong>Discount:</strong> ${escapeHtml(formattedDiscount)}</td></tr>
+                  <tr><td style="padding:6px 0;"><strong>Final Price:</strong> <span style="text-decoration:line-through;color:#9ca3af;margin-right:8px;">${escapeHtml(formattedBaseSum)}</span> <strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong></td></tr>` : `<tr><td style="padding:6px 0;"><strong>Final Price:</strong> <strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong></td></tr>`}
+                  ${(vehicles) ? `<tr><td style="padding:6px 0;"><strong>Vehicles:</strong></td></tr>` : `<tr><td style="padding:6px 0;"><strong>Vehicle:</strong> ${vehicleDisplay}</td></tr>`}
+                  ${vehicles ? vehicles.map(v=> `<tr><td style="padding:4px 0;padding-left:12px;">${escapeHtml(v.name||'N/A')} (${escapeHtml(v.type||'')}) — ${escapeHtml(typeof v.lineTotal==='number' ? formatMoney(v.lineTotal) : 'N/A')}</td></tr>`).join('') : ''}
                   ${(hasValue(safeDate) || hasValue(safeTime)) ? `<tr><td style="padding:6px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}</td></tr>` : ''}
                   ${hasValue(location?.address) ? `<tr><td style="padding:6px 0;"><strong>Location:</strong> ${escapeHtml(location.address)}</td></tr>` : ''}
                 </table>
@@ -348,20 +378,25 @@ export default async function handler(req, res) {
             '',
             'Booking Summary',
             `Service: ${service.title}`,
-            `Total Price: ${formattedTotalPrice}`,
+            `Original total: ${formattedBaseSum}`,
+            `Travel expense: ${formattedTravel}`,
+            `Discount: ${formattedDiscount}`,
+            `Final Price: ${formattedTotalPrice}`,
             `Business hours: 8:00 AM – 6:00 PM (Tues & Fri closed)`,
-            `Vehicle: ${vehicleDisplay}`,
-            (hasValue(safeDate) || hasValue(safeTime)) ? `Date & Time: ${safeDate} at ${safeTime}${safeEndTimeStr ? ` — Ends: ${safeEndTimeStr}` : ''}` : null,
-            hasValue(location?.address) ? `Location: ${location.address}` : null,
-            '',
-            'Need anything else?',
-            `Phone: ${brand.phone}`,
-            `Email: ${brand.email}`,
-            `Website: ${baseUrl}`,
-            '',
-            '— Wash Labs, Halifax NS',
-          ].filter(Boolean);
-          const userText = userTextLines.join('\n');
+          ];
+          if (vehicles) {
+            userTextLines.push('Vehicles:');
+            vehicles.forEach((v, i) => {
+              const lineTotal = typeof v.lineTotal === 'number' ? formatMoney(v.lineTotal) : (Array.isArray(perCarTotals) && typeof perCarTotals[i] === 'number' ? formatMoney(perCarTotals[i]) : 'N/A');
+              userTextLines.push(` - ${v.name || `Vehicle ${i+1}`} (${v.type || 'N/A'}) — ${lineTotal}`);
+            });
+          } else {
+            userTextLines.push(`Vehicle: ${vehicleDisplay}`);
+          }
+          if (hasValue(safeDate) || hasValue(safeTime)) userTextLines.push(`Date & Time: ${safeDate} at ${safeTime}${safeEndTimeStr ? ` — Ends: ${safeEndTimeStr}` : ''}`);
+          if (hasValue(location?.address)) userTextLines.push(`Location: ${location.address}`);
+          userTextLines.push('', 'Need anything else?', `Phone: ${brand.phone}`, `Email: ${brand.email}`, `Website: ${baseUrl}`, '', '— Wash Labs, Halifax NS');
+          const userText = userTextLines.filter(Boolean).join('\n');
 
           const userHtml = `
 <!doctype html>
@@ -403,8 +438,12 @@ export default async function handler(req, res) {
                 <h2 style="margin:0 0 8px 0;font-size:16px;color:#0f172a;">Booking Summary</h2>
                 <table cellpadding="0" cellspacing="0" style="font-size:14px;color:#0f172a;">
                   <tr><td style="padding:4px 0;"><strong>Service:</strong> ${safeService.title}</td></tr>
-                  <tr><td style="padding:4px 0;"><strong>Total Price:</strong> ${escapeHtml(formattedTotalPrice)}</td></tr>
-                  <tr><td style="padding:4px 0;"><strong>Vehicle:</strong> ${vehicleDisplay}</td></tr>
+                  ${typeof computedBaseSum === 'number' ? `<tr><td style="padding:4px 0;"><strong>Original Total:</strong> ${escapeHtml(formattedBaseSum)}</td></tr>
+                  <tr><td style="padding:4px 0;"><strong>Travel expense:</strong> ${escapeHtml(formattedTravel)}</td></tr>
+                  <tr><td style="padding:4px 0;"><strong>Discount:</strong> ${escapeHtml(formattedDiscount)}</td></tr>
+                  <tr><td style="padding:4px 0;"><strong>Final Price:</strong> <span style="text-decoration:line-through;color:#9ca3af;margin-right:8px;">${escapeHtml(formattedBaseSum)}</span> <strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong></td></tr>` : `<tr><td style="padding:4px 0;"><strong>Final Price:</strong> <strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong></td></tr>`}
+                  ${(vehicles) ? `<tr><td style="padding:4px 0;"><strong>Vehicles:</strong></td></tr>` : `<tr><td style="padding:4px 0;"><strong>Vehicle:</strong> ${vehicleDisplay}</td></tr>`}
+                  ${vehicles ? vehicles.map(v=> `<tr><td style="padding:4px 0;padding-left:12px;">${escapeHtml(v.name||'N/A')} (${escapeHtml(v.type||'')}) — ${escapeHtml(typeof v.lineTotal==='number' ? formatMoney(v.lineTotal) : 'N/A')}</td></tr>`).join('') : ''}
                   ${(hasValue(safeDate) || hasValue(safeTime)) ? `<tr><td style="padding:4px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}</td></tr>` : ''}
                   ${hasValue(location?.address) ? `<tr><td style=\"padding:4px 0;\"><strong>Location:</strong> ${escapeHtml(location.address)}</td></tr>` : ''}
                 </table>
@@ -458,13 +497,18 @@ export default async function handler(req, res) {
         const db = client.db(dbName);
         const collection = db.collection("bookings");
         const doc = {
-          // Align with admin schema
+          // Align with admin schema and store pricing breakdown
           name: userInfo.name,
           carName: vehicleDisplay,
           service: service.title,
           date: dateTime.date,
           time: dateTime.time,
-          amount: totalPrice ?? undefined,
+          amount: typeof finalAmount === 'number' ? finalAmount : undefined,
+          baseSum: typeof computedBaseSum === 'number' ? computedBaseSum : undefined,
+          travelExpense: travelExpense || 0,
+          discount: discount || 0,
+          vehicles: vehicles || (vehicle ? [{ name: vehicleDisplay, type: vehicle?.type || '', lineTotal: typeof finalAmount === 'number' ? finalAmount : undefined }] : []),
+          perCarTotals: perCarTotals || undefined,
           status: reqStatus === 'complete' ? 'complete' : 'pending',
           phone: userInfo.phone,
           email: userInfo.email,
@@ -527,9 +571,24 @@ export default async function handler(req, res) {
               console.error("[booking] Failed to fetch service duration from DB", svcErr);
             }
             const endDateTime = new Date(startDateTime.getTime() + durationHours * 60 * 60 * 1000);
+            // Build a description with vehicle list and pricing summary when available
+            let calendarDescription = `Service: ${service.title}`;
+            if (vehicles) {
+              calendarDescription += `\nVehicles:`;
+              vehicles.forEach((v,i)=>{
+                calendarDescription += `\n - ${v.name || `Vehicle ${i+1}`} (${v.type || 'N/A'}) — ${typeof v.lineTotal === 'number' ? formatMoney(v.lineTotal) : 'N/A'}`;
+              });
+            } else {
+              calendarDescription += `\nVehicle: ${vehicleDisplay}`;
+            }
+            calendarDescription += `\nPhone: ${userInfo.phone || ''}`;
+            calendarDescription += `\nEmail: ${userInfo.email || ''}`;
+            if (userInfo.message) calendarDescription += `\nNotes: ${userInfo.message}`;
+            calendarDescription += `\nFinal Price: ${formattedTotalPrice}`;
+
             await addBookingToCalendar({
               summary: `${service.title} for ${userInfo.name}`,
-              description: `Service: ${service.title}\nVehicle: ${vehicleDisplay}\nPhone: ${userInfo.phone}\nEmail: ${userInfo.email}\nNotes: ${userInfo.message}`,
+              description: calendarDescription,
               location: location?.address || '',
               startDateTime: startDateTime.toISOString(),
               endDateTime: endDateTime.toISOString(),
@@ -543,12 +602,22 @@ export default async function handler(req, res) {
         }
       }
     } catch (calendarErr) {
-      console.error('[booking] Failed to add to Google Calendar', calendarErr);
+      // Capture calendar insertion errors but do not fail the booking
+      try {
+        const details = calendarErr?.message || calendarErr?.response?.data || calendarErr;
+        calendarWarning = typeof details === 'string' ? details : JSON.stringify(details);
+      } catch (e) {
+        calendarWarning = 'Google Calendar insert failed';
+      }
+      console.error('[booking] Failed to add to Google Calendar', calendarWarning);
     }
     const responseMsg = isValidEmail(rawEmail)
       ? "Booking and confirmation sent successfully"
       : "Booking saved and admin notified; customer email not sent (no valid email)";
-    return res.status(200).json({ message: responseMsg, insertedId });
+    // Always return success for booking creation; include calendar warning if calendar insert failed
+    const respBody = { message: responseMsg, insertedId };
+    if (calendarWarning) respBody.calendarWarning = calendarWarning;
+    return res.status(200).json(respBody);
     } catch (error) {
         console.error("[booking] Error sending booking email", {
             error: error instanceof Error ? error.message : error,
