@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import { getCalendarClient } from '../../lib/googleCalendar';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -6,21 +7,21 @@ export default async function handler(req, res) {
   }
 
   const {
-    GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET,
-    GOOGLE_REDIRECT_URI,
-    GOOGLE_REFRESH_TOKEN,
+    GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    GOOGLE_PRIVATE_KEY,
     GOOGLE_CALENDAR_ID,
   } = process.env;
 
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REFRESH_TOKEN || !GOOGLE_CALENDAR_ID) {
-    return res.status(200).json({ ok: false, error: 'missing_env', message: 'Google Calendar not configured (missing env vars)' });
+  if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY || !GOOGLE_CALENDAR_ID) {
+    return res.status(200).json({ ok: false, error: 'missing_env', message: 'Google Calendar not configured (missing Service Account env vars)' });
   }
 
   try {
-    const oAuth2Client = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
-    oAuth2Client.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
-    const calendar = google.calendar({ version: 'v3', auth: oAuth2Client });
+    const client = getCalendarClient();
+    if (!client) {
+      return res.status(200).json({ ok: false, error: 'auth_error', message: 'Failed to create Google Calendar client' });
+    }
+    const calendar = google.calendar({ version: 'v3', auth: client });
 
     // Try a light-weight request: list events for today (no heavy data)
     const today = new Date();
@@ -34,7 +35,7 @@ export default async function handler(req, res) {
     // detect invalid_grant specifically
     const message = typeof body === 'string' ? body : JSON.stringify(body);
     if (message.toLowerCase().includes('invalid_grant') || (err?.code && Number(err.code) === 401)) {
-      return res.status(200).json({ ok: false, error: 'invalid_grant', message: 'Google refresh token is invalid or expired' });
+      return res.status(200).json({ ok: false, error: 'invalid_grant', message: 'Google Service Account credentials are invalid' });
     }
     return res.status(200).json({ ok: false, error: 'api_error', message });
   }
