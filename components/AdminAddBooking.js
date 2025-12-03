@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 
 const baseFieldClass =
-  "w-full rounded-2xl border border-slate-700/70 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/40";
+  "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200";
 
 export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onEdit }) {
   const [submitStatus, setSubmitStatus] = useState(null);
@@ -20,7 +20,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
 
   const [newBooking, setNewBooking] = useState({
     name: "",
-    cars: [{ name: "", type: carTypeOptions[0].label, service: "", addOns: [] }],
+    cars: [{ name: "", type: carTypeOptions[0].label, service: "", addOns: [], revivePlan: false }],
     date: "",
     time: "",
     amount: 0,
@@ -44,12 +44,26 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
         const resp = await fetch("/api/services");
         const data = await resp.json();
         if (Array.isArray(data.services)) {
-          const servicesData = data.services.map((s) => ({
-            title: s.title,
-            basePrice: s.basePrice,
-            hasAddOns: Array.isArray(s.addOns) && s.addOns.length > 0,
-            addOns: s.addOns,
-          }));
+          const servicesData = data.services.map((s) => {
+            const addOns = Array.isArray(s.addOns)
+              ? s.addOns.map((addon) => ({
+                  name: addon.name,
+                  price: Number(addon.price || 0),
+                }))
+              : [];
+
+            return {
+              title: s.title,
+              basePrice: Number(s.basePrice || 0),
+              revivePrice:
+                s.revivePrice === undefined || s.revivePrice === null
+                  ? null
+                  : Number(s.revivePrice),
+              hasAddOns: addOns.length > 0,
+              addOns,
+              reviveFeatures: Array.isArray(s.reviveFeatures) ? s.reviveFeatures : [],
+            };
+          });
           setServiceOptions(servicesData);
 
         } else {
@@ -78,14 +92,14 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
 
       const updatedCars = cars.map((car, index) =>
         index === 0 && !car.service
-          ? { ...car, service: serviceOptions[0].title }
+          ? { ...car, service: serviceOptions[0].title, revivePlan: false }
           : car
       );
 
       const updated = { ...prev, cars: updatedCars };
       if (!overrideAmount) {
         const perCarTotals = updatedCars.map((car) =>
-          calculatePrice(car.service || "", car.addOns || [], car.type)
+          calculatePrice(car.service || "", car.addOns || [], car.type, Boolean(car.revivePlan))
         );
         const base = perCarTotals.reduce((sum, value) => sum + value, 0);
         updated.amount = base + Number(updated.travelExpense || 0) - Number(updated.discount || 0);
@@ -106,6 +120,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                 ...c,
                 service: c.service || "",
                 addOns: Array.isArray(c.addOns) ? c.addOns : [],
+                revivePlan: Boolean(c.revivePlan),
               }))
             : [
                 {
@@ -113,6 +128,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                   type: editBooking.carType || carTypeOptions[0].label,
                   service: editBooking.service || "",
                   addOns: [],
+                  revivePlan: Boolean(editBooking.revivePlan),
                 },
               ],
         amount:
@@ -132,6 +148,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
             type: carTypeOptions[0].label,
             service: serviceOptions[0]?.title || "",
             addOns: [],
+            revivePlan: false,
           },
         ],
         date: "",
@@ -172,11 +189,11 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
 
   if (!open) return null;
 
-  const calculatePrice = (serviceTitle, addOns, carTypeLabel) => {
+  const calculatePrice = (serviceTitle, addOns, carTypeLabel, revivePlan = false) => {
     const service = serviceOptions.find((s) => s.title === serviceTitle);
     if (!service) return 0;
 
-    let base = service.basePrice || 0;
+    let base = revivePlan && service.revivePrice !== null ? service.revivePrice : service.basePrice || 0;
     const carType = carTypeOptions.find((c) => c.label === carTypeLabel);
     if (carType) base += carType.price;
 
@@ -210,11 +227,17 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
             type: carTypeOptions[0].label,
             service: serviceOptions[0]?.title || "",
             addOns: [],
+            revivePlan: false,
           },
         ];
 
     const perCarTotals = cars.map((car) =>
-      calculatePrice(car.service || serviceOptions[0]?.title || "", car.addOns || [], car.type)
+      calculatePrice(
+        car.service || serviceOptions[0]?.title || "",
+        car.addOns || [],
+        car.type,
+        Boolean(car.revivePlan)
+      )
     );
     const baseSum = perCarTotals.reduce((sum, value) => sum + value, 0);
     const travel = Number(newBooking.travelExpense || 0);
@@ -266,6 +289,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
               (Array.isArray(newBooking.cars) && newBooking.cars[0]?.service) ||
               serviceOptions[0]?.title ||
               "N/A",
+            revivePlan: Boolean(Array.isArray(newBooking.cars) && newBooking.cars[0]?.revivePlan),
           },
           vehicles: Array.isArray(newBooking.cars)
             ? newBooking.cars.map((car, index) => ({
@@ -273,6 +297,8 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                 type: car.type || "",
                 service: car.service || "",
                 addOns: Array.isArray(car.addOns) ? car.addOns : [],
+                revivePlan: Boolean(car.revivePlan),
+                plan: Boolean(car.revivePlan) ? "revive" : "base",
                 lineTotal:
                   perCarTotals && typeof perCarTotals[index] === "number"
                     ? perCarTotals[index]
@@ -325,6 +351,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
             type: carTypeOptions[0].label,
             service: serviceOptions[0]?.title || "",
             addOns: [],
+            revivePlan: false,
           },
         ],
         date: "",
@@ -347,7 +374,12 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
 
   const currentCars = Array.isArray(newBooking.cars) ? newBooking.cars : [];
   const computedPerCarTotals = currentCars.map((car) =>
-    calculatePrice(car.service || serviceOptions[0]?.title || "", car.addOns || [], car.type)
+    calculatePrice(
+      car.service || serviceOptions[0]?.title || "",
+      car.addOns || [],
+      car.type,
+      Boolean(car.revivePlan)
+    )
   );
   const computedBaseSum = computedPerCarTotals.reduce((sum, value) => sum + value, 0);
   const computedTravel = Number(newBooking.travelExpense || 0);
@@ -357,63 +389,81 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
     : computedBaseSum + computedTravel - computedDiscount;
 
   return (
-    <div className="fixed inset-0 z-[120] flex flex-col justify-end sm:justify-center">
-      <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" />
-      <div className="relative z-[1] mx-auto w-full max-w-4xl px-0 pb-0 sm:px-6 sm:pb-0">
-        <div className="relative flex max-h-[92vh] flex-col overflow-hidden rounded-t-3xl border border-slate-800/80 bg-slate-900/95 shadow-2xl sm:rounded-3xl">
-          <div className="absolute inset-x-0 top-0 flex justify-center pt-3 sm:hidden">
-            <div className="h-1.5 w-12 rounded-full bg-slate-600/60" />
-          </div>
-
+    <div className="fixed inset-0 z-[120] overflow-y-auto bg-white">
+      <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col px-4 py-8 sm:px-8">
+        <div className="relative flex flex-1 flex-col">
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-slate-800/70 text-slate-300 transition hover:bg-slate-700 hover:text-white"
+            className="absolute right-0 top-0 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
             aria-label="Close"
           >
             ×
           </button>
 
-          <header className="space-y-4 px-5 pt-8 sm:px-8 sm:pt-10">
+          <header className="space-y-4 pt-2 sm:pt-4">
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-500/90">Booking admin</p>
-              <h2 className="text-2xl font-semibold text-white sm:text-3xl">
+              <p className="text-xs uppercase tracking-[0.3em]" style={{ color: "#1f2937" }}>
+                Booking admin
+              </p>
+              <h2
+                className="text-2xl font-semibold sm:text-3xl"
+                style={{ color: "#111827" }}
+              >
                 {editBooking ? "Update booking" : "Add new booking"}
               </h2>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-3xl border border-slate-800/80 bg-slate-950/60 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-400/70">Vehicles</p>
-                <p className="mt-2 text-2xl font-semibold text-white">{currentCars.length}</p>
-                <p className="text-xs text-slate-500/90">Configured</p>
+            <div className="flex flex-col gap-3 lg:flex-row">
+              <div className="flex-1 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide" style={{ color: "#1f2937" }}>
+                  Vehicles
+                </p>
+                <p className="mt-2 text-2xl font-semibold" style={{ color: "#111827" }}>
+                  {currentCars.length}
+                </p>
+                <p className="text-xs" style={{ color: "#1f2937" }}>
+                  Configured
+                </p>
               </div>
-              <div className="rounded-3xl border border-slate-800/80 bg-slate-950/60 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-400/70">Base subtotal</p>
-                <p className="mt-2 text-2xl font-semibold text-white">${computedBaseSum.toFixed(2)}</p>
-                <p className="text-xs text-slate-500/90">Before travel & discount</p>
+              <div className="flex-1 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide" style={{ color: "#1f2937" }}>
+                  Base subtotal
+                </p>
+                <p className="mt-2 text-2xl font-semibold" style={{ color: "#111827" }}>
+                  ${computedBaseSum.toFixed(2)}
+                </p>
+                <p className="text-xs" style={{ color: "#1f2937" }}>
+                  Before travel & discount
+                </p>
               </div>
-              <div className="rounded-3xl border border-slate-800/80 bg-slate-950/60 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-400/70">Estimated total</p>
-                <p className="mt-2 text-2xl font-semibold text-sky-400">${computedEstimate.toFixed(2)}</p>
-                <p className="text-xs text-slate-500/90">Includes adjustments</p>
+              <div className="flex-1 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide" style={{ color: "#1f2937" }}>
+                  Estimated total
+                </p>
+                <p className="mt-2 text-2xl font-semibold" style={{ color: "#0ea5e9" }}>
+                  ${computedEstimate.toFixed(2)}
+                </p>
+                <p className="text-xs" style={{ color: "#1f2937" }}>
+                  Includes adjustments
+                </p>
               </div>
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto px-5 pb-32 pt-6 sm:px-8 sm:pb-40">
+          <div className="flex-1 overflow-y-auto px-5 pb-10 pt-6 sm:px-8">
             {checkingCalendar && (
-              <div className="mb-3 rounded-2xl border border-slate-700/60 bg-slate-950/60 px-4 py-3 text-sm text-slate-200">
+              <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
                 Checking Google Calendar integration...
               </div>
             )}
             {calendarStatus && !calendarStatus.ok && !dismissCalendarWarning && (
-              <div className="mb-4 rounded-3xl border border-amber-500/40 bg-amber-500/10 p-4 text-amber-100">
+              <div className="mb-4 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-200">
+                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
                       Calendar integration issue
                     </p>
-                    <p className="mt-2 text-sm text-amber-100/90">
+                    <p className="mt-2 text-sm text-amber-700">
                       {calendarStatus.message ||
                         calendarStatus.error ||
                         "Google Calendar appears to be misconfigured. Bookings will still be created but events may not be added."}
@@ -422,7 +472,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      className="rounded-full border border-amber-300/40 px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-amber-100 transition hover:bg-amber-400/20"
+                      className="rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-amber-700 transition hover:bg-amber-100"
                       onClick={async () => {
                         setDismissCalendarWarning(false);
                         setCheckingCalendar(true);
@@ -441,7 +491,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                     </button>
                     <button
                       type="button"
-                      className="rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-amber-200/80 transition hover:text-amber-100"
+                      className="rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-amber-500 transition hover:text-amber-700"
                       onClick={() => setDismissCalendarWarning(true)}
                     >
                       Dismiss
@@ -454,8 +504,8 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
               <div
                 className={`mb-4 rounded-3xl border px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] ${
                   submitStatus === "success"
-                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-                    : "border-rose-500/40 bg-rose-500/10 text-rose-200"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-rose-200 bg-rose-50 text-rose-700"
                 }`}
               >
                 {submitMsg}
@@ -464,7 +514,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
 
             <form onSubmit={handleSubmit} className="space-y-8">
               <div className="space-y-3">
-                <label className="text-xs uppercase tracking-wide text-slate-300/80">Customer name</label>
+                <label className="text-xs uppercase tracking-wide text-slate-600">Customer name</label>
                 <input
                   type="text"
                   placeholder="Name"
@@ -476,8 +526,8 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-300/80">Vehicles</p>
-                  <span className="rounded-full bg-slate-800/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-300/70">
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-700">Vehicles</p>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
                     Per-vehicle pricing
                   </span>
                 </div>
@@ -494,30 +544,35 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                     return (
                       <div
                         key={idx}
-                        className="rounded-3xl border border-slate-800/70 bg-slate-950/60 p-5 shadow-[0_18px_32px_-24px_rgba(15,23,42,0.8)]"
+                        className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
                       >
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div>
-                            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300/90">
+                            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-700">
                               Vehicle {idx + 1}
                             </p>
-                            <p className="text-xs text-slate-400/80">Customize type, service, and add-ons</p>
+                            <p className="text-xs text-slate-500">Customize type, service, and add-ons</p>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-sky-300">
+                            <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">
                               ${lineTotal.toFixed(2)}
                             </span>
                             {currentCars.length > 1 && (
                               <button
                                 type="button"
-                                className="rounded-full border border-rose-500/50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-rose-200 transition hover:bg-rose-500/15"
+                                className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-rose-600 transition hover:bg-rose-50"
                                 onClick={() =>
                                   setNewBooking((prev) => {
                                     const copy = { ...prev };
                                     copy.cars = copy.cars.filter((_, carIndex) => carIndex !== idx);
                                     if (!overrideAmount) {
                                       const perCarTotals = (copy.cars || []).map((c) =>
-                                        calculatePrice(c.service || "", c.addOns || [], c.type)
+                                        calculatePrice(
+                                          c.service || "",
+                                          c.addOns || [],
+                                          c.type,
+                                          Boolean(c.revivePlan)
+                                        )
                                       );
                                       const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                                       copy.amount =
@@ -560,7 +615,12 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                                 );
                                 if (!overrideAmount) {
                                   const perCarTotals = (copy.cars || []).map((c) =>
-                                    calculatePrice(c.service || "", c.addOns || [], c.type)
+                                    calculatePrice(
+                                      c.service || "",
+                                      c.addOns || [],
+                                      c.type,
+                                      Boolean(c.revivePlan)
+                                    )
                                   );
                                   const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                                   copy.amount =
@@ -585,12 +645,17 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                                 const copy = { ...prev };
                                 copy.cars = copy.cars.map((c, carIndex) =>
                                   carIndex === idx
-                                    ? { ...c, service: e.target.value, addOns: [] }
+                                    ? { ...c, service: e.target.value, addOns: [], revivePlan: false }
                                     : c
                                 );
                                 if (!overrideAmount) {
                                   const perCarTotals = (copy.cars || []).map((c) =>
-                                    calculatePrice(c.service || "", c.addOns || [], c.type)
+                                    calculatePrice(
+                                      c.service || "",
+                                      c.addOns || [],
+                                      c.type,
+                                      Boolean(c.revivePlan)
+                                    )
                                   );
                                   const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                                   copy.amount =
@@ -615,6 +680,92 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                               </>
                             )}
                           </select>
+
+                          {service && (
+                            <div className="space-y-2 rounded-3xl border border-slate-200 bg-slate-50 p-3">
+                              <p
+                                className="text-xs font-semibold uppercase tracking-[0.18em]"
+                                style={{ color: "#1f2937" }}
+                              >
+                                Plan selection
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setNewBooking((prev) => {
+                                      const copy = { ...prev };
+                                      copy.cars = copy.cars.map((c, carIndex) =>
+                                        carIndex === idx ? { ...c, revivePlan: false } : c
+                                      );
+                                      if (!overrideAmount) {
+                                        const perCarTotals = (copy.cars || []).map((c) =>
+                                          calculatePrice(
+                                            c.service || "",
+                                            c.addOns || [],
+                                            c.type,
+                                            Boolean(c.revivePlan)
+                                          )
+                                        );
+                                        const base = perCarTotals.reduce((sum, value) => sum + value, 0);
+                                        copy.amount =
+                                          base + Number(copy.travelExpense || 0) - Number(copy.discount || 0);
+                                      }
+                                      return copy;
+                                    })
+                                  }
+                                  className={`rounded-full border px-4 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                                    car.revivePlan
+                                      ? "border-slate-200 bg-white text-slate-600 hover:border-sky-200 hover:text-sky-600"
+                                      : "border-sky-400 bg-sky-600 text-white shadow-sm"
+                                  }`}
+                                >
+                                  Base plan · ${Number(service.basePrice || 0).toFixed(2)}
+                                </button>
+                                {service.revivePrice !== null && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setNewBooking((prev) => {
+                                        const copy = { ...prev };
+                                        copy.cars = copy.cars.map((c, carIndex) =>
+                                          carIndex === idx ? { ...c, revivePlan: true } : c
+                                        );
+                                        if (!overrideAmount) {
+                                          const perCarTotals = (copy.cars || []).map((c) =>
+                                            calculatePrice(
+                                              c.service || "",
+                                              c.addOns || [],
+                                              c.type,
+                                              Boolean(c.revivePlan)
+                                            )
+                                          );
+                                          const base = perCarTotals.reduce((sum, value) => sum + value, 0);
+                                          copy.amount =
+                                            base + Number(copy.travelExpense || 0) - Number(copy.discount || 0);
+                                        }
+                                        return copy;
+                                      })
+                                    }
+                                    className={`rounded-full border px-4 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                                      car.revivePlan
+                                        ? "border-sky-400 bg-sky-600 text-white shadow-sm"
+                                        : "border-slate-200 bg-white text-slate-600 hover:border-sky-200 hover:text-sky-600"
+                                    }`}
+                                  >
+                                    Revive plan · ${Number(service.revivePrice || 0).toFixed(2)}
+                                  </button>
+                                )}
+                              </div>
+                              {car.revivePlan && service.reviveFeatures?.length > 0 && (
+                                <ul className="list-disc space-y-1 pl-5 text-xs" style={{ color: "#1f2937" }}>
+                                  {service.reviveFeatures.map((feature, featureIdx) => (
+                                    <li key={`${service.title}-revive-feature-${featureIdx}`}>{feature}</li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          )}
 
                           {availableAddOns.length > 0 && (
                             <div className="flex flex-wrap gap-2">
@@ -641,7 +792,12 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                                         });
                                         if (!overrideAmount) {
                                           const perCarTotals = (copy.cars || []).map((c) =>
-                                            calculatePrice(c.service || "", c.addOns || [], c.type)
+                                            calculatePrice(
+                                              c.service || "",
+                                              c.addOns || [],
+                                              c.type,
+                                              Boolean(c.revivePlan)
+                                            )
                                           );
                                           const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                                           copy.amount =
@@ -652,8 +808,8 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                                     }
                                     className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
                                       isSelected
-                                        ? "border-sky-500 bg-sky-500/80 text-slate-950"
-                                        : "border-slate-700/70 bg-slate-950/60 text-slate-200 hover:border-sky-500/60 hover:text-sky-200"
+                                        ? "border-sky-400 bg-sky-100 text-sky-700"
+                                        : "border-slate-200 bg-white text-slate-600 hover:border-sky-200 hover:text-sky-600"
                                     }`}
                                   >
                                     {addon.label}
@@ -675,11 +831,22 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                         const copy = { ...prev };
                         copy.cars = [
                           ...(copy.cars || []),
-                          { name: "", type: carTypeOptions[0].label, service: nextService, addOns: [] },
+                          {
+                            name: "",
+                            type: carTypeOptions[0].label,
+                            service: nextService,
+                            addOns: [],
+                            revivePlan: false,
+                          },
                         ];
                         if (!overrideAmount) {
                           const perCarTotals = (copy.cars || []).map((c) =>
-                            calculatePrice(c.service || "", c.addOns || [], c.type)
+                            calculatePrice(
+                              c.service || "",
+                              c.addOns || [],
+                              c.type,
+                              Boolean(c.revivePlan)
+                            )
                           );
                           const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                           copy.amount =
@@ -688,7 +855,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                         return copy;
                       })
                     }
-                    className="w-full rounded-3xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm font-semibold uppercase tracking-[0.22em] text-sky-300 transition hover:bg-sky-500/20"
+                    className="w-full rounded-3xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold uppercase tracking-[0.22em] text-sky-600 transition hover:bg-sky-100"
                   >
                     + Add another vehicle
                   </button>
@@ -697,7 +864,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-wide text-slate-300/80">Date</label>
+                  <label className="text-xs uppercase tracking-wide text-slate-600">Date</label>
                   <input
                     type="date"
                     value={newBooking.date}
@@ -706,7 +873,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-wide text-slate-300/80">Time</label>
+                  <label className="text-xs uppercase tracking-wide text-slate-600">Time</label>
                   <input
                     type="time"
                     disabled={!newBooking.date}
@@ -717,11 +884,11 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                 </div>
               </div>
 
-              <div className="space-y-3 rounded-3xl border border-slate-800/80 bg-slate-950/40 p-4 sm:p-5">
-                <label className="flex items-center gap-3 text-sm text-white">
+              <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                <label className="flex items-center gap-3 text-sm text-slate-700">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-sky-400 focus:ring-sky-400/40"
+                    className="h-4 w-4 rounded border-slate-300 text-sky-500 focus:ring-sky-200"
                     checked={overrideAmount}
                     onChange={(e) => setOverrideAmount(e.target.checked)}
                   />
@@ -733,19 +900,19 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                   value={newBooking.amount}
                   onChange={(e) => setNewBooking({ ...newBooking, amount: Number(e.target.value || 0) })}
                   className={`${baseFieldClass} ${
-                    overrideAmount ? "border-sky-400 bg-slate-950/60" : "cursor-not-allowed opacity-60"
+                    overrideAmount ? "border-sky-400" : "cursor-not-allowed opacity-60"
                   }`}
                   readOnly={!overrideAmount}
                   min={0}
                 />
                 {!overrideAmount && (
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500">
                     Amount auto-calculates from selected services, vehicle types, travel, and discounts.
                   </p>
                 )}
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <label className="text-xs uppercase tracking-wide text-slate-300/80">Discount ($)</label>
+                    <label className="text-xs uppercase tracking-wide text-slate-600">Discount ($)</label>
                     <input
                       type="number"
                       min={0}
@@ -755,7 +922,12 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                           const updated = { ...prev, discount: Number(e.target.value || 0) };
                           if (!overrideAmount) {
                             const perCarTotals = (updated.cars || []).map((car) =>
-                              calculatePrice(car.service || "", car.addOns || [], car.type)
+                              calculatePrice(
+                                car.service || "",
+                                car.addOns || [],
+                                car.type,
+                                Boolean(car.revivePlan)
+                              )
                             );
                             const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                             updated.amount =
@@ -768,7 +940,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs uppercase tracking-wide text-slate-300/80">Travel expense ($)</label>
+                    <label className="text-xs uppercase tracking-wide text-slate-600">Travel expense ($)</label>
                     <input
                       type="number"
                       min={0}
@@ -778,7 +950,12 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                           const updated = { ...prev, travelExpense: Number(e.target.value || 0) };
                           if (!overrideAmount) {
                             const perCarTotals = (updated.cars || []).map((car) =>
-                              calculatePrice(car.service || "", car.addOns || [], car.type)
+                              calculatePrice(
+                                car.service || "",
+                                car.addOns || [],
+                                car.type,
+                                Boolean(car.revivePlan)
+                              )
                             );
                             const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                             updated.amount =
@@ -841,12 +1018,12 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                   autoComplete="off"
                 />
                 {locationSuggestions.length > 0 && (
-                  <div className="rounded-2xl border border-slate-800/80 bg-slate-950/90 text-sm text-slate-100 shadow-lg">
+                  <div className="rounded-2xl border border-slate-200 bg-white text-sm text-slate-700 shadow-lg">
                     {locationSuggestions.map((suggestion, index) => (
                       <button
                         type="button"
                         key={index}
-                        className="block w-full border-b border-slate-800/60 px-4 py-2 text-left transition hover:bg-slate-900/70 last:border-b-0"
+                        className="block w-full border-b border-slate-200 px-4 py-2 text-left transition hover:bg-slate-100 last:border-b-0"
                         onClick={() => {
                           setNewBooking((prev) => ({ ...prev, location: suggestion }));
                           setLocationSuggestions([]);
@@ -868,25 +1045,24 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                 <option value="complete">Complete</option>
               </select>
 
-              <div className="sticky bottom-0 -mx-5 flex flex-col gap-3 bg-slate-900/95 px-5 pb-1 pt-4 sm:-mx-8 sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:pb-0 sm:pt-5">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-400/80">Quick actions</div>
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <button
-                    type="submit"
-                    className="w-full rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-white shadow-[0_18px_28px_-18px_rgba(59,130,246,0.8)] transition hover:brightness-110 disabled:opacity-60 sm:min-w-[180px]"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (editBooking ? "Saving..." : "Adding...") : editBooking ? "Save Changes" : "Add Booking"}
-                  </button>
-                  <button
-                    type="button"
-                    className="w-full rounded-2xl border border-slate-700/80 px-4 py-3 text-sm font-semibold text-slate-200 transition hover:bg-slate-800 sm:min-w-[140px]"
-                    onClick={onClose}
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </button>
-                </div>
+              <div className="flex flex-col gap-3 pt-6 sm:flex-row sm:justify-end">
+                <button
+                  type="submit"
+                  className="w-full rounded-2xl px-4 py-3 text-sm font-semibold uppercase tracking-[0.12em] shadow-[0_18px_28px_-18px_rgba(59,130,246,0.45)] transition hover:brightness-110 disabled:opacity-60 sm:min-w-[180px]"
+                  style={{ background: "linear-gradient(90deg, #0ea5e9 0%, #6366f1 100%)", color: "#ffffff" }}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (editBooking ? "Saving..." : "Adding...") : editBooking ? "Save Changes" : "Add Booking"}
+                </button>
+                <button
+                  type="button"
+                  className="w-full rounded-2xl border px-4 py-3 text-sm font-semibold transition hover:bg-slate-100 sm:min-w-[140px]"
+                  style={{ borderColor: "#cbd5f5", color: "#1f2937" }}
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </button>
               </div>
             </form>
           </div>

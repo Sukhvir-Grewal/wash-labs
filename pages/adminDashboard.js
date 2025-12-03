@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/router";
 import {
   FiActivity,
   FiBarChart2,
@@ -43,7 +42,6 @@ export async function getServerSideProps(context) {
 
 export default function AdminDashboard() {
   useSessionRefresh();
-  const router = useRouter();
 
   const [bookings, setBookings] = useState([]);
   const [expenses, setExpenses] = useState([]);
@@ -121,7 +119,6 @@ export default function AdminDashboard() {
     const totalBookingAmount = completed
       .concat(pending)
       .reduce((sum, booking) => sum + (Number(booking.amount || 0) || 0), 0);
-
     return {
       totalRevenue,
       pendingRevenue,
@@ -198,14 +195,9 @@ export default function AdminDashboard() {
   const getDisplayBookings = useCallback(() => {
     const list = [...bookings];
     if (statusFilter === "pending") {
-      const pending = list.filter((booking) => booking.status === "pending");
-      if (!pending.length) return [];
-      const asc = [...pending].sort((a, b) => computeTimestamp(a) - computeTimestamp(b));
-      const first = asc[0];
-      const remaining = pending
-        .filter((booking) => booking !== first)
-        .sort((a, b) => computeTimestamp(b) - computeTimestamp(a));
-      return [first, ...remaining];
+      return list
+        .filter((booking) => booking.status === "pending")
+        .sort((a, b) => computeTimestamp(a) - computeTimestamp(b));
     }
     if (statusFilter === "complete") {
       return list
@@ -239,15 +231,6 @@ export default function AdminDashboard() {
   );
 
   const nextPendingBooking = pendingBookings[0] || null;
-
-  const handleLogout = useCallback(async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-    router.replace("/admin");
-  }, [router]);
 
   const refreshBookings = useCallback(async () => {
     const resp = await fetch("/api/get-bookings");
@@ -386,20 +369,20 @@ export default function AdminDashboard() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold" style={{ color: "#fff" }}>
+          <h3 className="text-lg font-semibold" style={{ color: "#111827" }}>
             Booking History
           </h3>
-          <p className="text-sm" style={{ color: "#fff" }}>
+          <p className="text-sm" style={{ color: "#1f2937" }}>
             Manage every request and edit details as needed.
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="inline-flex items-center gap-2 text-sm text-slate-400">
-            <span className="hidden text-xs uppercase tracking-wide sm:inline">Status</span>
+          <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+            <span className="hidden text-xs uppercase tracking-wide text-slate-500 sm:inline">Status</span>
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="rounded-full border border-slate-700/70 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+              className="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
             >
               <option value="all">All</option>
               <option value="pending">Pending</option>
@@ -419,47 +402,44 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <p className="text-xs uppercase tracking-wide" style={{ color: "#fff" }}>
+      <p className="text-xs uppercase tracking-wide" style={{ color: "#1f2937" }}>
         {bookingSummaryText}
       </p>
 
-      <div
-        className="min-w-0 flex-1 rounded-2xl border border-slate-800/70 bg-slate-950/40 overflow-x-auto overscroll-x-contain touch-pan-x"
-        style={{ WebkitOverflowScrolling: "touch" }}
-      >
-        <div className="inline-block min-w-max align-middle">
-          <div className="max-h-[60vh] overflow-y-auto pr-2 overscroll-y-contain touch-pan-y">
+      <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="inline-block min-w-full align-middle">
+          <div className="max-h-[60vh] overflow-y-auto">
             {loading ? (
-              <div className="py-10 text-center text-sm font-semibold text-slate-400">
+              <div className="py-10 text-center text-sm font-semibold text-slate-500">
                 Loading bookings...
               </div>
             ) : displayBookings.length === 0 ? (
-              <div className="py-12 text-center text-sm text-slate-500">
+              <div className="py-12 text-center text-sm text-slate-600">
                 No bookings to display yet.
               </div>
             ) : (
-              <table className="min-w-full divide-y divide-slate-800/70 text-xs sm:text-sm">
-                <thead className="bg-slate-900/80 text-[11px] uppercase tracking-wide text-slate-400">
+              <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
+                <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
                   <tr>
-                    <th className="px-2 py-2 text-left font-semibold">Status</th>
-                    <th className="px-2 py-2 text-left font-semibold">Client</th>
-                    <th className="px-2 py-2 text-left font-semibold">Amount</th>
-                    <th className="hidden md:table-cell px-2 py-2 text-left font-semibold">Date</th>
-                    <th className="hidden lg:table-cell px-2 py-2 text-left font-semibold">Time</th>
-                    <th className="hidden lg:table-cell px-2 py-2 text-left font-semibold">Vehicle</th>
-                    <th className="hidden xl:table-cell px-2 py-2 text-left font-semibold">Service</th>
-                    <th className="px-2 py-2 text-left font-semibold">Actions</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-700">Status</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-700">Client</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-700">Amount</th>
+                    <th className="hidden md:table-cell px-3 py-2 text-left font-semibold text-slate-700">Date</th>
+                    <th className="hidden lg:table-cell px-3 py-2 text-left font-semibold text-slate-700">Time</th>
+                    <th className="hidden lg:table-cell px-3 py-2 text-left font-semibold text-slate-700">Vehicle</th>
+                    <th className="hidden xl:table-cell px-3 py-2 text-left font-semibold text-slate-700">Service</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-700">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/70">
+                <tbody className="divide-y divide-slate-200 text-slate-600">
                   {displayBookings.map((booking) => {
                     const isSelected = selectedBookingId === booking.id;
                     const badgeClasses =
                       booking.status === "complete"
-                        ? "bg-emerald-500/20 text-emerald-300"
+                        ? "bg-emerald-100 text-emerald-700"
                         : booking.status === "pending"
-                        ? "bg-amber-500/20 text-amber-300"
-                        : "bg-slate-500/20 text-slate-300";
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-slate-100 text-slate-600";
                     return (
                       <tr
                         key={booking.id}
@@ -467,49 +447,41 @@ export default function AdminDashboard() {
                           setSelectedBookingId((prev) => (prev === booking.id ? null : booking.id))
                         }
                         className={`transition-colors ${
-                          isSelected ? "bg-slate-800/60" : "hover:bg-slate-800/40"
+                          isSelected ? "bg-slate-100" : "hover:bg-slate-50"
                         }`}
                       >
-                        <td className="px-2 py-2">
+                        <td className="px-3 py-2">
                           <span
                             className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${badgeClasses}`}
                           >
                             {booking.status}
                           </span>
                         </td>
-                        <td className="px-2 py-2">
+                        <td className="px-3 py-2">
                           <button
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
                               handleEditBooking(booking);
                             }}
-                            className="truncate text-left text-sm font-semibold text-slate-100 underline-offset-4 hover:underline"
+                            className="truncate text-left text-sm font-semibold text-slate-900 underline-offset-4 hover:underline"
                           >
                             {booking.name}
                           </button>
                         </td>
-                        <td className="px-2 py-2 text-slate-200">{formatCurrency(booking.amount)}</td>
-                        <td className="hidden md:table-cell px-2 py-2 text-slate-300">
-                          {formatDateShort(booking.date)}
-                        </td>
-                        <td className="hidden lg:table-cell px-2 py-2 text-slate-300">
-                          {booking.time || "--"}
-                        </td>
-                        <td className="hidden lg:table-cell px-2 py-2 text-slate-300">
-                          {booking.carName || "--"}
-                        </td>
-                        <td className="hidden xl:table-cell px-2 py-2 text-slate-300">
-                          {booking.service}
-                        </td>
-                        <td className="px-2 py-2 text-slate-200">
+                        <td className="px-3 py-2">{formatCurrency(booking.amount)}</td>
+                        <td className="hidden md:table-cell px-3 py-2">{formatDateShort(booking.date)}</td>
+                        <td className="hidden lg:table-cell px-3 py-2">{booking.time || "--"}</td>
+                        <td className="hidden lg:table-cell px-3 py-2">{booking.carName || "--"}</td>
+                        <td className="hidden xl:table-cell px-3 py-2">{booking.service}</td>
+                        <td className="px-3 py-2">
                           <button
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
                               handleShowDetail(booking);
                             }}
-                            className="rounded-full border border-slate-700/70 px-2.5 py-1 text-[11px] font-semibold text-slate-200 transition hover:bg-slate-800"
+                            className="rounded-full border border-slate-300 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700 transition hover:bg-slate-100"
                           >
                             Details
                           </button>
@@ -530,20 +502,20 @@ export default function AdminDashboard() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold" style={{ color: "#fff" }}>
+          <h3 className="text-lg font-semibold" style={{ color: "#111827" }}>
             Expense History
           </h3>
-          <p className="text-sm" style={{ color: "#fff" }}>
+          <p className="text-sm" style={{ color: "#1f2937" }}>
             Track operational costs and keep margins in check.
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="inline-flex items-center gap-2 text-sm text-slate-400">
-            <span className="hidden text-xs uppercase tracking-wide sm:inline">Category</span>
+          <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+            <span className="hidden text-xs uppercase tracking-wide text-slate-500 sm:inline">Category</span>
             <select
               value={expenseFilter}
               onChange={(event) => setExpenseFilter(event.target.value)}
-              className="rounded-full border border-slate-700/70 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+              className="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
             >
               <option value="all">All</option>
               <option value="equipment">Equipment</option>
@@ -551,14 +523,14 @@ export default function AdminDashboard() {
               <option value="other">Other</option>
             </select>
           </label>
-          <label className="inline-flex items-center gap-1 text-xs text-slate-400 uppercase tracking-wide">
+          <label className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500">
             <input
               type="checkbox"
-              className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-fuchsia-500 focus:ring-fuchsia-500/40"
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-200"
               checked={sortExpensesAsc}
               onChange={(event) => setSortExpensesAsc(event.target.checked)}
             />
-            <span>Amount ↑</span>
+            <span className="text-slate-600">Amount ↑</span>
           </label>
           <button
             type="button"
@@ -570,31 +542,31 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <p className="text-xs uppercase tracking-wide" style={{ color: "#fff" }}>
+      <p className="text-xs uppercase tracking-wide" style={{ color: "#1f2937" }}>
         Total spent{expenseTotalSuffix}: {formatCurrency(filteredExpenseTotal)}
       </p>
 
-      <div className="flex-1 rounded-2xl border border-slate-800/70 bg-slate-950/40">
+      <div className="flex-1 rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="py-10 text-center text-sm font-semibold text-slate-400">
+            <div className="py-10 text-center text-sm font-semibold text-slate-500">
               Loading expenses...
             </div>
           ) : sortedExpenses.length === 0 ? (
-            <div className="py-12 text-center text-sm text-slate-500">No expenses captured yet.</div>
+            <div className="py-12 text-center text-sm text-slate-600">No expenses captured yet.</div>
           ) : (
-            <table className="min-w-full divide-y divide-slate-800/70 text-xs sm:text-sm">
-              <thead className="bg-slate-900/80 text-[11px] uppercase tracking-wide text-slate-400">
+            <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
+              <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-2 py-2 text-left font-semibold">Date</th>
-                  <th className="px-2 py-2 text-left font-semibold">Item</th>
-                  <th className="hidden md:table-cell px-2 py-2 text-left font-semibold">Supplier</th>
-                  <th className="hidden lg:table-cell px-2 py-2 text-left font-semibold">Category</th>
-                  <th className="px-2 py-2 text-left font-semibold">Amount</th>
-                  <th className="px-2 py-2 text-left font-semibold">Actions</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Date</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Item</th>
+                  <th className="hidden md:table-cell px-3 py-2 text-left font-semibold text-slate-700">Supplier</th>
+                  <th className="hidden lg:table-cell px-3 py-2 text-left font-semibold text-slate-700">Category</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Amount</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/70">
+              <tbody className="divide-y divide-slate-200 text-slate-600">
                 {sortedExpenses.map((expense) => {
                   const rowId = expense._id || `${expense.date}-${expense.productName}`;
                   const isSelected = selectedExpenseId === rowId;
@@ -611,33 +583,31 @@ export default function AdminDashboard() {
                         setSelectedExpenseId((prev) => (prev === rowId ? null : rowId))
                       }
                       className={`transition-colors ${
-                        isSelected ? "bg-slate-800/60" : "hover:bg-slate-800/40"
+                        isSelected ? "bg-slate-100" : "hover:bg-slate-50"
                       }`}
                     >
-                      <td className="px-2 py-2 text-slate-300">{formatDateShort(expense.date)}</td>
-                      <td className="px-2 py-2 text-slate-200">
+                      <td className="px-3 py-2">{formatDateShort(expense.date)}</td>
+                      <td className="px-3 py-2 text-slate-700">
                         <span className="block max-w-[10rem] truncate sm:max-w-xs md:max-w-md">
                           {expense.productName || "--"}
                         </span>
                       </td>
-                      <td className="hidden md:table-cell px-2 py-2 text-slate-300">
-                        {expense.supplier || "--"}
-                      </td>
-                      <td className="hidden lg:table-cell px-2 py-2 text-slate-300">{categoryLabel}</td>
-                      <td className="px-2 py-2 text-slate-200">
+                      <td className="hidden md:table-cell px-3 py-2">{expense.supplier || "--"}</td>
+                      <td className="hidden lg:table-cell px-3 py-2">{categoryLabel}</td>
+                      <td className="px-3 py-2">
                         {formatCurrency(expense.amount)}
                         {expense.taxIncluded && (
                           <span className="ml-2 text-[11px] text-slate-500">(tax incl.)</span>
                         )}
                       </td>
-                      <td className="px-2 py-2">
+                      <td className="px-3 py-2">
                         <button
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
                             handleExpenseDeleteRequest(expense);
                           }}
-                          className="rounded-full border border-rose-500/60 px-2.5 py-1 text-[11px] font-semibold text-rose-300 transition hover:bg-rose-500/20"
+                          className="rounded-full border border-rose-300 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-rose-600 transition hover:bg-rose-50"
                         >
                           Delete
                         </button>
@@ -665,13 +635,13 @@ export default function AdminDashboard() {
               setActiveSection(key);
               setActiveBottomPanel(null);
             }}
-            className="flex flex-col items-start gap-2 rounded-2xl border border-slate-800/70 bg-slate-950/60 p-4 text-left transition hover:bg-slate-900/70"
+            className="flex flex-col items-start gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-slate-300 hover:bg-slate-50"
           >
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900/80 text-slate-100">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
               <Icon size={18} />
             </span>
-            <span className="text-sm font-semibold text-white">{value.label}</span>
-            <span className="text-xs text-slate-400">{value.hint}</span>
+            <span className="text-sm font-semibold text-slate-900">{value.label}</span>
+            <span className="text-xs text-slate-500">{value.hint}</span>
           </button>
         );
       })}
@@ -692,36 +662,32 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 px-4 pt-12 pb-32 text-slate-50">
+    <div className="min-h-screen bg-slate-100 px-4 pt-12 pb-32 text-slate-900">
       <div className="mx-auto flex max-w-6xl flex-col gap-8">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-semibold sm:text-4xl" style={{ color: "#fff" }}>
+            <h1
+              className="text-3xl font-semibold sm:text-4xl"
+              style={{ color: "#111827" }}
+            >
               Admin Dashboard
             </h1>
-            <p className="text-sm" style={{ color: "#fff" }}>
+            <p className="text-sm" style={{ color: "#1f2937" }}>
               Stay on top of upcoming work and use the bottom bar for history and insights.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="inline-flex w-full items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-100 transition hover:bg-slate-800 sm:w-auto sm:px-3 sm:py-1.5 sm:text-xs"
-          >
-            Logout
-          </button>
         </header>
 
-        <section className="flex flex-col gap-6 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-6 shadow-2xl backdrop-blur">
+        <section className="flex flex-col gap-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-lg">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold" style={{ color: "#fff" }}>
+              <h2 className="text-xl font-semibold" style={{ color: "#111827" }}>
                 Create a Booking
               </h2>
-              <p className="text-sm" style={{ color: "#fff" }}>
+              <p className="text-sm" style={{ color: "#1f2937" }}>
                 Start a fresh appointment without leaving the dashboard.
               </p>
-              <p className="mt-3 text-xs uppercase tracking-wide" style={{ color: "#fff" }}>
+              <p className="mt-3 text-xs uppercase tracking-wide" style={{ color: "#1f2937" }}>
                 {nextPendingBooking
                   ? `Next service: ${formatDateLong(nextPendingBooking.date)} at ${
                       nextPendingBooking.time || "--"
@@ -741,72 +707,72 @@ export default function AdminDashboard() {
             </button>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl bg-slate-950/60 p-4 text-slate-100">
-              <div className="text-xs uppercase tracking-wide text-slate-400">Pending</div>
-              <div className="mt-1 text-2xl font-semibold text-white">{pendingBookings.length}</div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 shadow-sm">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Pending</div>
+              <div className="mt-1 text-2xl font-semibold text-slate-900">{pendingBookings.length}</div>
             </div>
-            <div className="rounded-2xl bg-slate-950/60 p-4 text-slate-100">
-              <div className="text-xs uppercase tracking-wide text-slate-400">Pending Revenue</div>
-              <div className="mt-1 text-2xl font-semibold text-white">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 shadow-sm">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Pending Revenue</div>
+              <div className="mt-1 text-2xl font-semibold text-slate-900">
                 {formatCurrency(pendingRevenueTotal)}
               </div>
             </div>
-            <div className="rounded-2xl bg-slate-950/60 p-4 text-slate-100">
-              <div className="text-xs uppercase tracking-wide text-slate-400">All Bookings</div>
-              <div className="mt-1 text-2xl font-semibold text-white">{metrics.totalBookings}</div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 shadow-sm">
+              <div className="text-xs uppercase tracking-wide text-slate-500">All Bookings</div>
+              <div className="mt-1 text-2xl font-semibold text-slate-900">{metrics.totalBookings}</div>
             </div>
           </div>
         </section>
 
-        <section className="flex flex-col rounded-3xl border border-slate-800/80 bg-slate-900/70 p-6 shadow-2xl backdrop-blur">
+        <section className="flex flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-lg">
           <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold" style={{ color: "#fff" }}>
+              <h2 className="text-xl font-semibold" style={{ color: "#111827" }}>
                 Pending bookings
               </h2>
-              <p className="text-sm" style={{ color: "#fff" }}>
+              <p className="text-sm" style={{ color: "#1f2937" }}>
                 Review what is coming up next. Open the bottom bar for full history.
               </p>
             </div>
             <button
               type="button"
               onClick={() => setActiveBottomPanel("bookings")}
-              className="inline-flex w-full items-center justify-center rounded-full border border-slate-700/70 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-100 transition hover:bg-slate-800 sm:w-auto"
+              className="inline-flex w-full items-center justify-center rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-700 transition hover:bg-slate-100 sm:w-auto"
             >
               Manage all bookings
             </button>
           </header>
 
-          <p className="mt-4 text-xs uppercase tracking-wide" style={{ color: "#fff" }}>
+          <p className="mt-4 text-xs uppercase tracking-wide" style={{ color: "#1f2937" }}>
             {pendingBookings.length
               ? `Outstanding: ${pendingBookings.length} • ${formatCurrency(pendingRevenueTotal)}`
               : "No pending work right now."}
           </p>
 
-          <div className="mt-4 flex-1 rounded-2xl border border-slate-800/70 bg-slate-950/40">
+          <div className="mt-4 flex-1 rounded-2xl border border-slate-200 bg-white">
             {loading ? (
-              <div className="py-10 text-center text-sm font-semibold text-slate-400">
+              <div className="py-10 text-center text-sm font-semibold text-slate-500">
                 Loading bookings...
               </div>
             ) : pendingBookings.length === 0 ? (
-              <div className="py-12 text-center text-sm text-slate-500">
+              <div className="py-12 text-center text-sm text-slate-600">
                 Nothing pending. Enjoy the calm before the next rush!
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-800/70 text-xs sm:text-sm">
-                  <thead className="bg-slate-900/80 text-[11px] uppercase tracking-wide text-slate-400">
+                <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
+                  <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
                     <tr>
-                      <th className="px-2 py-2 text-left font-semibold">Client</th>
-                      <th className="hidden sm:table-cell px-2 py-2 text-left font-semibold">Service</th>
-                      <th className="px-2 py-2 text-left font-semibold">Date</th>
-                      <th className="hidden md:table-cell px-2 py-2 text-left font-semibold">Time</th>
-                      <th className="hidden lg:table-cell px-2 py-2 text-left font-semibold">Vehicle</th>
-                      <th className="px-2 py-2 text-left font-semibold">Amount</th>
-                      <th className="px-2 py-2 text-left font-semibold">Actions</th>
+                      <th className="px-2 py-2 text-left font-semibold text-slate-700">Client</th>
+                      <th className="hidden sm:table-cell px-2 py-2 text-left font-semibold text-slate-700">Service</th>
+                      <th className="px-2 py-2 text-left font-semibold text-slate-700">Date</th>
+                      <th className="hidden md:table-cell px-2 py-2 text-left font-semibold text-slate-700">Time</th>
+                      <th className="hidden lg:table-cell px-2 py-2 text-left font-semibold text-slate-700">Vehicle</th>
+                      <th className="px-2 py-2 text-left font-semibold text-slate-700">Amount</th>
+                      <th className="px-2 py-2 text-left font-semibold text-slate-700">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/70">
+                  <tbody className="divide-y divide-slate-200 text-slate-600">
                     {pendingBookings.map((booking) => {
                       const isSelected = selectedBookingId === booking.id;
                       return (
@@ -816,7 +782,7 @@ export default function AdminDashboard() {
                             setSelectedBookingId((prev) => (prev === booking.id ? null : booking.id))
                           }
                           className={`transition-colors ${
-                            isSelected ? "bg-slate-800/60" : "hover:bg-slate-800/40"
+                            isSelected ? "bg-slate-100" : "hover:bg-slate-50"
                           }`}
                         >
                           <td className="px-2 py-2">
@@ -826,32 +792,24 @@ export default function AdminDashboard() {
                                 event.stopPropagation();
                                 handleEditBooking(booking);
                               }}
-                              className="truncate text-left text-sm font-semibold text-slate-100 underline-offset-4 hover:underline"
+                              className="truncate text-left text-sm font-semibold text-slate-900 underline-offset-4 hover:underline"
                             >
                               {booking.name}
                             </button>
                           </td>
-                          <td className="hidden sm:table-cell px-2 py-2 text-slate-300">
-                            {booking.service || "--"}
-                          </td>
-                          <td className="px-2 py-2 text-slate-300">
-                            {formatDateShort(booking.date)}
-                          </td>
-                          <td className="hidden md:table-cell px-2 py-2 text-slate-300">
-                            {booking.time || "--"}
-                          </td>
-                          <td className="hidden lg:table-cell px-2 py-2 text-slate-300">
-                            {booking.carName || "--"}
-                          </td>
-                          <td className="px-2 py-2 text-slate-100">{formatCurrency(booking.amount)}</td>
-                          <td className="px-2 py-2 text-slate-200">
+                          <td className="hidden sm:table-cell px-2 py-2">{booking.service || "--"}</td>
+                          <td className="px-2 py-2">{formatDateShort(booking.date)}</td>
+                          <td className="hidden md:table-cell px-2 py-2">{booking.time || "--"}</td>
+                          <td className="hidden lg:table-cell px-2 py-2">{booking.carName || "--"}</td>
+                          <td className="px-2 py-2">{formatCurrency(booking.amount)}</td>
+                          <td className="px-2 py-2">
                             <button
                               type="button"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 handleShowDetail(booking);
                               }}
-                              className="rounded-full border border-slate-700/70 px-2.5 py-1 text-[11px] font-semibold text-slate-200 transition hover:bg-slate-800"
+                              className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-700 transition hover:bg-slate-100"
                             >
                               Details
                             </button>
@@ -868,7 +826,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="pointer-events-none fixed bottom-6 left-1/2 z-40 flex w-[min(92vw,420px)] -translate-x-1/2">
-        <div className="flex w-full gap-2 rounded-2xl border border-slate-800/80 bg-slate-950/90 p-2 shadow-[0_20px_50px_-24px_rgba(15,23,42,0.8)] backdrop-blur">
+        <div className="pointer-events-auto flex w-full gap-2 rounded-2xl border border-white/40 bg-white/20 p-2 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.35)] backdrop-blur-xl">
           {BOTTOM_ACTIONS.map((action) => {
             const Icon = action.icon;
             const isActive = activeBottomPanel === action.key;
@@ -879,10 +837,10 @@ export default function AdminDashboard() {
                 onClick={() =>
                   setActiveBottomPanel((prev) => (prev === action.key ? null : action.key))
                 }
-                className={`pointer-events-auto flex-1 rounded-xl px-3 py-2 text-center text-xs font-semibold uppercase tracking-[0.12em] transition ${
+                className={`flex-1 rounded-xl border px-3 py-2 text-center text-xs font-semibold uppercase tracking-[0.12em] transition backdrop-blur-lg ${
                   isActive
-                    ? "bg-slate-800 text-white shadow-[0_18px_28px_-20px_rgba(59,130,246,0.9)]"
-                    : "text-slate-200 hover:bg-slate-900"
+                    ? "border-white/60 bg-white/60 text-slate-900 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.35)]"
+                    : "border-white/30 bg-white/10 text-slate-700 hover:border-white/50 hover:bg-white/30 hover:text-slate-900"
                 }`}
               >
                 <span className="flex flex-col items-center gap-1">
@@ -898,26 +856,26 @@ export default function AdminDashboard() {
       {activeBottomPanel && (() => {
         const panelMeta = BOTTOM_PANEL_META[activeBottomPanel] || { title: "", description: "" };
         return (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/80 backdrop-blur">
-            <div className="w-[96vw] max-w-5xl rounded-t-3xl border border-slate-800/80 bg-slate-900/95 p-6 shadow-2xl sm:rounded-3xl">
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/30 backdrop-blur-sm">
+            <div className="w-[96vw] max-w-5xl rounded-t-3xl border border-slate-200 bg-white p-6 shadow-2xl sm:rounded-3xl">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-2xl font-semibold" style={{ color: "#fff" }}>
+                  <h2 className="text-2xl font-semibold" style={{ color: "#111827" }}>
                     {panelMeta.title}
                   </h2>
-                  <p className="text-sm" style={{ color: "#fff" }}>
+                  <p className="text-sm" style={{ color: "#1f2937" }}>
                     {panelMeta.description}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setActiveBottomPanel(null)}
-                  className="rounded-full border border-slate-700/70 px-3 py-1 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
+                  className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                 >
                   Close
                 </button>
               </div>
-              <div className="mt-6 max-h-[70vh] overflow-y-auto pr-2">
+              <div className="mt-6 max-h-[70vh] overflow-y-auto pr-1">
                 {renderBottomPanelContent()}
               </div>
             </div>
@@ -941,17 +899,17 @@ export default function AdminDashboard() {
       />
 
       {expenseDeleteModalOpen && expenseToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur">
-          <div className="w-full max-w-sm rounded-3xl border border-slate-800/80 bg-slate-900/90 p-6 shadow-2xl">
-            <h3 className="text-lg font-semibold" style={{ color: "#fff" }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold" style={{ color: "#111827" }}>
               Delete expense
             </h3>
-            <p className="mt-3 text-sm" style={{ color: "#fff" }}>
+            <p className="mt-3 text-sm" style={{ color: "#1f2937" }}>
               Remove {expenseToDelete.productName || "this entry"} recorded on {" "}
               {formatDateLong(expenseToDelete.date)} for {formatCurrency(expenseToDelete.amount)}?
             </p>
             {expenseDeleteError && (
-              <p className="mt-3 rounded-lg border border-rose-500/60 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+              <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
                 {expenseDeleteError}
               </p>
             )}
@@ -962,7 +920,7 @@ export default function AdminDashboard() {
                   setExpenseDeleteModalOpen(false);
                   setExpenseToDelete(null);
                 }}
-                className="rounded-full border border-slate-700/70 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
+                className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                 disabled={deletingExpense}
               >
                 Cancel
@@ -981,14 +939,14 @@ export default function AdminDashboard() {
       )}
 
       {detailBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-800/80 bg-slate-900/90 p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-xl font-semibold" style={{ color: "#fff" }}>
+                <h3 className="text-xl font-semibold" style={{ color: "#111827" }}>
                   Booking details
                 </h3>
-                <p className="text-sm" style={{ color: "#fff" }}>
+                <p className="text-sm" style={{ color: "#1f2937" }}>
                   {detailBooking.service}
                 </p>
               </div>
@@ -998,54 +956,54 @@ export default function AdminDashboard() {
                   setDetailBooking(null);
                   setConfirmDeleteBooking(false);
                 }}
-                className="rounded-full border border-slate-700/70 px-3 py-1 text-sm text-slate-300 hover:bg-slate-800"
+                className="rounded-full border border-slate-300 px-3 py-1 text-sm text-slate-700 transition hover:bg-slate-100"
               >
                 Close
               </button>
             </div>
-            <div className="mt-6 grid gap-3 text-sm text-slate-200">
+            <div className="mt-6 grid gap-3 text-sm text-slate-600">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Client</span>
-                <span className="font-semibold text-slate-100">{detailBooking.name}</span>
+                <span className="text-slate-500">Client</span>
+                <span className="font-semibold text-slate-900">{detailBooking.name}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Service date</span>
+                <span className="text-slate-500">Service date</span>
                 <span>{formatDateLong(detailBooking.date)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Time</span>
+                <span className="text-slate-500">Time</span>
                 <span>{detailBooking.time || "--"}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Amount</span>
-                <span>{formatCurrency(detailBooking.amount)}</span>
+                <span className="text-slate-500">Amount</span>
+                <span className="font-semibold text-slate-900">{formatCurrency(detailBooking.amount)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Status</span>
-                <span className="rounded-full bg-slate-800/60 px-3 py-1 text-xs uppercase tracking-wide text-slate-200">
+                <span className="text-slate-500">Status</span>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs uppercase tracking-wide text-slate-700">
                   {detailBooking.status}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Vehicle</span>
+                <span className="text-slate-500">Vehicle</span>
                 <span>{detailBooking.carName || "--"}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Phone</span>
+                <span className="text-slate-500">Phone</span>
                 <span>{detailBooking.phone || "--"}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Email</span>
+                <span className="text-slate-500">Email</span>
                 <span>{detailBooking.email || "--"}</span>
               </div>
               <div>
-                <span className="text-slate-400">Add-ons</span>
+                <span className="text-slate-500">Add-ons</span>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {Array.isArray(detailBooking.addOns) && detailBooking.addOns.length ? (
                     detailBooking.addOns.map((addon, index) => (
                       <span
                         key={`${addon.label}-${index}`}
-                        className="rounded-full bg-slate-800/60 px-3 py-1 text-xs text-slate-300"
+                        className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700"
                       >
                         {addon.label}
                       </span>
@@ -1062,7 +1020,7 @@ export default function AdminDashboard() {
                   <button
                     type="button"
                     onClick={() => setConfirmDeleteBooking(true)}
-                    className="rounded-full border border-rose-500/60 px-4 py-2 text-sm font-semibold text-rose-300 transition hover:bg-rose-500/20"
+                    className="rounded-full border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
                   >
                     Delete booking
                   </button>
@@ -1072,7 +1030,7 @@ export default function AdminDashboard() {
                       setDetailBooking(null);
                       setConfirmDeleteBooking(false);
                     }}
-                    className="rounded-full border border-slate-700/70 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
+                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                   >
                     Done
                   </button>
@@ -1082,7 +1040,7 @@ export default function AdminDashboard() {
                   <button
                     type="button"
                     onClick={() => setConfirmDeleteBooking(false)}
-                    className="rounded-full border border-slate-700/70 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
+                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                   >
                     Cancel
                   </button>
