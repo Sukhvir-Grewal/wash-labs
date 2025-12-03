@@ -13,9 +13,16 @@ export default function DateTimePicker({
     durationMinutes = 60,
 }) {
     const today = startOfToday();
-    // Do not select any date by default
-    const [selectedDay, setSelectedDay] = useState(undefined);
-    const [selectedTime, setSelectedTime] = useState(dateTime.time || "");
+    const initialDay = useMemo(() => {
+        if (!dateTime?.date) return undefined;
+        const pieces = dateTime.date.split("-").map(Number);
+        if (pieces.length === 3 && pieces.every((n) => Number.isInteger(n))) {
+            return new Date(pieces[0], pieces[1] - 1, pieces[2]);
+        }
+        return undefined;
+    }, [dateTime?.date]);
+    const [selectedDay, setSelectedDay] = useState(initialDay);
+    const [selectedSlot, setSelectedSlot] = useState(null);
     const [showValidation, setShowValidation] = useState(false);
 
     // Business rules
@@ -28,6 +35,12 @@ export default function DateTimePicker({
     const [loadingSlots, setLoadingSlots] = useState(false);
     const [visibleMonth, setVisibleMonth] = useState(() => new Date());
     const [unavailableSet, setUnavailableSet] = useState(new Set());
+
+    useEffect(() => {
+        if (!selectedDay && initialDay) {
+            setSelectedDay(initialDay);
+        }
+    }, [initialDay, selectedDay]);
 
     // When a date is selected, query the server for occupied slots for that day
     useEffect(() => {
@@ -125,6 +138,13 @@ export default function DateTimePicker({
         return () => { cancelled = true; };
     }, [visibleMonth, durationMinutes]);
 
+    const to24HourString = (dateObj) =>
+        dateObj.toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        });
+
     // Generate candidate slots between business hours
     const candidateTimes = useMemo(() => {
         if (!selectedDay) return [];
@@ -165,7 +185,24 @@ export default function DateTimePicker({
         });
     }
 
-    const isValid = selectedDay && selectedTime;
+    useEffect(() => {
+        if (!selectedDay || !times.length || selectedSlot) return;
+        if (dateTime?.timeValue) {
+            const match = times.find((slot) => to24HourString(slot.start) === dateTime.timeValue);
+            if (match) {
+                setSelectedSlot(match);
+                return;
+            }
+        }
+        if (dateTime?.time) {
+            const match = times.find((slot) => slot.label === dateTime.time);
+            if (match) {
+                setSelectedSlot(match);
+            }
+        }
+    }, [times, selectedDay, selectedSlot, dateTime?.timeValue, dateTime?.time]);
+
+    const isValid = Boolean(selectedDay && selectedSlot);
 
     const handleNext = () => {
         if (!isValid) {
@@ -175,13 +212,21 @@ export default function DateTimePicker({
 
         const formattedDate = selectedDay.toISOString().split("T")[0];
         setShowValidation(false);
+        const slot = selectedSlot;
+        const timeLabel = slot?.label || "";
+        const timeValue = slot ? to24HourString(slot.start) : "";
+        const timeISO = slot ? slot.start.toISOString() : "";
         setDateTime({
             date: formattedDate,
-            time: selectedTime,
+            time: timeLabel,
+            timeValue,
+            timeISO,
         });
         onNext({
             date: formattedDate,
-            time: selectedTime,
+            time: timeLabel,
+            timeValue,
+            timeISO,
         });
     };
 
@@ -203,8 +248,11 @@ export default function DateTimePicker({
                     mode="single"
                     selected={selectedDay}
                     onSelect={(day) => {
+                        if (day && selectedDay && day.toDateString() !== selectedDay.toDateString()) {
+                            setSelectedSlot(null);
+                        }
                         setSelectedDay(day);
-                        if (day && selectedTime) {
+                        if (day && selectedSlot) {
                             setShowValidation(false);
                         }
                     }}
@@ -250,16 +298,20 @@ export default function DateTimePicker({
                                             <div className="text-sm text-gray-500">No candidate slots for this day.</div>
                                         ) : (
                                             times.map((slot) => {
-                                                const isSelected = slot.label === selectedTime;
+                                                const isSelected = selectedSlot?.iso === slot.iso;
                                                 return (
                                                     <button
-                                                        key={slot.label}
+                                                        key={slot.iso}
                                                         type="button"
                                                         onClick={() => {
-                                                            setSelectedTime(slot.label);
+                                                            setSelectedSlot(slot);
                                                             setShowValidation(false);
                                                         }}
-                                                        className={`py-2 px-3 rounded-full text-sm font-medium transition ${isSelected ? 'bg-blue-600 text-white' : 'bg-white text-gray-900 hover:bg-blue-50 border border-blue-100'}`}
+                                                        className={`py-2 px-3 rounded-full text-sm font-medium transition ${
+                                                            isSelected
+                                                                ? 'bg-blue-600 text-white'
+                                                                : 'bg-white text-gray-900 hover:bg-blue-50 border border-blue-100'
+                                                        }`}
                                                     >
                                                         {slot.label}
                                                     </button>
@@ -268,7 +320,7 @@ export default function DateTimePicker({
                                         )}
                                 </div>
 
-                {showValidation && !selectedTime && (
+                {showValidation && !selectedSlot && (
                     <p className="text-sm text-red-600 mt-2">
                         Please pick a time slot to continue.
                     </p>

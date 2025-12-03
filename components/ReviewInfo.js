@@ -94,7 +94,15 @@ export default function ReviewInfo({
                         { label: "Vehicle", value: vehicleDisplay },
                         location?.address && { label: "Address", value: location.address }, // added
                         { label: "Date", value: dateTime?.date || "N/A" },
-                        { label: "Time", value: dateTime?.time || "N/A" },
+                        {
+                            label: "Time",
+                            value:
+                                dateTime?.time ||
+                                (dateTime?.timeValue
+                                    ? new Date(`1970-01-01T${dateTime.timeValue}`)
+                                          .toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+                                    : "N/A"),
+                        },
                         { label: "Name", value: userInfo.name },
                         { label: "Email", value: userInfo.email },
                         {

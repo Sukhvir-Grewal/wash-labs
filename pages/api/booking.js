@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import { MongoClient } from "mongodb";
 import { addBookingToCalendar } from '../../lib/googleCalendar';
 import { getOccupiedSlotsForDate, isSlotConflicting } from '../../lib/availability';
+import { SERVICE_TIME_ZONE, zonedDateToUtc, formatTimeInZone, normalizeTo24Hour } from '../../lib/timezone';
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
@@ -39,6 +40,18 @@ const escapeHtml = (str = "") =>
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+
+// Convert a 24-hour HH:MM string into a friendly 12-hour display
+const formatDisplayTime = (time24h) => {
+  if (!time24h || !/^\d{2}:\d{2}$/.test(time24h)) return null;
+  const [hStr, mStr] = time24h.split(":");
+  const hours = Number(hStr);
+  const minutes = Number(mStr);
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+  const period = hours >= 12 ? "PM" : "AM";
+  const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+  return `${displayHour}:${mStr} ${period}`;
+};
 
 export default async function handler(req, res) {
     if (req.method !== "POST") {
@@ -96,11 +109,41 @@ export default async function handler(req, res) {
         .filter(Boolean)
         .join(" ");
     const safeDate = escapeHtml(dateTime?.date || "N/A");
-    const safeTime = escapeHtml(dateTime?.time || "N/A");
+    const timeCandidates = [dateTime?.timeValue, dateTime?.time];
+    let normalizedTime24 = null;
+    for (const candidate of timeCandidates) {
+      const parsed = normalizeTo24Hour(candidate);
+        if (parsed) {
+            normalizedTime24 = parsed;
+            break;
+        }
+    }
+    if (!normalizedTime24 && dateTime?.timeISO) {
+      try {
+        const isoDate = new Date(dateTime.timeISO);
+        if (!Number.isNaN(isoDate.getTime())) {
+          const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: SERVICE_TIME_ZONE,
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          });
+          const fallback = formatter.format(isoDate);
+          const normalized = normalizeTo24Hour(fallback);
+          if (normalized) normalizedTime24 = normalized;
+        }
+      } catch (isoErr) {
+        console.warn('[booking] Failed to derive normalized time from ISO', isoErr);
+      }
+    }
+    const canonicalStartUtc = normalizedTime24 ? zonedDateToUtc(dateTime.date, normalizedTime24, SERVICE_TIME_ZONE) : null;
+    const normalizedDisplay = normalizedTime24 ? formatDisplayTime(normalizedTime24) : null;
+    const displayTime = normalizedDisplay || dateTime?.time;
+    const safeTime = escapeHtml(displayTime || "N/A");
     // compute end time string if possible (use service.durationMinutes when available, else try DB)
-    let safeEndTimeStr = null;
+    let endTimeDisplay = null;
     try {
-      if (dateTime?.date && dateTime?.time) {
+      if (canonicalStartUtc) {
         let durationMinutesForEmail = typeof service?.durationMinutes === 'number' ? service.durationMinutes : null;
         if (!durationMinutesForEmail) {
           try {
@@ -112,30 +155,15 @@ export default async function handler(req, res) {
           }
         }
         if (!durationMinutesForEmail) durationMinutesForEmail = 60;
-        // parse provided time into 24h
-        const baseDate = new Date(`${dateTime.date}T00:00:00`);
-        const timeStr = String(dateTime.time || '').trim();
-        let hours = 0; let minutes = 0;
-        const ampmMatch = timeStr.match(/(AM|PM)$/i);
-        if (ampmMatch) {
-          const [timeOnly, period] = timeStr.split(/\s+/);
-          const [h, m] = timeOnly.split(':');
-          hours = parseInt(h || '0', 10);
-          minutes = parseInt(m || '0', 10);
-          if (/pm/i.test(period) && hours !== 12) hours += 12;
-          if (/am/i.test(period) && hours === 12) hours = 0;
-        } else {
-          const [h, m] = timeStr.split(':');
-          hours = parseInt(h || '0', 10);
-          minutes = parseInt(m || '0', 10);
+        if (canonicalStartUtc) {
+          const endDateUtc = new Date(canonicalStartUtc.getTime() + durationMinutesForEmail * 60 * 1000);
+          endTimeDisplay = formatTimeInZone(endDateUtc, SERVICE_TIME_ZONE);
         }
-        baseDate.setHours(hours, minutes, 0, 0);
-        const endDate = new Date(baseDate.getTime() + durationMinutesForEmail * 60 * 1000);
-        safeEndTimeStr = endDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
       }
     } catch (e) {
-      safeEndTimeStr = null;
+      endTimeDisplay = null;
     }
+    const safeEndTime = endTimeDisplay ? escapeHtml(endTimeDisplay) : null;
   const safeLocation = escapeHtml(location?.address || "N/A");
   const safeName = escapeHtml(userInfo?.name || "");
   const rawEmail = userInfo?.email || "";
@@ -163,7 +191,7 @@ export default async function handler(req, res) {
   // Server-side availability check (avoid race conditions)
   // Skip availability check for admin bookings to allow overrides
   try {
-    if (reqSource !== 'admin' && dateTime?.date && dateTime?.time) {
+    if (reqSource !== 'admin' && dateTime?.date && normalizedTime24) {
       // Determine duration: try to fetch from services collection
       let durationMinutes = 60;
       try {
@@ -171,38 +199,77 @@ export default async function handler(req, res) {
         const svcDoc = await db.collection('services').findOne({ title: { $regex: `^${service.title}$`, $options: 'i' } });
         if (svcDoc && typeof svcDoc.durationMinutes === 'number') durationMinutes = svcDoc.durationMinutes;
       } catch (e) {}
-
-      // Parse provided time into 24h (same parser as availability)
-      const baseDate = new Date(`${dateTime.date}T00:00:00`);
-      const timeStr = String(dateTime.time || '').trim();
-      let hours = 0; let minutes = 0;
-      const ampmMatch = timeStr.match(/(AM|PM)$/i);
-      if (ampmMatch) {
-        const [timeOnly, period] = timeStr.split(/\s+/);
-        const [h, m] = timeOnly.split(':');
-        hours = parseInt(h || '0', 10);
-        minutes = parseInt(m || '0', 10);
-        if (/pm/i.test(period) && hours !== 12) hours += 12;
-        if (/am/i.test(period) && hours === 12) hours = 0;
+      const startDateUtc = canonicalStartUtc;
+      if (!startDateUtc) {
+        console.warn('[booking] Unable to parse normalized time for availability check', {
+          date: dateTime.date,
+          timeValue: dateTime.timeValue,
+          timeLabel: dateTime.time,
+          normalizedTime24,
+        });
       } else {
-        const [h, m] = timeStr.split(':');
-        hours = parseInt(h || '0', 10);
-        minutes = parseInt(m || '0', 10);
-      }
-      baseDate.setHours(hours, minutes, 0, 0);
-      const slotStartISO = baseDate.toISOString();
-      const slotEndISO = new Date(baseDate.getTime() + durationMinutes * 60 * 1000).toISOString();
+        const slotStartISO = startDateUtc.toISOString();
+        const slotEndISO = new Date(startDateUtc.getTime() + durationMinutes * 60 * 1000).toISOString();
 
-      const occupied = await getOccupiedSlotsForDate(dateTime.date);
+        const occupied = await getOccupiedSlotsForDate(dateTime.date);
         // Reject bookings on Tuesdays (2) and Fridays (5)
         const checkDate = new Date(`${dateTime.date}T00:00:00`);
         const w = checkDate.getDay();
         if (w === 2 || w === 5) {
           return res.status(400).json({ message: 'Bookings are not allowed on Tuesdays or Fridays.' });
         }
-  const conflict = isSlotConflicting(slotStartISO, slotEndISO, occupied, 30);
-      if (conflict) {
-        return res.status(409).json({ message: 'Requested time slot is no longer available. Please choose another time.' });
+        const bufferMinutes = 30;
+        const conflict = isSlotConflicting(slotStartISO, slotEndISO, occupied, bufferMinutes);
+        if (conflict) {
+          const bufferMs = bufferMinutes * 60 * 1000;
+          const slotStartMs = new Date(slotStartISO).getTime();
+          const slotEndMs = new Date(slotEndISO).getTime();
+          const conflicting = occupied.filter((occ) => {
+            const occStart = new Date(occ.start).getTime();
+            const occEnd = new Date(occ.end).getTime();
+            return slotStartMs < occEnd + bufferMs && slotEndMs > occStart - bufferMs;
+          });
+          try {
+            console.warn('[booking] slot conflict', {
+              requested: {
+                date: dateTime.date,
+                time: dateTime.time,
+                normalizedTime: normalizedTime24,
+                timeZone: SERVICE_TIME_ZONE,
+                start: slotStartISO,
+                end: slotEndISO,
+                durationMinutes,
+              },
+              occupied: occupied.map((occ) => ({
+                start: occ.start,
+                end: occ.end,
+                source: occ.source,
+                title: occ.title,
+                id: occ.id,
+              })),
+              conflicting,
+            });
+          } catch (logErr) {
+            console.error('[booking] failed to log conflict details', logErr);
+          }
+          return res.status(409).json({
+            message: 'Requested time slot is no longer available. Please choose another time.',
+            details: {
+              requested: {
+                start: slotStartISO,
+                end: slotEndISO,
+                normalizedTime: normalizedTime24,
+              },
+              conflicting: conflicting.map((occ) => ({
+                start: occ.start,
+                end: occ.end,
+                source: occ.source,
+                title: occ.title,
+                id: occ.id,
+              })),
+            },
+          });
+        }
       }
     }
   } catch (e) {
@@ -269,7 +336,7 @@ export default async function handler(req, res) {
           adminTextLines.push(`Vehicle: ${vehicleDisplay}`);
         }
         // Date/time and location
-        if (hasValue(safeDate) || hasValue(safeTime)) adminTextLines.push(`Date & Time: ${safeDate} at ${safeTime}${safeEndTimeStr ? ` — Ends: ${safeEndTimeStr}` : ''}`);
+        if (hasValue(safeDate) || hasValue(safeTime)) adminTextLines.push(`Date & Time: ${safeDate} at ${safeTime}${endTimeDisplay ? ` — Ends: ${endTimeDisplay}` : ''}`);
         if (hasValue(location?.address)) adminTextLines.push(`Location: ${location?.address}`);
         adminTextLines.push('', 'Client:');
         if (hasValue(userInfo.name)) adminTextLines.push(`Name: ${userInfo.name}`);
@@ -327,7 +394,7 @@ export default async function handler(req, res) {
                   <tr><td style="padding:6px 0;"><strong>Final Price:</strong> <span style="text-decoration:line-through;color:#9ca3af;margin-right:8px;">${escapeHtml(formattedBaseSum)}</span> <strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong></td></tr>` : `<tr><td style="padding:6px 0;"><strong>Final Price:</strong> <strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong></td></tr>`}
                   ${(vehicles) ? `<tr><td style="padding:6px 0;"><strong>Vehicles:</strong></td></tr>` : `<tr><td style="padding:6px 0;"><strong>Vehicle:</strong> ${vehicleDisplay}</td></tr>`}
                   ${vehicles ? vehicles.map(v=> `<tr><td style="padding:4px 0;padding-left:12px;">${escapeHtml(v.name||'N/A')} (${escapeHtml(v.type||'')}) — ${escapeHtml(typeof v.lineTotal==='number' ? formatMoney(v.lineTotal) : 'N/A')}</td></tr>`).join('') : ''}
-                  ${(hasValue(safeDate) || hasValue(safeTime)) ? `<tr><td style="padding:6px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}</td></tr>` : ''}
+                  ${(hasValue(safeDate) || hasValue(safeTime)) ? `<tr><td style="padding:6px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}${safeEndTime ? ` — Ends: ${safeEndTime}` : ''}</td></tr>` : ''}
                   ${hasValue(location?.address) ? `<tr><td style="padding:6px 0;"><strong>Location:</strong> ${escapeHtml(location.address)}</td></tr>` : ''}
                 </table>
               </td>
@@ -393,7 +460,7 @@ export default async function handler(req, res) {
           } else {
             userTextLines.push(`Vehicle: ${vehicleDisplay}`);
           }
-          if (hasValue(safeDate) || hasValue(safeTime)) userTextLines.push(`Date & Time: ${safeDate} at ${safeTime}${safeEndTimeStr ? ` — Ends: ${safeEndTimeStr}` : ''}`);
+          if (hasValue(safeDate) || hasValue(safeTime)) userTextLines.push(`Date & Time: ${safeDate} at ${safeTime}${endTimeDisplay ? ` — Ends: ${endTimeDisplay}` : ''}`);
           if (hasValue(location?.address)) userTextLines.push(`Location: ${location.address}`);
           userTextLines.push('', 'Need anything else?', `Phone: ${brand.phone}`, `Email: ${brand.email}`, `Website: ${baseUrl}`, '', '— Wash Labs, Halifax NS');
           const userText = userTextLines.filter(Boolean).join('\n');
@@ -444,7 +511,7 @@ export default async function handler(req, res) {
                   <tr><td style="padding:4px 0;"><strong>Final Price:</strong> <span style="text-decoration:line-through;color:#9ca3af;margin-right:8px;">${escapeHtml(formattedBaseSum)}</span> <strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong></td></tr>` : `<tr><td style="padding:4px 0;"><strong>Final Price:</strong> <strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong></td></tr>`}
                   ${(vehicles) ? `<tr><td style="padding:4px 0;"><strong>Vehicles:</strong></td></tr>` : `<tr><td style="padding:4px 0;"><strong>Vehicle:</strong> ${vehicleDisplay}</td></tr>`}
                   ${vehicles ? vehicles.map(v=> `<tr><td style="padding:4px 0;padding-left:12px;">${escapeHtml(v.name||'N/A')} (${escapeHtml(v.type||'')}) — ${escapeHtml(typeof v.lineTotal==='number' ? formatMoney(v.lineTotal) : 'N/A')}</td></tr>`).join('') : ''}
-                  ${(hasValue(safeDate) || hasValue(safeTime)) ? `<tr><td style="padding:4px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}</td></tr>` : ''}
+                  ${(hasValue(safeDate) || hasValue(safeTime)) ? `<tr><td style="padding:4px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}${safeEndTime ? ` — Ends: ${safeEndTime}` : ''}</td></tr>` : ''}
                   ${hasValue(location?.address) ? `<tr><td style=\"padding:4px 0;\"><strong>Location:</strong> ${escapeHtml(location.address)}</td></tr>` : ''}
                 </table>
                 ${hasValue(safeNotes) ? `<div style="margin-top:12px;padding:12px;border-left:3px solid ${brand.color};background:#f8fbff;color:#334155;white-space:pre-wrap;"><strong>Your Notes:</strong>\n${safeNotes}</div>` : ''}
@@ -503,6 +570,9 @@ export default async function handler(req, res) {
           service: service.title,
           date: dateTime.date,
           time: dateTime.time,
+          timeValue: normalizedTime24 || undefined,
+          timeISO: (canonicalStartUtc ? canonicalStartUtc.toISOString() : dateTime.timeISO) || undefined,
+          timeZone: SERVICE_TIME_ZONE,
           amount: typeof finalAmount === 'number' ? finalAmount : undefined,
           baseSum: typeof computedBaseSum === 'number' ? computedBaseSum : undefined,
           travelExpense: travelExpense || 0,
@@ -532,31 +602,25 @@ export default async function handler(req, res) {
     // Add to Google Calendar (best-effort, after DB insert)
     try {
       const {
-        GOOGLE_CLIENT_ID,
-        GOOGLE_CLIENT_SECRET,
-        GOOGLE_REDIRECT_URI,
+        GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        GOOGLE_PRIVATE_KEY,
         GOOGLE_CALENDAR_ID
       } = process.env;
-      if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_REDIRECT_URI && GOOGLE_CALENDAR_ID) {
-        if (dateTime.date && dateTime.time) {
-          // Convert 12-hour format (e.g., "7:00 AM") to 24-hour format (e.g., "07:00")
-          let time24hr = dateTime.time;
-          if (dateTime.time.match(/AM|PM/i)) {
-            const [time, period] = dateTime.time.split(/\s+/);
-            let [hours, minutes] = time.split(':');
-            hours = parseInt(hours, 10);
-            
-            if (period.toUpperCase() === 'PM' && hours !== 12) {
-              hours += 12;
-            } else if (period.toUpperCase() === 'AM' && hours === 12) {
-              hours = 0;
-            }
-            
-            time24hr = `${hours.toString().padStart(2, '0')}:${minutes || '00'}`;
-          }
-          
-          const startDateTime = new Date(`${dateTime.date}T${time24hr}`);
-          if (!isNaN(startDateTime.getTime())) {
+      const hasCalendarCreds = Boolean(
+        GOOGLE_SERVICE_ACCOUNT_EMAIL && GOOGLE_PRIVATE_KEY && GOOGLE_CALENDAR_ID
+      );
+      if (hasCalendarCreds) {
+        if (dateTime.date && (normalizedTime24 || dateTime.time)) {
+          const calendarTime = normalizedTime24 || normalizeTo24Hour(dateTime.time);
+          if (!calendarTime) {
+            console.error('[booking] Unable to determine calendar start time', {
+              date: dateTime.date,
+              timeValue: dateTime.timeValue,
+              timeLabel: dateTime.time,
+            });
+          } else {
+            const startDateUtc = canonicalStartUtc || zonedDateToUtc(dateTime.date, calendarTime, SERVICE_TIME_ZONE);
+            if (startDateUtc) {
             // Fetch the service duration from MongoDB
             let durationHours = 2; // fallback default
             try {
@@ -570,7 +634,7 @@ export default async function handler(req, res) {
             } catch (svcErr) {
               console.error("[booking] Failed to fetch service duration from DB", svcErr);
             }
-            const endDateTime = new Date(startDateTime.getTime() + durationHours * 60 * 60 * 1000);
+            const endDateUtc = new Date(startDateUtc.getTime() + durationHours * 60 * 60 * 1000);
             // Build a description with vehicle list and pricing summary when available
             let calendarDescription = `Service: ${service.title}`;
             if (vehicles) {
@@ -590,16 +654,25 @@ export default async function handler(req, res) {
               summary: `${service.title} for ${userInfo.name}`,
               description: calendarDescription,
               location: location?.address || '',
-              startDateTime: startDateTime.toISOString(),
-              endDateTime: endDateTime.toISOString(),
+              startDateTime: startDateUtc.toISOString(),
+              endDateTime: endDateUtc.toISOString(),
               calendarId: GOOGLE_CALENDAR_ID
             });
-          } else {
-            console.error('[booking] Invalid start date/time for Google Calendar event:', dateTime);
+            } else {
+              console.error('[booking] Invalid start date/time for Google Calendar event:', {
+                date: dateTime.date,
+                timeValue: dateTime.timeValue,
+                timeLabel: dateTime.time,
+                calendarTime,
+                timeZone: SERVICE_TIME_ZONE,
+              });
+            }
           }
         } else {
           console.error('[booking] Missing date or time for Google Calendar event:', dateTime);
         }
+      } else {
+        console.warn('[booking] Skipping Google Calendar insert: missing service account env vars');
       }
     } catch (calendarErr) {
       // Capture calendar insertion errors but do not fail the booking

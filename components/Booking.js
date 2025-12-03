@@ -10,7 +10,7 @@ import Location from "./Location"; // added
 export default function Booking({ service, onClose }) {
     const [step, setStep] = useState(1);
     const [vehicle, setVehicle] = useState({ name: "", year: "" });
-    const [dateTime, setDateTime] = useState({ date: "", time: "" });
+    const [dateTime, setDateTime] = useState({ date: "", time: "", timeValue: "", timeISO: "" });
     const [location, setLocation] = useState({ address: "", lat: null, lon: null }); // added
     const [userInfo, setUserInfo] = useState({
         name: "",
@@ -35,8 +35,8 @@ export default function Booking({ service, onClose }) {
         setStep(2);
     };
 
-    const handleNextDateTime = ({ date, time }) => {
-        setDateTime({ date, time });
+    const handleNextDateTime = ({ date, time, timeValue, timeISO }) => {
+        setDateTime({ date, time, timeValue, timeISO });
         setStep(3);
     };
 
@@ -51,7 +51,7 @@ export default function Booking({ service, onClose }) {
     const resetAndClose = () => {
         setStep(1);
         setVehicle({ name: "", year: "" });
-        setDateTime({ date: "", time: "" });
+        setDateTime({ date: "", time: "", timeValue: "", timeISO: "" });
         setLocation({ address: "", lat: null, lon: null }); // reset
         setUserInfo({
             name: "",
