@@ -367,21 +367,6 @@ export default function AdminServicesPage() {
             >
               Add New Service
             </button>
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await fetch("/api/auth/logout", { method: "POST" });
-                  router.replace("/admin");
-                } catch (logoutError) {
-                  console.error("Logout error:", logoutError);
-                  router.replace("/admin");
-                }
-              }}
-              className="admin-services-btn admin-services-btn--danger"
-            >
-              Logout
-            </button>
           </div>
         </div>
 
