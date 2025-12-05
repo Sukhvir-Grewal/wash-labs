@@ -46,3 +46,4 @@ next-env.d.ts
 # Sensitive and important files to ignore
 
 google_oauth_test.js
+scripts/testCustomers.js

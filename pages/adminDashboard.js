@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FiActivity,
   FiBarChart2,
@@ -66,7 +66,23 @@ export default function AdminDashboard() {
   const [deletingExpense, setDeletingExpense] = useState(false);
   const [expenseDeleteError, setExpenseDeleteError] = useState("");
 
+  const [activeBottomPanel, setActiveBottomPanel] = useState("bookings");
   const [activeSection, setActiveSection] = useState(null);
+  const bookingScrollRef = useRef(null);
+  const expenseScrollRef = useRef(null);
+  const bottomPanelRef = useRef(null);
+
+  useEffect(() => {
+    if (activeBottomPanel === "bookings" && bookingScrollRef.current) {
+      bookingScrollRef.current.scrollTop = 0;
+    }
+    if (activeBottomPanel === "expenses" && expenseScrollRef.current) {
+      expenseScrollRef.current.scrollTop = 0;
+    }
+    if (bottomPanelRef.current) {
+      bottomPanelRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [activeBottomPanel]);
 
   const formatCurrency = (amount) => `$${Number(amount || 0).toFixed(2)}`;
 
@@ -105,8 +121,6 @@ export default function AdminDashboard() {
       year: "numeric",
     });
   };
-
-  const [activeBottomPanel, setActiveBottomPanel] = useState("bookings");
 
   const metrics = useMemo(() => {
     const completed = bookings.filter((booking) => booking.status === "complete");
@@ -563,7 +577,7 @@ export default function AdminDashboard() {
 
       <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="inline-block min-w-full align-middle">
-          <div className="max-h-[60vh] overflow-y-auto">
+          <div ref={bookingScrollRef} className="max-h-[60vh] overflow-y-auto">
             {loading ? (
               <div className="py-10 text-center text-sm font-semibold text-slate-500">
                 Loading bookings...
@@ -764,78 +778,80 @@ export default function AdminDashboard() {
           Total spent{expenseTotalSuffix}: {formatCurrency(filteredExpenseTotal)}
         </p>
 
-        <div className="flex-1 rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            {loading ? (
-              <div className="py-10 text-center text-sm font-semibold text-slate-500">
-                Loading expenses...
-              </div>
-            ) : displayExpenses.length === 0 ? (
-              <div className="py-12 text-center text-sm text-slate-600">No expenses captured yet.</div>
-            ) : (
-              <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
-                <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-700">Date</th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-700">Item</th>
-                    <th className="hidden md:table-cell px-3 py-2 text-left font-semibold text-slate-700">Supplier</th>
-                    <th className="hidden lg:table-cell px-3 py-2 text-left font-semibold text-slate-700">Category</th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-700">Amount</th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-700">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 text-slate-600">
-                  {displayExpenses.map((expense) => {
-                    const rowId = expense._id || `${expense.date}-${expense.productName}`;
-                    const isSelected = selectedExpenseId === rowId;
-                    const categoryLabel =
-                      expense.category === "one-time"
-                        ? "Equipment"
-                        : expense.category === "chemicals"
-                        ? "Chemicals"
-                        : expense.category || "Other";
-                    return (
-                      <tr
-                        key={rowId}
-                        onClick={() =>
-                          setSelectedExpenseId((prev) => (prev === rowId ? null : rowId))
-                        }
-                        className={`transition-colors ${
-                          isSelected ? "bg-slate-100" : "hover:bg-slate-50"
-                        }`}
-                      >
-                        <td className="px-3 py-2">{formatDateShort(expense.date)}</td>
-                        <td className="px-3 py-2 text-slate-700">
-                          <span className="block max-w-[10rem] truncate sm:max-w-xs md:max-w-md">
-                            {expense.productName || "--"}
-                          </span>
-                        </td>
-                        <td className="hidden md:table-cell px-3 py-2">{expense.supplier || "--"}</td>
-                        <td className="hidden lg:table-cell px-3 py-2">{categoryLabel}</td>
-                        <td className="px-3 py-2">
-                          {formatCurrency(expense.amount)}
-                          {expense.taxIncluded && (
-                            <span className="ml-2 text-[11px] text-slate-500">(tax incl.)</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2">
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleExpenseDeleteRequest(expense);
-                            }}
-                            className="rounded-full border border-rose-300 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-rose-600 transition hover:bg-rose-50"
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
+        <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="inline-block min-w-full align-middle">
+            <div ref={expenseScrollRef} className="max-h-[60vh] overflow-auto">
+              {loading ? (
+                <div className="py-10 text-center text-sm font-semibold text-slate-500">
+                  Loading expenses...
+                </div>
+              ) : displayExpenses.length === 0 ? (
+                <div className="py-12 text-center text-sm text-slate-600">No expenses captured yet.</div>
+              ) : (
+                <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
+                  <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700">Date</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700">Item</th>
+                      <th className="hidden md:table-cell px-3 py-2 text-left font-semibold text-slate-700">Supplier</th>
+                      <th className="hidden lg:table-cell px-3 py-2 text-left font-semibold text-slate-700">Category</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700">Amount</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 text-slate-600">
+                    {displayExpenses.map((expense) => {
+                      const rowId = expense._id || `${expense.date}-${expense.productName}`;
+                      const isSelected = selectedExpenseId === rowId;
+                      const categoryLabel =
+                        expense.category === "one-time"
+                          ? "Equipment"
+                          : expense.category === "chemicals"
+                          ? "Chemicals"
+                          : expense.category || "Other";
+                      return (
+                        <tr
+                          key={rowId}
+                          onClick={() =>
+                            setSelectedExpenseId((prev) => (prev === rowId ? null : rowId))
+                          }
+                          className={`transition-colors ${
+                            isSelected ? "bg-slate-100" : "hover:bg-slate-50"
+                          }`}
+                        >
+                          <td className="px-3 py-2">{formatDateShort(expense.date)}</td>
+                          <td className="px-3 py-2 text-slate-700">
+                            <span className="block max-w-[10rem] truncate sm:max-w-xs md:max-w-md">
+                              {expense.productName || "--"}
+                            </span>
+                          </td>
+                          <td className="hidden md:table-cell px-3 py-2">{expense.supplier || "--"}</td>
+                          <td className="hidden lg:table-cell px-3 py-2">{categoryLabel}</td>
+                          <td className="px-3 py-2">
+                            {formatCurrency(expense.amount)}
+                            {expense.taxIncluded && (
+                              <span className="ml-2 text-[11px] text-slate-500">(tax incl.)</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2">
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleExpenseDeleteRequest(expense);
+                              }}
+                              className="rounded-full border border-rose-300 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-rose-600 transition hover:bg-rose-50"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1040,7 +1056,7 @@ export default function AdminDashboard() {
         )}
 
         {bottomPanelContent && (
-          <section className="flex flex-col gap-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-lg">
+          <section ref={bottomPanelRef} className="flex flex-col gap-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-lg">
             <div className="flex flex-col gap-2">
               <h2 className="text-xl font-semibold" style={{ color: "#0f172a" }}>
                 {panelMeta.title || ""}

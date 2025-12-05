@@ -122,71 +122,102 @@ export default function DashboardSectionModal({
   const Icon = iconMap[section] || FiGrid;
 
   const renderServices = () => (
-    <div className="space-y-6">
+    <div className="space-y-6 rounded-3xl border border-slate-200 bg-white/95 p-6 text-slate-900 shadow-[0_30px_60px_-40px_rgba(15,23,42,0.25)]">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-slate-100">Service Catalog</h3>
-          <p className="text-sm text-slate-400">Review pricing, add-ons, and duration at a glance.</p>
+          <h3 className="text-xl font-semibold" style={{ color: "#0f172a" }}>Service Catalog</h3>
+          <p className="text-sm" style={{ color: "#1f2937" }}>Quick glance at packages, pricing, and timing.</p>
         </div>
         <Link
           href="/admin-services"
-          className="inline-flex items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/70 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-800"
+          className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm transition hover:border-sky-200 hover:bg-slate-50"
         >
           Manage Services
         </Link>
       </div>
       {servicesLoading ? (
-        <div className="py-12 text-center text-sm text-slate-400">Loading services...</div>
+        <div className="py-12 text-center text-sm" style={{ color: "#1f2937" }}>Loading services...</div>
       ) : servicesError ? (
-        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm" style={{ color: "#9f1239" }}>
           {servicesError}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/60">
-          <table className="min-w-full divide-y divide-slate-800/70 text-sm">
-            <thead className="bg-slate-900/80 text-slate-300">
-              <tr>
-                <th className="px-4 py-3 text-left font-semibold">Service</th>
-                <th className="px-4 py-3 text-left font-semibold">Base Price</th>
-                <th className="px-4 py-3 text-left font-semibold">Duration</th>
-                <th className="px-4 py-3 text-left font-semibold">Add-ons</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 text-slate-200">
-              {services.map((service) => (
-                <tr key={service._id || service.title}>
-                  <td className="px-4 py-4 align-top">
-                    <div className="font-semibold text-slate-100">{service.title}</div>
-                    {service.description && (
-                      <div className="mt-1 text-xs text-slate-400">{service.description}</div>
-                    )}
-                  </td>
-                  <td className="px-4 py-4 align-top">${Number(service.basePrice || 0).toFixed(2)}</td>
-                  <td className="px-4 py-4 align-top">
-                    {service.durationMinutes
-                      ? `${service.durationMinutes} min`
-                      : service.duration
-                      ? `${service.duration} hr`
-                      : "--"}
-                  </td>
-                  <td className="px-4 py-4 align-top">
-                    {Array.isArray(service.addOns) && service.addOns.length ? (
-                      <ul className="space-y-1 text-xs text-slate-300">
-                        {service.addOns.map((addon) => (
-                          <li key={addon.name} className="flex items-center justify-between">
-                            <span>{addon.name}</span>
-                            <span className="text-slate-400">${Number(addon.price || 0).toFixed(2)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span className="text-xs text-slate-500">No add-ons</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-4">
+          {services.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center text-sm shadow-sm" style={{ color: "#1f2937" }}>
+              No services configured yet. Add one from the services dashboard.
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {services.map((service) => {
+                const durationLabel = service.durationMinutes
+                  ? `${service.durationMinutes} min`
+                  : service.duration
+                  ? `${service.duration} hr`
+                  : "--";
+                const addOns = Array.isArray(service.addOns) ? service.addOns : [];
+                return (
+                  <div
+                    key={service._id || service.title}
+                    className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_48px_-36px_rgba(15,23,42,0.3)] transition hover:-translate-y-1 hover:border-sky-200 hover:shadow-[0_30px_60px_-40px_rgba(56,189,248,0.35)]"
+                  >
+                    <div className="relative flex items-start justify-between gap-4">
+                      <div className="space-y-2">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                          Service
+                        </div>
+                        <h4 className="text-xl font-semibold" style={{ color: "#111827" }}>{service.title}</h4>
+                        {service.description && (
+                          <p className="text-sm line-clamp-3" style={{ color: "#1f2937" }}>{service.description}</p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[11px] uppercase tracking-[0.18em]" style={{ color: "#475569" }}>Base</span>
+                        <div className="text-3xl font-semibold text-slate-900">
+                          ${Number(service.basePrice || 0).toFixed(2)}
+                        </div>
+                        <div className="mt-2 inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                          {durationLabel}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="relative mt-5 space-y-4 text-sm" style={{ color: "#1f2937" }}>
+                      <div className="flex gap-4 text-xs" style={{ color: "#475569" }}>
+                        <div className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                          <span className="block text-[11px] uppercase tracking-[0.18em]" style={{ color: "#475569" }}>Source</span>
+                          <span className="mt-1 block font-semibold" style={{ color: "#0f172a" }}>{service.tier || "Core Package"}</span>
+                        </div>
+                        <div className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                          <span className="block text-[11px] uppercase tracking-[0.18em]" style={{ color: "#475569" }}>Status</span>
+                          <span className="mt-1 block font-semibold" style={{ color: "#047857" }}>Active</span>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-[11px] uppercase tracking-[0.18em]" style={{ color: "#475569" }}>Add-ons</span>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {addOns.length ? (
+                            addOns.map((addon) => (
+                              <span
+                                key={`${service._id || service.title}-${addon.name}`}
+                                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs text-slate-700"
+                              >
+                                <span style={{ color: "#0f172a" }}>{addon.name}</span>
+                                <span style={{ color: "#475569" }}>${Number(addon.price || 0).toFixed(2)}</span>
+                              </span>
+                            ))
+                          ) : (
+                            <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs text-slate-500">
+                              No add-ons configured
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -371,33 +402,34 @@ export default function DashboardSectionModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur"
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        style={{ backgroundColor: "rgba(15, 23, 42, 0.35)", backdropFilter: "blur(24px)" }}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.94, y: 30 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 20 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="relative max-h-[90vh] w-[94vw] max-w-5xl overflow-y-auto rounded-3xl border border-slate-800/80 bg-slate-950/95 p-8 shadow-2xl"
+          className="relative max-h-[90vh] w-[94vw] max-w-5xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-8 text-slate-900 shadow-[0_40px_70px_-40px_rgba(15,23,42,0.4)]"
         >
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-6 top-6 inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-900/80 text-slate-200 hover:bg-slate-800 transition"
+            className="absolute right-6 top-6 inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 shadow transition hover:bg-slate-200"
             aria-label="Close section"
           >
             <FiX size={20} />
           </button>
           <div className="flex items-center gap-3 pb-6">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900/70 text-slate-100">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100" style={{ color: "#1f2937" }}>
               <Icon size={22} />
             </span>
             <div>
-              <h2 className="text-2xl font-semibold text-slate-100">{active.label}</h2>
-              <p className="text-sm text-slate-400">{active.hint}</p>
+              <h2 className="text-2xl font-semibold" style={{ color: "#0f172a" }}>{active.label}</h2>
+              <p className="text-sm" style={{ color: "#1f2937" }}>{active.hint}</p>
             </div>
           </div>
-          <div className="space-y-8 pb-4 text-slate-100">
+          <div className="space-y-8 pb-4">
             {renderContent()}
           </div>
         </motion.div>

@@ -1,24 +1,20 @@
-import { useMemo, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { isAuthenticated } from "../lib/auth";
 
-/**
- * Server-side authentication check
- * Redirect to login if not authenticated
- */
 export async function getServerSideProps(context) {
   const authenticated = isAuthenticated(context.req);
-  
+
   if (!authenticated) {
     return {
       redirect: {
-        destination: '/admin',
+        destination: "/admin",
         permanent: false,
       },
     };
   }
-  
+
   return {
     props: {},
   };
@@ -37,43 +33,53 @@ const emptyServiceTemplate = {
   addOns: [],
 };
 
+const cloneServices = (source) =>
+  source.map((service) => ({
+    ...service,
+    baseFeatures: Array.isArray(service.baseFeatures) ? [...service.baseFeatures] : [],
+    reviveFeatures: Array.isArray(service.reviveFeatures) ? [...service.reviveFeatures] : [],
+    addOns: Array.isArray(service.addOns) ? service.addOns.map((addon) => ({ ...addon })) : [],
+  }));
+
 function AddOnEditor({ addOns, onChange, onAdd, onRemove }) {
   return (
-    <div style={{ background: '#F8FAFC', borderRadius: 16, padding: 20, marginBottom: 8, border: '1px solid #E0E7EF' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <h4 style={{ fontSize: 16, fontWeight: 600, color: '#1E293B', margin: 0 }}>Add-ons</h4>
-        <button
-          type="button"
-          onClick={onAdd}
-          style={{ borderRadius: 20, border: '1px solid #60A5FA', padding: '6px 16px', fontSize: 13, fontWeight: 600, color: '#2563EB', background: '#EFF6FF', cursor: 'pointer' }}
-        >
+    <div className="admin-services-panel">
+      <div className="admin-services-panel__header">
+        <h4 className="admin-services-panel__title" style={{ color: "#0f172a" }}>Add-ons</h4>
+        <button type="button" onClick={onAdd} className="admin-services-chip-button">
           + Add add-on
         </button>
       </div>
       {addOns.length === 0 && (
-        <p style={{ fontSize: 13, color: '#2563EB', margin: 0 }}>No add-ons yet. Add one above.</p>
+        <p className="admin-services-panel__empty" style={{ color: "#2563eb" }}>
+          No add-ons yet. Add one above.
+        </p>
       )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="admin-services-panel__body">
         {addOns.map((addon, index) => (
-          <div key={index} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <div key={index} className="admin-services-input-row">
             <input
-              value={addon.name || ''}
+              value={addon.name || ""}
               onChange={(event) => onChange(index, { ...addon, name: event.target.value })}
               placeholder="Add-on name"
-              style={{ flex: 2, borderRadius: 8, border: '1px solid #CBD5E1', background: '#F1F5F9', padding: 10, fontSize: 14, color: '#1E293B' }}
+              className="admin-services-input admin-services-input--grow"
             />
             <input
               type="number"
-              value={addon.price || ''}
-              onChange={(event) => onChange(index, { ...addon, price: Number(event.target.value) })}
+              value={addon.price ?? ""}
+              onChange={(event) => {
+                const parsed = Number(event.target.value);
+                const price = Number.isNaN(parsed) ? 0 : parsed;
+                onChange(index, { ...addon, price });
+              }}
               placeholder="Price"
               min="0"
-              style={{ flex: 1, borderRadius: 8, border: '1px solid #CBD5E1', background: '#F1F5F9', padding: 10, fontSize: 14, color: '#1E293B' }}
+              className="admin-services-input admin-services-input--price"
             />
             <button
               type="button"
               onClick={() => onRemove(index)}
-              style={{ borderRadius: 8, border: '1px solid #FCA5A5', padding: '8px 12px', fontSize: 13, fontWeight: 600, color: '#DC2626', background: '#FEF2F2', cursor: 'pointer', marginTop: 2 }}
+              className="admin-services-btn admin-services-btn--danger"
             >
               Remove
             </button>
@@ -86,34 +92,32 @@ function AddOnEditor({ addOns, onChange, onAdd, onRemove }) {
 
 function FeatureListEditor({ label, features, onChange, onAdd, onRemove }) {
   return (
-    <div style={{ background: '#F8FAFC', borderRadius: 16, padding: 20, marginBottom: 8, border: '1px solid #E0E7EF' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <h4 style={{ fontSize: 16, fontWeight: 600, color: '#1E293B', margin: 0 }}>{label}</h4>
-        <button
-          type="button"
-          onClick={onAdd}
-          style={{ borderRadius: 20, border: '1px solid #60A5FA', padding: '6px 16px', fontSize: 13, fontWeight: 600, color: '#2563EB', background: '#EFF6FF', cursor: 'pointer' }}
-        >
+    <div className="admin-services-panel">
+      <div className="admin-services-panel__header">
+        <h4 className="admin-services-panel__title" style={{ color: "#0f172a" }}>{label}</h4>
+        <button type="button" onClick={onAdd} className="admin-services-chip-button">
           + Add item
         </button>
       </div>
       {features.length === 0 && (
-        <p style={{ fontSize: 13, color: '#2563EB', margin: 0 }}>No items yet. Add one above.</p>
+        <p className="admin-services-panel__empty" style={{ color: "#2563eb" }}>
+          No items yet. Add one above.
+        </p>
       )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="admin-services-panel__body">
         {features.map((feature, index) => (
-          <div key={`${label}-${index}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <div key={`${label}-${index}`} className="admin-services-input-row">
             <textarea
               value={feature}
               onChange={(event) => onChange(index, event.target.value)}
               rows={2}
               placeholder="Add bullet point"
-              style={{ flex: 1, borderRadius: 8, border: '1px solid #CBD5E1', background: '#F1F5F9', padding: 10, fontSize: 14, color: '#1E293B', resize: 'vertical', minHeight: 40, maxHeight: 80 }}
+              className="admin-services-textarea"
             />
             <button
               type="button"
               onClick={() => onRemove(index)}
-              style={{ borderRadius: 8, border: '1px solid #FCA5A5', padding: '8px 12px', fontSize: 13, fontWeight: 600, color: '#DC2626', background: '#FEF2F2', cursor: 'pointer', marginTop: 2 }}
+              className="admin-services-btn admin-services-btn--danger"
             >
               Remove
             </button>
@@ -128,133 +132,181 @@ export default function AdminServicesPage() {
   const router = useRouter();
   const [services, setServices] = useState([]);
   const [initialServices, setInitialServices] = useState([]);
-  
-  // Default add-ons for new services
-  const defaultAddOns = {
-    'Premium Exterior Wash': [
-      { name: 'Clay Bar', price: 40 }
-    ],
-    'Complete Interior Detail': [
-      { name: 'Interior Ceramic', price: 20 },
-      { name: 'Pet Hair Removal', price: 30 }
-    ],
-    'Ultimate Full Detail': [
-      { name: 'Clay Bar', price: 40 },
-      { name: 'Interior Ceramic', price: 20 },
-      { name: 'Pet Hair Removal', price: 30 }
-    ]
-  };
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    async function loadServices() {
+    let active = true;
+
+    const loadServices = async () => {
       setLoading(true);
       setError("");
       try {
         const response = await fetch("/api/services");
         if (!response.ok) {
-          throw new Error("Unable to load services.");
+          throw new Error("Unable to load services");
         }
-  const data = await response.json();
-  const fetched = Array.isArray(data.services) ? data.services : [];
-  const cloned = JSON.parse(JSON.stringify(fetched));
-  setServices(cloned);
-  setInitialServices(cloned);
-      } catch (loadError) {
-        setError(loadError.message || "Unable to load services.");
-        setServices([]);
-        setInitialServices([]);
+        const data = await response.json();
+        const fetched = Array.isArray(data.services) ? data.services : [];
+        const normalized = fetched.map((service) => {
+          const { _id, baseFeatures = [], reviveFeatures = [], addOns = [], ...rest } = service;
+          return {
+            ...emptyServiceTemplate,
+            ...rest,
+            baseFeatures: Array.isArray(baseFeatures) ? [...baseFeatures] : [],
+            reviveFeatures: Array.isArray(reviveFeatures) ? [...reviveFeatures] : [],
+            addOns: Array.isArray(addOns)
+              ? addOns.map((addon) => ({ name: addon.name || "", price: Number(addon.price) || 0 }))
+              : [],
+            comingSoon: Boolean(service.comingSoon),
+          };
+        });
+        if (active) {
+          const cloned = cloneServices(normalized);
+          setServices(cloned);
+          setInitialServices(cloneServices(cloned));
+        }
+      } catch (fetchError) {
+        if (active) {
+          setError(fetchError.message || "Failed to load services.");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
-    }
+    };
 
     loadServices();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const hasChanges = useMemo(() => {
+    if (services.length !== initialServices.length) {
+      return true;
+    }
     return JSON.stringify(services) !== JSON.stringify(initialServices);
   }, [services, initialServices]);
 
-  const handleServiceChange = (index, key, value) => {
+  const bannerVisible = hasChanges || saving;
+
+  const handleServiceChange = (serviceIndex, field, value) => {
     setServices((prev) =>
-      prev.map((service, svcIndex) => {
-        if (svcIndex !== index) return service;
-        const updates = { [key]: value };
-        
-        // If changing title, apply default add-ons if they exist
-        if (key === 'title' && defaultAddOns[value]) {
-          updates.addOns = defaultAddOns[value];
+      prev.map((service, index) =>
+        index === serviceIndex
+          ? { ...service, [field]: field === "id" ? value.trim() : value }
+          : service
+      )
+    );
+  };
+
+  const handleNumberChange = (serviceIndex, field, value) => {
+    if (value === "") {
+      handleServiceChange(serviceIndex, field, null);
+      return;
+    }
+    const parsed = Number(value);
+    handleServiceChange(serviceIndex, field, Number.isNaN(parsed) ? null : parsed);
+  };
+
+  const handleFeatureChange = (serviceIndex, key, featureIndex, value) => {
+    setServices((prev) =>
+      prev.map((service, index) => {
+        if (index !== serviceIndex) {
+          return service;
         }
-        
-        return {
-          ...service,
-          ...updates,
-        };
+        const items = Array.isArray(service[key]) ? [...service[key]] : [];
+        items[featureIndex] = value;
+        return { ...service, [key]: items };
       })
     );
   };
 
-  const handleNumberChange = (index, key, value) => {
-    handleServiceChange(index, key, value === "" ? "" : Number(value));
-  };
-
-  const handleFeatureChange = (index, field, featureIndex, value) => {
+  const handleFeatureAdd = (serviceIndex, key) => {
     setServices((prev) =>
-      prev.map((service, svcIndex) => {
-        if (svcIndex !== index) return service;
-        const list = Array.isArray(service[field]) ? [...service[field]] : [];
-        list[featureIndex] = value;
-        return {
-          ...service,
-          [field]: list,
-        };
+      prev.map((service, index) => {
+        if (index !== serviceIndex) {
+          return service;
+        }
+        const items = Array.isArray(service[key]) ? [...service[key]] : [];
+        items.push("");
+        return { ...service, [key]: items };
       })
     );
   };
 
-  const handleFeatureAdd = (index, field) => {
+  const handleFeatureRemove = (serviceIndex, key, featureIndex) => {
     setServices((prev) =>
-      prev.map((service, svcIndex) => {
-        if (svcIndex !== index) return service;
-        const list = Array.isArray(service[field]) ? [...service[field]] : [];
-        list.push("");
-        return {
-          ...service,
-          [field]: list,
-        };
+      prev.map((service, index) => {
+        if (index !== serviceIndex) {
+          return service;
+        }
+        const items = Array.isArray(service[key]) ? [...service[key]] : [];
+        items.splice(featureIndex, 1);
+        return { ...service, [key]: items };
       })
     );
   };
 
-  const handleFeatureRemove = (index, field, featureIndex) => {
+  const handleAddOnChange = (serviceIndex, addOnIndex, nextAddon) => {
     setServices((prev) =>
-      prev.map((service, svcIndex) => {
-        if (svcIndex !== index) return service;
-        const list = Array.isArray(service[field]) ? [...service[field]] : [];
-        list.splice(featureIndex, 1);
-        return {
-          ...service,
-          [field]: list,
-        };
+      prev.map((service, index) => {
+        if (index !== serviceIndex) {
+          return service;
+        }
+        const addOns = Array.isArray(service.addOns) ? [...service.addOns] : [];
+        addOns[addOnIndex] = nextAddon;
+        return { ...service, addOns };
+      })
+    );
+  };
+
+  const handleAddOnAdd = (serviceIndex) => {
+    setServices((prev) =>
+      prev.map((service, index) => {
+        if (index !== serviceIndex) {
+          return service;
+        }
+        const addOns = Array.isArray(service.addOns) ? [...service.addOns] : [];
+        addOns.push({ name: "", price: 0 });
+        return { ...service, addOns };
+      })
+    );
+  };
+
+  const handleAddOnRemove = (serviceIndex, addOnIndex) => {
+    setServices((prev) =>
+      prev.map((service, index) => {
+        if (index !== serviceIndex) {
+          return service;
+        }
+        const addOns = Array.isArray(service.addOns) ? [...service.addOns] : [];
+        addOns.splice(addOnIndex, 1);
+        return { ...service, addOns };
       })
     );
   };
 
   const handleReset = () => {
-    setServices(initialServices);
+    setServices(cloneServices(initialServices));
     setError("");
     setSuccess("");
   };
 
   const handleAddNewService = () => {
-    setServices((prev) => [...prev, { ...emptyServiceTemplate, id: `service-${prev.length + 1}` }]);
+    setServices((prev) => {
+      const nextId = `service-${prev.length + 1}`;
+      return [...prev, { ...emptyServiceTemplate, id: nextId }];
+    });
   };
 
-  const handleDeleteService = (index) => {
-    setServices((prev) => prev.filter((_, svcIndex) => svcIndex !== index));
+  const handleDeleteService = (serviceIndex) => {
+    setServices((prev) => prev.filter((_, index) => index !== serviceIndex));
   };
 
   const handleSave = async () => {
@@ -275,32 +327,43 @@ export default function AdminServicesPage() {
       }
 
       const updated = Array.isArray(data.services) ? data.services : services;
-      const cloned = JSON.parse(JSON.stringify(updated));
+      const normalized = updated.map((service) => {
+        const { _id, baseFeatures = [], reviveFeatures = [], addOns = [], ...rest } = service;
+        return {
+          ...emptyServiceTemplate,
+          ...rest,
+          baseFeatures: Array.isArray(baseFeatures) ? [...baseFeatures] : [],
+          reviveFeatures: Array.isArray(reviveFeatures) ? [...reviveFeatures] : [],
+          addOns: Array.isArray(addOns)
+            ? addOns.map((addon) => ({ name: addon.name || "", price: Number(addon.price) || 0 }))
+            : [],
+          comingSoon: Boolean(service.comingSoon),
+        };
+      });
+
+      const cloned = cloneServices(normalized);
       setServices(cloned);
-      setInitialServices(cloned);
+      setInitialServices(cloneServices(cloned));
       setSuccess("Services updated successfully.");
     } catch (saveError) {
       setError(saveError.message || "Failed to save services.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   return (
-    <main style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #EFF6FF 0%, #FFFFFF 100%)', padding: '32px 0', color: '#1E293B' }}>
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 40 }}>
-        {/* Top Bar */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 8, alignItems: 'stretch', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', flexDirection: 'row', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <Link
-              href="/adminDashboard"
-              style={{ borderRadius: 8, border: '1px solid #BFDBFE', background: '#FFFFFF', padding: '10px 20px', fontSize: 15, fontWeight: 600, color: '#2563EB', boxShadow: '0 1px 4px #e0e7ef33', textDecoration: 'none', transition: 'background 0.2s' }}
-            >
+    <main className="admin-services-page">
+      <div className="admin-services-container">
+        <div className="admin-services-toolbar">
+          <div className="admin-services-toolbar__row">
+            <Link href="/adminDashboard" className="admin-services-btn admin-services-btn--ghost">
               ← Back to Dashboard
             </Link>
             <button
               type="button"
               onClick={handleAddNewService}
-              style={{ borderRadius: 8, border: '1px solid #BBF7D0', background: '#ECFDF5', padding: '10px 20px', fontSize: 15, fontWeight: 600, color: '#059669', cursor: 'pointer', transition: 'background 0.2s' }}
+              className="admin-services-btn admin-services-btn--success"
             >
               Add New Service
             </button>
@@ -308,199 +371,222 @@ export default function AdminServicesPage() {
               type="button"
               onClick={async () => {
                 try {
-                  await fetch('/api/auth/logout', { method: 'POST' });
-                  router.replace('/admin');
-                } catch (err) {
-                  console.error('Logout error:', err);
-                  router.replace('/admin');
+                  await fetch("/api/auth/logout", { method: "POST" });
+                  router.replace("/admin");
+                } catch (logoutError) {
+                  console.error("Logout error:", logoutError);
+                  router.replace("/admin");
                 }
               }}
-              style={{ borderRadius: 8, border: '1px solid #FCA5A5', background: '#FEF2F2', padding: '10px 20px', fontSize: 15, fontWeight: 600, color: '#DC2626', cursor: 'pointer', transition: 'background 0.2s' }}
+              className="admin-services-btn admin-services-btn--danger"
             >
               Logout
             </button>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'row', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={handleReset}
-              disabled={!hasChanges || saving}
-              style={{ borderRadius: 8, border: '1px solid #BFDBFE', background: '#FFFFFF', padding: '10px 20px', fontSize: 15, fontWeight: 600, color: '#2563EB', opacity: !hasChanges || saving ? 0.5 : 1, cursor: !hasChanges || saving ? 'not-allowed' : 'pointer', transition: 'background 0.2s' }}
-            >
-              Reset
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={!hasChanges || saving}
-              style={{ borderRadius: 8, background: '#2563EB', padding: '10px 28px', fontSize: 15, fontWeight: 600, color: '#FFFFFF', boxShadow: '0 1px 4px #2563eb22', opacity: !hasChanges || saving ? 0.5 : 1, cursor: !hasChanges || saving ? 'not-allowed' : 'pointer', transition: 'background 0.2s' }}
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
+        </div>
+
+        <div
+          className={`admin-services-banner ${bannerVisible ? "admin-services-banner--visible" : ""}`}
+          aria-hidden={!bannerVisible}
+        >
+          <div className="admin-services-banner__content">
+            <div className="admin-services-banner__text">
+              <span className="admin-services-banner__status" style={{ color: saving ? "#2563eb" : "#0f172a" }}>
+                {saving ? "Saving updates…" : "Unsaved changes"}
+              </span>
+              {!saving && (
+                <span className="admin-services-banner__message" style={{ color: "#2563eb" }}>
+                  Your edits will persist once you save.
+                </span>
+              )}
+            </div>
+            <div className="admin-services-banner__actions">
+              <button
+                type="button"
+                onClick={handleReset}
+                disabled={!hasChanges || saving}
+                className="admin-services-btn admin-services-btn--ghost"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={!hasChanges || saving}
+                className="admin-services-btn admin-services-btn--primary"
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Header */}
-        <header style={{ borderRadius: 20, border: '1px solid #BFDBFE', background: 'linear-gradient(90deg, #EFF6FF 0%, #FFFFFF 100%)', padding: 32, boxShadow: '0 2px 8px #e0e7ef22' }}>
-          <h1 style={{ fontSize: 28, fontWeight: 700, color: '#0A0A0A', margin: 0 }}>Services & Pricing Editor</h1>
-          <p style={{ marginTop: 10, fontSize: 16, color: '#2563EB' }}>
+        <header className="admin-services-hero">
+          <h1 className="admin-services-hero__title" style={{ color: "#0f172a" }}>
+            Services & Pricing Editor
+          </h1>
+          <p className="admin-services-hero__subtitle" style={{ color: "#2563eb" }}>
             Update prices, toggle availability, and adjust bullet points for each plan. Changes are saved directly to
-            <code style={{ marginLeft: 8, borderRadius: 6, background: '#DBEAFE', padding: '2px 8px', fontSize: 13, color: '#1E40AF' }}>MongoDB (services collection)</code>.
+            <code className="admin-services-hero__badge">MongoDB (services collection)</code>.
           </p>
-          {error && <div style={{ marginTop: 16, borderRadius: 8, border: '1px solid #FCA5A5', background: '#FEF2F2', padding: '10px 18px', fontSize: 15, color: '#DC2626' }}>{error}</div>}
-          {success && <div style={{ marginTop: 16, borderRadius: 8, border: '1px solid #BBF7D0', background: '#ECFDF5', padding: '10px 18px', fontSize: 15, color: '#059669' }}>{success}</div>}
+          {error && (
+            <div className="admin-services-alert admin-services-alert--error" style={{ color: "#dc2626" }}>
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="admin-services-alert admin-services-alert--success" style={{ color: "#047857" }}>
+              {success}
+            </div>
+          )}
         </header>
 
-        {/* Main Content */}
         {loading ? (
-          <div style={{ borderRadius: 20, border: '1px solid #BFDBFE', background: '#FFFFFF', padding: 40, textAlign: 'center', color: '#2563EB', fontSize: 18, boxShadow: '0 1px 4px #e0e7ef33' }}>
+          <div className="admin-services-empty" style={{ color: "#2563eb" }}>
             Loading services...
           </div>
         ) : services.length === 0 ? (
-          <div style={{ borderRadius: 20, border: '1px solid #BFDBFE', background: '#FFFFFF', padding: 40, textAlign: 'center', color: '#2563EB', fontSize: 18, boxShadow: '0 1px 4px #e0e7ef33' }}>
+          <div className="admin-services-empty" style={{ color: "#2563eb" }}>
             No services found. Add a new service to get started.
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 36 }}>
+          <div className="admin-services-list">
             {services.map((service, index) => (
-              <section key={service.id || index} style={{ borderRadius: 20, border: '1px solid #E0E7EF', background: '#FFFFFFF7', padding: 28, boxShadow: '0 2px 8px #e0e7ef22', transition: 'box-shadow 0.2s' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginBottom: 8 }}>
-                  <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 16, background: '#DBEAFE', padding: '6px 16px', fontSize: 13, fontWeight: 600, color: '#2563EB' }}>
-                      {service.id || 'New service'}
-                    </span>
-                    <h2 style={{ fontSize: 22, fontWeight: 600, color: '#0A0A0A', margin: 0 }}>
-                      {service.title || 'Untitled Service'}
+              <section
+                key={service.id || index}
+                className="admin-service-card"
+                style={{ animationDelay: `${index * 80}ms` }}
+              >
+                <div className="admin-service-card__header">
+                  <div className="admin-service-card__meta">
+                    <span className="admin-service-chip">{service.id || "New service"}</span>
+                    <h2 className="admin-service-card__title" style={{ color: "#0f172a" }}>
+                      {service.title || "Untitled Service"}
                     </h2>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteService(index)}
-                      style={{ marginLeft: 'auto', borderRadius: 8, border: '1px solid #FCA5A5', padding: '8px 16px', fontSize: 14, fontWeight: 600, color: '#DC2626', background: '#FEF2F2', cursor: 'pointer' }}
-                    >
-                      Delete service
-                    </button>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                    <div style={{ display: 'grid', gap: 18, gridTemplateColumns: '1fr', maxWidth: 900 }}>
-                      <label style={{ fontSize: 15, fontWeight: 600, color: '#1E293B', display: 'block' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteService(index)}
+                    className="admin-services-btn admin-services-btn--danger"
+                  >
+                    Delete service
+                  </button>
+                </div>
+                <div className="admin-service-card__content">
+                  <div className="admin-service-grid">
+                    <label className="admin-service-field">
+                      <span className="admin-service-field__label" style={{ color: "#1e293b" }}>
                         Service ID
-                        <input
-                          type="text"
-                          value={service.id}
-                          onChange={(event) => handleServiceChange(index, 'id', event.target.value)}
-                          style={{ marginTop: 6, width: '100%', borderRadius: 8, border: '1px solid #CBD5E1', background: '#F1F5F9', padding: '10px 12px', fontSize: 15, color: '#1E293B' }}
-                        />
-                      </label>
-                      <label style={{ fontSize: 15, fontWeight: 600, color: '#1E293B', display: 'block' }}>
-                        Title
-                        <input
-                          type="text"
-                          value={service.title || ''}
-                          onChange={(event) => handleServiceChange(index, 'title', event.target.value)}
-                          style={{ marginTop: 6, width: '100%', borderRadius: 8, border: '1px solid #CBD5E1', background: '#F1F5F9', padding: '10px 12px', fontSize: 15, color: '#1E293B' }}
-                        />
-                      </label>
-                      <label style={{ fontSize: 15, fontWeight: 600, color: '#1E293B', display: 'block' }}>
-                        Summary
-                        <textarea
-                          value={service.summary || ''}
-                          onChange={(event) => handleServiceChange(index, 'summary', event.target.value)}
-                          rows={3}
-                          style={{ marginTop: 6, width: '100%', borderRadius: 8, border: '1px solid #CBD5E1', background: '#F1F5F9', padding: '10px 12px', fontSize: 15, color: '#1E293B', resize: 'vertical', minHeight: 48 }}
-                        />
-                      </label>
-                      <label style={{ fontSize: 15, fontWeight: 600, color: '#1E293B', display: 'block' }}>
-                        Base Price
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={service.basePrice ?? ''}
-                          onChange={(event) => handleNumberChange(index, 'basePrice', event.target.value)}
-                          style={{ marginTop: 6, width: '100%', borderRadius: 8, border: '1px solid #CBD5E1', background: '#F1F5F9', padding: '10px 12px', fontSize: 15, color: '#1E293B' }}
-                        />
-                      </label>
-                      <label style={{ fontSize: 15, fontWeight: 600, color: '#1E293B', display: 'block' }}>
-                        Revive Price
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={service.revivePrice ?? ''}
-                          onChange={(event) => handleNumberChange(index, 'revivePrice', event.target.value)}
-                          style={{ marginTop: 6, width: '100%', borderRadius: 8, border: '1px solid #CBD5E1', background: '#F1F5F9', padding: '10px 12px', fontSize: 15, color: '#1E293B' }}
-                        />
-                      </label>
-                      <label style={{ fontSize: 15, fontWeight: 600, color: '#1E293B', display: 'block' }}>
-                        Duration (minutes)
-                        <input
-                          type="number"
-                          min="0"
-                          step="15"
-                          value={service.durationMinutes ?? ''}
-                          onChange={(event) => handleNumberChange(index, 'durationMinutes', event.target.value)}
-                          style={{ marginTop: 6, width: '100%', borderRadius: 8, border: '1px solid #CBD5E1', background: '#F1F5F9', padding: '10px 12px', fontSize: 15, color: '#1E293B' }}
-                        />
-                      </label>
-                    </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, fontWeight: 600, color: '#1E293B', marginTop: 8 }}>
+                      </span>
                       <input
-                        type="checkbox"
-                        checked={Boolean(service.comingSoon)}
-                        onChange={(event) => handleServiceChange(index, 'comingSoon', event.target.checked)}
-                        style={{ width: 20, height: 20, borderRadius: 6, border: '1px solid #93C5FD', accentColor: '#2563EB' }}
+                        type="text"
+                        value={service.id}
+                        onChange={(event) => handleServiceChange(index, "id", event.target.value)}
+                        className="admin-services-input"
                       />
-                      Coming soon (hide from booking form)
+                    </label>
+                    <label className="admin-service-field">
+                      <span className="admin-service-field__label" style={{ color: "#1e293b" }}>
+                        Title
+                      </span>
+                      <input
+                        type="text"
+                        value={service.title || ""}
+                        onChange={(event) => handleServiceChange(index, "title", event.target.value)}
+                        className="admin-services-input"
+                      />
+                    </label>
+                    <label className="admin-service-field">
+                      <span className="admin-service-field__label" style={{ color: "#1e293b" }}>
+                        Summary
+                      </span>
+                      <textarea
+                        value={service.summary || ""}
+                        onChange={(event) => handleServiceChange(index, "summary", event.target.value)}
+                        rows={3}
+                        className="admin-services-textarea"
+                      />
+                    </label>
+                    <label className="admin-service-field">
+                      <span className="admin-service-field__label" style={{ color: "#1e293b" }}>
+                        Base Price
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={service.basePrice ?? ""}
+                        onChange={(event) => handleNumberChange(index, "basePrice", event.target.value)}
+                        className="admin-services-input"
+                      />
+                    </label>
+                    <label className="admin-service-field">
+                      <span className="admin-service-field__label" style={{ color: "#1e293b" }}>
+                        Revive Price
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={service.revivePrice ?? ""}
+                        onChange={(event) => handleNumberChange(index, "revivePrice", event.target.value)}
+                        className="admin-services-input"
+                      />
+                    </label>
+                    <label className="admin-service-field">
+                      <span className="admin-service-field__label" style={{ color: "#1e293b" }}>
+                        Duration (minutes)
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="15"
+                        value={service.durationMinutes ?? ""}
+                        onChange={(event) => handleNumberChange(index, "durationMinutes", event.target.value)}
+                        className="admin-services-input"
+                      />
                     </label>
                   </div>
+                  <label className="admin-services-toggle">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(service.comingSoon)}
+                      onChange={(event) => handleServiceChange(index, "comingSoon", event.target.checked)}
+                      className="admin-services-toggle__input"
+                    />
+                    <span style={{ color: "#1e293b" }}>Coming soon (hide from booking form)</span>
+                  </label>
                 </div>
-                <div style={{ display: 'grid', gap: 24, gridTemplateColumns: '1fr', marginTop: 24 }}>
+                <div className="admin-services-editor-grid">
                   <FeatureListEditor
                     label="Base Plan Features"
                     features={service.baseFeatures || []}
-                    onChange={(featureIndex, value) => handleFeatureChange(index, 'baseFeatures', featureIndex, value)}
-                    onAdd={() => handleFeatureAdd(index, 'baseFeatures')}
-                    onRemove={(featureIndex) => handleFeatureRemove(index, 'baseFeatures', featureIndex)}
+                    onChange={(featureIndex, value) =>
+                      handleFeatureChange(index, "baseFeatures", featureIndex, value)
+                    }
+                    onAdd={() => handleFeatureAdd(index, "baseFeatures")}
+                    onRemove={(featureIndex) =>
+                      handleFeatureRemove(index, "baseFeatures", featureIndex)
+                    }
                   />
                   <FeatureListEditor
                     label="Revive Plan Features"
                     features={service.reviveFeatures || []}
-                    onChange={(featureIndex, value) => handleFeatureChange(index, 'reviveFeatures', featureIndex, value)}
-                    onAdd={() => handleFeatureAdd(index, 'reviveFeatures')}
-                    onRemove={(featureIndex) => handleFeatureRemove(index, 'reviveFeatures', featureIndex)}
+                    onChange={(featureIndex, value) =>
+                      handleFeatureChange(index, "reviveFeatures", featureIndex, value)
+                    }
+                    onAdd={() => handleFeatureAdd(index, "reviveFeatures")}
+                    onRemove={(featureIndex) =>
+                      handleFeatureRemove(index, "reviveFeatures", featureIndex)
+                    }
                   />
                   <AddOnEditor
                     addOns={service.addOns || []}
-                    onChange={(addonIndex, newAddon) => {
-                      setServices(prev =>
-                        prev.map((s, svcIndex) => {
-                          if (svcIndex !== index) return s;
-                          const addOns = Array.isArray(s.addOns) ? [...s.addOns] : [];
-                          addOns[addonIndex] = newAddon;
-                          return { ...s, addOns };
-                        })
-                      );
-                    }}
-                    onAdd={() => {
-                      setServices(prev =>
-                        prev.map((s, svcIndex) => {
-                          if (svcIndex !== index) return s;
-                          const addOns = Array.isArray(s.addOns) ? [...s.addOns] : [];
-                          addOns.push({ name: '', price: 0 });
-                          return { ...s, addOns };
-                        })
-                      );
-                    }}
-                    onRemove={(addonIndex) => {
-                      setServices(prev =>
-                        prev.map((s, svcIndex) => {
-                          if (svcIndex !== index) return s;
-                          const addOns = Array.isArray(s.addOns) ? [...s.addOns] : [];
-                          addOns.splice(addonIndex, 1);
-                          return { ...s, addOns };
-                        })
-                      );
-                    }}
+                    onChange={(addOnIndex, addon) =>
+                      handleAddOnChange(index, addOnIndex, addon)
+                    }
+                    onAdd={() => handleAddOnAdd(index)}
+                    onRemove={(addOnIndex) => handleAddOnRemove(index, addOnIndex)}
                   />
                 </div>
               </section>
