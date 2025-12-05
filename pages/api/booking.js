@@ -1,8 +1,10 @@
 import nodemailer from "nodemailer";
-import { MongoClient } from "mongodb";
 import { addBookingToCalendar } from '../../lib/googleCalendar';
 import { getOccupiedSlotsForDate, isSlotConflicting } from '../../lib/availability';
 import { SERVICE_TIME_ZONE, zonedDateToUtc, formatTimeInZone, normalizeTo24Hour } from '../../lib/timezone';
+import connectMongoose from "../../lib/mongoose";
+import BookingModel from "../../models/Booking";
+import CustomerModel from "../../models/Customer";
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
@@ -299,7 +301,6 @@ export default async function handler(req, res) {
         address: "53 Vitalia Ct, Halifax, NS B3S 0H4",
     };
 
-  let client;
   let calendarWarning = null;
   try {
         const transporter = nodemailer.createTransport({
@@ -555,14 +556,19 @@ export default async function handler(req, res) {
         }
 
     // Insert booking into MongoDB (best-effort, after emails)
-    const uri = process.env.MONGODB_URI;
-    const dbName = process.env.MONGODB_DB;
+    const uri = process.env.MONGODB_URI || process.env.MONGODB_URL;
+    const dbName = process.env.MONGODB_DB || process.env.DB_NAME || "washlabs";
     let insertedId = null;
     if (uri && dbName) {
       try {
-  client = await MongoClient.connect(uri);
-        const db = client.db(dbName);
-        const collection = db.collection("bookings");
+        await connectMongoose();
+
+        const phoneComponents = [userInfo.countryCode, userInfo.phone]
+          .map((part) => (part || "").trim())
+          .filter(Boolean);
+        const phoneForMatching = phoneComponents.join(" ").replace(/\s+/g, " ").trim();
+        const emailForMatching = isValidEmail(rawEmail) ? rawEmail.trim().toLowerCase() : "";
+
         const doc = {
           // Align with admin schema and store pricing breakdown
           name: userInfo.name,
@@ -580,20 +586,52 @@ export default async function handler(req, res) {
           vehicles: vehicles || (vehicle ? [{ name: vehicleDisplay, type: vehicle?.type || '', lineTotal: typeof finalAmount === 'number' ? finalAmount : undefined }] : []),
           perCarTotals: perCarTotals || undefined,
           status: reqStatus === 'complete' ? 'complete' : 'pending',
-          phone: userInfo.phone,
-          email: userInfo.email,
+          phone: phoneForMatching || userInfo.phone,
+          email: rawEmail?.trim() || userInfo.email,
           location: location?.address || "",
           addOns: Array.isArray(service?.addOns) ? service.addOns : [],
           carType: vehicle?.type || "",
           createdAt: new Date().toISOString(),
           source: reqSource || "online",
         };
-        const result = await collection.insertOne(doc);
-        insertedId = result.insertedId;
+
+        const bookingRecord = await BookingModel.create(doc);
+        insertedId = bookingRecord._id;
+
+        const identifiers = [];
+        if (phoneForMatching) identifiers.push({ phone: phoneForMatching });
+        if (emailForMatching) identifiers.push({ email: emailForMatching });
+
+        if (identifiers.length) {
+          const bookingSnapshot = bookingRecord.toObject({ versionKey: false });
+          const primaryVehicleName = vehicles?.[0]?.name || vehicleDisplay || "";
+          const customerLocation = location?.address || "";
+
+          const setFields = {};
+          if (userInfo.name) setFields.name = userInfo.name;
+          if (phoneForMatching) setFields.phone = phoneForMatching;
+          if (emailForMatching) setFields.email = emailForMatching;
+          if (customerLocation) setFields.location = customerLocation;
+          if (primaryVehicleName) setFields.car = primaryVehicleName;
+
+          const nowIso = new Date().toISOString();
+          setFields.updatedAt = nowIso;
+
+          const update = {
+            $push: { bookings: bookingSnapshot },
+            $setOnInsert: { createdAt: nowIso },
+          };
+
+          if (Object.keys(setFields).length) update.$set = setFields;
+
+          await CustomerModel.findOneAndUpdate(
+            identifiers.length === 1 ? identifiers[0] : { $or: identifiers },
+            update,
+            { upsert: true, new: true }
+          );
+        }
       } catch (dbErr) {
         console.error("[booking] DB insert failed:", dbErr?.message || dbErr);
-      } finally {
-        if (client) await client.close();
       }
     } else {
       console.warn("[booking] Skipping DB insert: missing MONGODB config");

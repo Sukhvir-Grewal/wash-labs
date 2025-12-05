@@ -1,9 +1,12 @@
-import { MongoClient } from "mongodb";
 import { requireAuth } from "../../lib/auth";
 import { addBookingToCalendar } from '../../lib/googleCalendar';
+import connectMongoose from "../../lib/mongoose";
+import BookingModel from "../../models/Booking";
+import CustomerModel from "../../models/Customer";
+import { getDb } from "../../lib/mongodb";
 
-const uri = process.env.MONGODB_URI;
-const dbName = process.env.MONGODB_DB;
+const uri = process.env.MONGODB_URI || process.env.MONGODB_URL;
+const dbName = process.env.MONGODB_DB || process.env.DB_NAME || "washlabs";
 
 async function handler(req, res) {
   if (req.method !== "POST") {
@@ -13,12 +16,58 @@ async function handler(req, res) {
   if (!uri || !dbName) {
     return res.status(500).json({ error: "Missing MongoDB config" });
   }
-  let client;
   try {
-    client = await MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-    const db = client.db(dbName);
-    const collection = db.collection("bookings");
-    const result = await collection.insertOne(booking);
+    await connectMongoose();
+
+    const phoneParts = [booking.countryCode, booking.phone]
+      .map((part) => (part || "").trim())
+      .filter(Boolean);
+    const phoneForMatching = phoneParts.join(" ").replace(/\s+/g, " ").trim();
+    const emailForMatching = (booking.email || "").trim().toLowerCase();
+
+    const bookingPayload = {
+      ...booking,
+      phone: phoneForMatching || booking.phone,
+      email: booking.email ? booking.email.trim() : booking.email,
+      createdAt: booking.createdAt || new Date().toISOString(),
+      source: booking.source || "admin",
+    };
+
+    const bookingRecord = await BookingModel.create(bookingPayload);
+
+    const identifiers = [];
+    if (phoneForMatching) identifiers.push({ phone: phoneForMatching });
+    if (emailForMatching) identifiers.push({ email: emailForMatching });
+
+    if (identifiers.length) {
+      const bookingSnapshot = bookingRecord.toObject({ versionKey: false });
+      const primaryVehicleName = Array.isArray(bookingRecord.vehicles) && bookingRecord.vehicles.length > 0
+        ? bookingRecord.vehicles[0]?.name || bookingRecord.carName || ""
+        : bookingRecord.carName || "";
+      const customerLocation = bookingRecord.location || "";
+
+      const setFields = {};
+      if (bookingRecord.name) setFields.name = bookingRecord.name;
+      if (phoneForMatching) setFields.phone = phoneForMatching;
+      if (emailForMatching) setFields.email = emailForMatching;
+      if (customerLocation) setFields.location = customerLocation;
+      if (primaryVehicleName) setFields.car = primaryVehicleName;
+
+      const nowIso = new Date().toISOString();
+      setFields.updatedAt = nowIso;
+
+      const update = {
+        $push: { bookings: bookingSnapshot },
+        $setOnInsert: { createdAt: nowIso },
+      };
+      if (Object.keys(setFields).length) update.$set = setFields;
+
+      await CustomerModel.findOneAndUpdate(
+        identifiers.length === 1 ? identifiers[0] : { $or: identifiers },
+        update,
+        { upsert: true, new: true }
+      );
+    }
 
     // Add to Google Calendar
     try {
@@ -53,7 +102,8 @@ async function handler(req, res) {
             let durationHours = 2; // fallback default
             try {
               // Try to match by title (case-insensitive)
-              const svcCol = db.collection("services");
+              const svcDb = await getDb();
+              const svcCol = svcDb.collection("services");
               const svcDoc = await svcCol.findOne({ title: { $regex: `^${booking.service}$`, $options: "i" } });
               if (svcDoc && typeof svcDoc.duration === "number" && svcDoc.duration > 0) {
                 durationHours = svcDoc.duration;
@@ -82,11 +132,9 @@ async function handler(req, res) {
       // Don't fail the whole request if calendar add fails
     }
 
-    res.status(200).json({ success: true, insertedId: result.insertedId });
+    res.status(200).json({ success: true, insertedId: bookingRecord._id });
   } catch (err) {
     res.status(500).json({ error: err.message });
-  } finally {
-    if (client) await client.close();
   }
 }
 
