@@ -39,6 +39,7 @@ export default function DashboardSectionModal({
   const [servicesLoading, setServicesLoading] = useState(false);
   const [servicesError, setServicesError] = useState("");
   const [services, setServices] = useState([]);
+  const isServicesSection = section === "services";
 
   useEffect(() => {
     if (section !== "services" || services.length || servicesLoading) return;
@@ -402,15 +403,19 @@ export default function DashboardSectionModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center"
+        className={isServicesSection ? "fixed inset-0 z-50 flex" : "fixed inset-0 z-50 flex items-center justify-center"}
         style={{ backgroundColor: "rgba(15, 23, 42, 0.35)", backdropFilter: "blur(24px)" }}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.94, y: 30 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.94, y: 20 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
-          className="relative max-h-[90vh] w-[94vw] max-w-5xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-8 text-slate-900 shadow-[0_40px_70px_-40px_rgba(15,23,42,0.4)]"
+          initial={isServicesSection ? { opacity: 0, y: 40 } : { opacity: 0, scale: 0.94, y: 30 }}
+          animate={isServicesSection ? { opacity: 1, y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+          exit={isServicesSection ? { opacity: 0, y: 20 } : { opacity: 0, scale: 0.94, y: 20 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+          className={
+            isServicesSection
+              ? "relative flex h-full w-full flex-col overflow-y-auto bg-white px-6 py-6 text-slate-900 shadow-[0_24px_60px_-30px_rgba(15,23,42,0.35)] sm:px-10 sm:py-8"
+              : "relative max-h-[90vh] w-[94vw] max-w-5xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-8 text-slate-900 shadow-[0_40px_70px_-40px_rgba(15,23,42,0.4)]"
+          }
         >
           <button
             type="button"
