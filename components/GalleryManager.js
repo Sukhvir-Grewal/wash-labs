@@ -143,8 +143,18 @@ export default function GalleryManager() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold text-slate-100">Gallery Library</h3>
-          <p className="text-sm text-slate-400">Upload, curate, and maintain marketing visuals.</p>
+          <h3
+            className="text-lg font-semibold"
+            style={{ color: "#0f172a" }}
+          >
+            Gallery Library
+          </h3>
+          <p
+            className="text-sm"
+            style={{ color: "#2563eb" }}
+          >
+            Upload, curate, and maintain marketing visuals.
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <input
