@@ -35,9 +35,17 @@ function groupByMonth(bookings) {
   return monthMap;
 }
 
-export default function RevenueChart({ bookings, status = 'complete', datasetLabel = 'Revenue', borderColor = 'rgb(37, 99, 235)', backgroundColor = 'rgba(37,99,235,0.2)', pointBackgroundColor = 'rgb(37,99,235)' }) {
+export default function RevenueChart({
+  bookings,
+  status = 'complete',
+  datasetLabel = 'Revenue',
+  borderColor = 'rgb(37, 99, 235)',
+  backgroundColor = 'rgba(37,99,235,0.2)',
+  pointBackgroundColor = 'rgb(37,99,235)',
+  accentColor = '#2563eb',
+}) {
   const [interval, setInterval] = useState('date'); // 'date' | 'week' | 'month'
-  const filtered = bookings.filter(b => b.status === status);
+  const filtered = status === 'all' ? bookings : bookings.filter(b => b.status === status);
 
   let labels = [], amounts = [];
   if (interval === 'date') {
@@ -128,36 +136,67 @@ export default function RevenueChart({ bookings, status = 'complete', datasetLab
         enabled: true,
         mode: 'index',
         intersect: false,
+        backgroundColor: '#0f172a',
+        titleColor: '#f8fafc',
+        bodyColor: '#f8fafc',
+        borderColor: '#0f172a',
+        borderWidth: 1,
       },
     },
     scales: {
       x: {
         title: { display: true, text: interval === 'date' ? 'Date' : interval === 'week' ? 'Week' : 'Month' },
-        ticks: { color: '#222' },
+        ticks: { color: '#0f172a' },
+        grid: { color: '#e2e8f0' },
       },
       y: {
         title: { display: true, text: 'Revenue ($)' },
         beginAtZero: true,
-        ticks: { color: '#222' },
+        ticks: { color: '#0f172a' },
+        grid: { color: '#f1f5f9' },
       },
     },
   };
 
+  const buttonBaseClass = 'px-3 py-1 rounded-full text-xs font-semibold border transition';
+  const buttonStyle = (active) =>
+    active
+      ? {
+          backgroundColor: accentColor,
+          borderColor: accentColor,
+          color: '#ffffff',
+          boxShadow: `0 8px 18px ${accentColor}33`,
+        }
+      : {
+          backgroundColor: '#ffffff',
+          borderColor: `${accentColor}33`,
+          color: accentColor,
+        };
+
   return (
     <div style={{ width: '100%', minHeight: 180 }}>
-      <div className="flex gap-2 mb-2 justify-end">
+      <div className="mb-3 flex justify-end gap-2">
         <button
-          className={`px-3 py-1 rounded-full text-xs font-semibold border ${interval==='date' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'}`}
+          className={buttonBaseClass}
+          style={buttonStyle(interval === 'date')}
           onClick={() => setInterval('date')}
-        >Dates</button>
+        >
+          Dates
+        </button>
         <button
-          className={`px-3 py-1 rounded-full text-xs font-semibold border ${interval==='week' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'}`}
+          className={buttonBaseClass}
+          style={buttonStyle(interval === 'week')}
           onClick={() => setInterval('week')}
-        >Weeks</button>
+        >
+          Weeks
+        </button>
         <button
-          className={`px-3 py-1 rounded-full text-xs font-semibold border ${interval==='month' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'}`}
+          className={buttonBaseClass}
+          style={buttonStyle(interval === 'month')}
           onClick={() => setInterval('month')}
-        >Months</button>
+        >
+          Months
+        </button>
       </div>
       <Line data={data} options={options} />
     </div>
