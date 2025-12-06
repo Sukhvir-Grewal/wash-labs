@@ -20,13 +20,14 @@ function groupByWeek(bookings) {
   // Returns { 'YYYY-WW': sum }
   const weekMap = {};
   bookings.forEach(b => {
-    if (b.date && b.amount) {
+    const amount = Number(b.amount);
+    if (b.date && !Number.isNaN(amount)) {
       const d = new Date(b.date);
       const year = d.getFullYear();
       const onejan = new Date(d.getFullYear(),0,1);
       const week = Math.ceil((((d - onejan) / 86400000) + onejan.getDay()+1)/7);
       const key = `${year}-W${week}`;
-      weekMap[key] = (weekMap[key] || 0) + b.amount;
+      weekMap[key] = (weekMap[key] || 0) + amount;
     }
   });
   return weekMap;
@@ -36,11 +37,12 @@ function groupByMonth(bookings) {
   // Returns { 'YYYY-MM': sum }
   const monthMap = {};
   bookings.forEach(b => {
-    if (b.date && b.amount) {
+    const amount = Number(b.amount);
+    if (b.date && !Number.isNaN(amount)) {
       const parts = b.date.split('-');
       if (parts.length === 3) {
         const key = `${parts[0]}-${parts[1]}`;
-        monthMap[key] = (monthMap[key] || 0) + b.amount;
+        monthMap[key] = (monthMap[key] || 0) + amount;
       }
     }
   });
@@ -66,8 +68,9 @@ export default function RevenueChart({
       // build service distribution, ignore timeline intervals
       const serviceMap = {};
       filtered.forEach((booking) => {
-        if (booking.service && booking.amount) {
-          serviceMap[booking.service] = (serviceMap[booking.service] || 0) + booking.amount;
+        const amount = Number(booking.amount);
+        if (booking.service && !Number.isNaN(amount)) {
+          serviceMap[booking.service] = (serviceMap[booking.service] || 0) + amount;
         }
       });
       const entries = Object.entries(serviceMap).sort((a, b) => b[1] - a[1]);
@@ -80,8 +83,9 @@ export default function RevenueChart({
     // Group by date
     const dateMap = {};
     filtered.forEach(b => {
-      if (b.date && b.amount) {
-        dateMap[b.date] = (dateMap[b.date] || 0) + b.amount;
+        const amount = Number(b.amount);
+        if (b.date && !Number.isNaN(amount)) {
+          dateMap[b.date] = (dateMap[b.date] || 0) + amount;
       }
     });
     const rawDates = Object.keys(dateMap).sort();
@@ -95,7 +99,7 @@ export default function RevenueChart({
       }
       return dateStr;
     });
-      next.amounts = rawDates.map(date => dateMap[date]);
+      next.amounts = rawDates.map(date => Number(dateMap[date]) || 0);
       return next;
     }
 
@@ -123,7 +127,7 @@ export default function RevenueChart({
         }
         return wstr;
       });
-      next.amounts = rawWeeks.map(w => weekMap[w]);
+      next.amounts = rawWeeks.map(w => Number(weekMap[w]) || 0);
       return next;
     }
 
@@ -138,7 +142,7 @@ export default function RevenueChart({
       }
       return mstr;
     });
-      next.amounts = rawMonths.map(m => monthMap[m]);
+      next.amounts = rawMonths.map(m => Number(monthMap[m]) || 0);
       return next;
     }
 

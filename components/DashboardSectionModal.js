@@ -13,6 +13,7 @@ import {
 import RevenueChart from "./RevenueChart";
 import ExpensesCard from "./ExpensesCard";
 import ProfitsCard from "./ProfitsCard";
+import PerformanceEfficiencyCard from "./PerformanceEfficiencyCard";
 import StatusCalendar from "./StatusCalendar";
 import GalleryManager from "./GalleryManager";
 
@@ -26,6 +27,15 @@ const iconMap = {
 };
 
 const monthFormatter = new Intl.DateTimeFormat("en", { month: "short", year: "numeric" });
+const expenseCategoryLabels = {
+  "one-time": "Equipment",
+  chemicals: "Chemicals",
+  labor: "Labor",
+  travel: "Travel",
+  utilities: "Utilities",
+  marketing: "Marketing",
+  other: "Other",
+};
 
 export default function DashboardSectionModal({
   section,
@@ -179,12 +189,6 @@ export default function DashboardSectionModal({
     () => expenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0),
     [expenses]
   );
-
-  const peRatio = useMemo(() => {
-    if (!totalExpenses) return null;
-    if (!metrics.totalRevenue) return null;
-    return metrics.totalRevenue / totalExpenses;
-  }, [metrics.totalRevenue, totalExpenses]);
 
   if (!active) {
     return null;
@@ -587,90 +591,189 @@ export default function DashboardSectionModal({
     );
   };
 
-  const renderExpenses = () => (
-    <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <InsightPill label="Lifetime Spend" value={`$${totalExpenses.toFixed(2)}`} accent="from-rose-500 to-red-500" />
-        <InsightPill label="Records" value={`${expenses.length}`} accent="from-slate-500 to-slate-600" />
-        <InsightPill label="Avg. Expense" value={`$${(totalExpenses / Math.max(expenses.length || 1, 1)).toFixed(2)}`} accent="from-fuchsia-500 to-purple-600" />
-      </div>
-      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-6">
-        <h3 className="text-base font-semibold text-slate-100">Expense Analytics</h3>
-        <p className="text-sm text-slate-400 mb-4">Interactive visualizations of spending habits.</p>
-        <div className="rounded-xl border border-slate-800/60 bg-white/95 p-4 text-slate-900">
-          <ExpensesCard />
+  const renderExpenses = () => {
+    const formatCurrency = (value, decimals = 0) =>
+      new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      }).format(value || 0);
+
+    const categoryLabel = (key) => expenseCategoryLabels[key?.toLowerCase?.()] || key?.replace(/-/g, " ") || "Other";
+
+    return (
+      <div className="space-y-8">
+        <ExpensesCard expenses={expenses} />
+        <div className="rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.18)]">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h3 className="text-xl font-semibold" style={{ color: "#0f172a" }}>Category Ledger</h3>
+              <p className="text-sm" style={{ color: "#475569" }}>
+                Drill into every purchase to audit spend, validate vendor invoices, and spot cost spikes early.
+              </p>
+            </div>
+            <div
+              className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide"
+              style={{ color: "#be123c" }}
+            >
+              {expenses.length} line item{expenses.length === 1 ? "" : "s"}
+            </div>
+          </div>
+          {expenseBreakdown.length ? (
+            <div className="mt-6 space-y-5">
+              {expenseBreakdown.map((entry) => (
+                <div key={entry.category} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className="text-lg font-semibold" style={{ color: "#0f172a" }}>
+                        {categoryLabel(entry.category)}
+                      </h4>
+                      <p className="text-xs" style={{ color: "#64748b" }}>
+                        {entry.items.length} expense{entry.items.length === 1 ? "" : "s"} · {formatCurrency(entry.total, 0)}
+                      </p>
+                    </div>
+                    <div
+                      className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-4 py-1 text-xs font-semibold uppercase tracking-wide"
+                      style={{ color: "#475569" }}
+                    >
+                      {totalExpenses ? ((entry.total / totalExpenses) * 100).toFixed(1) : "0.0"}% of spend
+                    </div>
+                  </div>
+                  <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="min-w-full divide-y divide-slate-200 text-sm">
+                      <thead className="bg-slate-50 text-slate-600">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold">Date</th>
+                          <th className="px-4 py-3 text-left font-semibold">Item</th>
+                          <th className="px-4 py-3 text-left font-semibold">Supplier</th>
+                          <th className="px-4 py-3 text-right font-semibold">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 bg-white">
+                        {entry.items.slice(0, 10).map((item) => (
+                          <tr
+                            key={item._id || `${item.date}-${item.productName}`}
+                            className="hover:bg-slate-50"
+                          >
+                            <td className="px-4 py-3" style={{ color: "#475569" }}>
+                              {formatDate(item.date)}
+                            </td>
+                            <td className="px-4 py-3" style={{ color: "#0f172a" }}>
+                              {item.productName || "—"}
+                            </td>
+                            <td className="px-4 py-3" style={{ color: "#475569" }}>
+                              {item.supplier || "—"}
+                            </td>
+                            <td className="px-4 py-3 text-right" style={{ color: "#ef4444" }}>
+                              {formatCurrency(Number(item.amount) || 0, 2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div
+              className="mt-8 rounded-2xl border border-dashed border-rose-200 bg-rose-50 px-6 py-10 text-center text-sm"
+              style={{ color: "#be123c" }}
+            >
+              No expenses have been recorded yet.
+            </div>
+          )}
         </div>
       </div>
-      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-6">
-        <h3 className="text-base font-semibold text-slate-100">Category Breakdown</h3>
-        <p className="text-sm text-slate-400 mb-4">Where operational dollars are allocated.</p>
-        <div className="space-y-4">
-          {expenseBreakdown.map((entry) => (
-            <div key={entry.category} className="rounded-xl border border-slate-800/70 bg-slate-950/70 p-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="capitalize text-slate-100">{entry.category.replace("-", " ")}</span>
-                <span className="font-semibold text-slate-200">${entry.total.toFixed(2)}</span>
-              </div>
-              <div className="mt-4 overflow-auto">
-                <table className="min-w-full text-xs text-slate-300">
-                  <thead className="text-slate-500">
-                    <tr>
-                      <th className="px-2 py-2 text-left">Date</th>
-                      <th className="px-2 py-2 text-left">Item</th>
-                      <th className="px-2 py-2 text-left">Supplier</th>
-                      <th className="px-2 py-2 text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/70">
-                    {entry.items.slice(0, 10).map((item) => (
-                      <tr key={item._id || `${item.date}-${item.productName}`}
-                        className="hover:bg-slate-800/40">
-                        <td className="px-2 py-2">{formatDate(item.date)}</td>
-                        <td className="px-2 py-2">{item.productName || "--"}</td>
-                        <td className="px-2 py-2">{item.supplier || "--"}</td>
-                        <td className="px-2 py-2 text-right">${Number(item.amount || 0).toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+    );
+  };
+
+  const renderProfit = () => {
+    const totalRevenue = Number(metrics.totalRevenue || 0);
+    const netProfit = totalRevenue - totalExpenses;
+    const completedCount = bookings.filter((booking) => booking.status === "complete").length;
+    const avgTicket = completedCount ? totalRevenue / completedCount : 0;
+    const profitMargin = totalRevenue ? (netProfit / totalRevenue) * 100 : 0;
+
+    const formatCurrency = (value, fractionDigits = 0) =>
+      new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+      }).format(value || 0);
+
+    const quickStats = [
+      {
+        title: "Lifetime Net Profit",
+        value: formatCurrency(netProfit, 0),
+        subtitle: `Margin ${profitMargin.toFixed(1)}%`,
+        accent: netProfit >= 0 ? "#16a34a" : "#dc2626",
+      },
+      {
+        title: "Revenue vs Expenses",
+        value: formatCurrency(totalRevenue, 0),
+        subtitle: `Expenses ${formatCurrency(totalExpenses, 0)}`,
+        accent: "#2563eb",
+      },
+      {
+        title: "Avg. Ticket Value",
+        value: formatCurrency(avgTicket, avgTicket < 100 ? 2 : 0),
+        subtitle: `${completedCount} completed booking${completedCount === 1 ? "" : "s"}`,
+        accent: "#0ea5e9",
+      },
+      {
+        title: "Pending Pipeline",
+        value: `${metrics.pendingCount || 0}`,
+        subtitle: "Bookings awaiting completion",
+        accent: "#f97316",
+      },
+    ];
+
+    return (
+      <div className="space-y-8">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {quickStats.map((stat) => (
+            <div
+              key={stat.title}
+              className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4 shadow-sm"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#047857" }}>
+                {stat.title}
+              </p>
+              <p className="mt-2 text-2xl font-semibold" style={{ color: "#064e3b" }}>
+                {stat.value}
+              </p>
+              <p className="mt-1 text-xs font-semibold" style={{ color: stat.accent }}>
+                {stat.subtitle}
+              </p>
             </div>
           ))}
         </div>
+        <ProfitsCard bookings={bookings} expenses={expenses} />
       </div>
-    </div>
-  );
-
-  const renderProfit = () => (
-    <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <InsightPill label="Total Profit" value={`$${Number(metrics.totalRevenue - totalExpenses).toFixed(2)}`} accent="from-emerald-500 to-green-500" />
-        <InsightPill label="Revenue" value={`$${Number(metrics.totalRevenue || 0).toFixed(2)}`} accent="from-blue-500 to-indigo-500" />
-        <InsightPill label="Expenses" value={`$${totalExpenses.toFixed(2)}`} accent="from-rose-500 to-red-500" />
-      </div>
-      <div className="rounded-2xl border border-slate-800/80 bg-white/95 p-4 text-slate-900">
-        <ProfitsCard bookings={bookings} />
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderPe = () => (
-    <div className="space-y-6">
-      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-6">
-        <h3 className="text-base font-semibold text-slate-100">Performance Efficiency</h3>
-        <p className="text-sm text-slate-400 mb-4">
-          Ratio of generated revenue over operational spend. Track efficiency over time.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <InsightPill label="P/E Ratio" value={peRatio ? peRatio.toFixed(2) : "--"} accent="from-purple-500 to-violet-500" />
-          <InsightPill label="Completed Bookings" value={`${metrics.completedCount || 0}`} accent="from-blue-500 to-sky-500" />
-          <InsightPill label="Pending Bookings" value={`${metrics.pendingCount || 0}`} accent="from-amber-500 to-orange-500" />
+    <div className="space-y-8">
+      <PerformanceEfficiencyCard bookings={bookings} expenses={expenses} metrics={metrics} />
+      <div className="rounded-3xl border border-teal-100 bg-white/95 p-6 shadow-[0_24px_60px_-32px_rgba(13,148,136,0.16)]">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h3 className="text-xl font-semibold" style={{ color: "#0f766e" }}>
+              Scheduling Outlook
+            </h3>
+            <p className="text-sm" style={{ color: "#0f172a" }}>
+              Heatmap of upcoming commitments to spot bottlenecks, padding, or overbooked days.
+            </p>
+          </div>
+          <div className="inline-flex items-center rounded-full border border-teal-200 bg-teal-50 px-4 py-1 text-xs font-semibold uppercase tracking-wide" style={{ color: "#0f766e" }}>
+            {metrics.pendingCount || 0} pending · {metrics.completedCount || 0} completed
+          </div>
         </div>
-      </div>
-      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-6">
-        <h3 className="text-base font-semibold text-slate-100">Scheduling Outlook</h3>
-        <p className="text-sm text-slate-400 mb-4">Availability heatmap for the upcoming period.</p>
-        <div className="rounded-xl border border-slate-800/70 bg-white/95 p-4 text-slate-900">
+        <div className="mt-4 rounded-2xl border border-teal-100 bg-white p-4">
           <StatusCalendar bookings={bookings} />
         </div>
       </div>

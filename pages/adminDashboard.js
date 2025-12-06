@@ -577,30 +577,31 @@ export default function AdminDashboard() {
 
       <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="inline-block min-w-full align-middle">
-          <div ref={bookingScrollRef} className="max-h-[60vh] overflow-y-auto">
-            {loading ? (
-              <div className="py-10 text-center text-sm font-semibold text-slate-500">
-                Loading bookings...
-              </div>
-            ) : displayBookings.length === 0 ? (
-              <div className="py-12 text-center text-sm text-slate-600">
-                No bookings to display yet.
-              </div>
-            ) : (
-              <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
-                <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-700">Status</th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-700">Client</th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-700">Amount</th>
-                    <th className="hidden md:table-cell px-3 py-2 text-left font-semibold text-slate-700">Date</th>
-                    <th className="hidden lg:table-cell px-3 py-2 text-left font-semibold text-slate-700">Time</th>
-                    <th className="hidden lg:table-cell px-3 py-2 text-left font-semibold text-slate-700">Vehicle</th>
-                    <th className="hidden xl:table-cell px-3 py-2 text-left font-semibold text-slate-700">Service</th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-700">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 text-slate-600">
+          <div className="overflow-x-auto">
+            <div ref={bookingScrollRef} className="max-h-[60vh] overflow-y-auto">
+              {loading ? (
+                <div className="py-10 text-center text-sm font-semibold text-slate-500">
+                  Loading bookings...
+                </div>
+              ) : displayBookings.length === 0 ? (
+                <div className="py-12 text-center text-sm text-slate-600">
+                  No bookings to display yet.
+                </div>
+              ) : (
+                <table className="w-full min-w-[960px] divide-y divide-slate-200 text-xs sm:text-sm">
+                  <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700 whitespace-nowrap">Status</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700 whitespace-nowrap">Client</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700 whitespace-nowrap">Amount</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700 whitespace-nowrap">Date</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700 whitespace-nowrap">Time</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700 whitespace-nowrap">Vehicle</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700 whitespace-nowrap">Service</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700 whitespace-nowrap">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 text-slate-600">
                   {displayBookings.map((booking) => {
                     const isSelected = selectedBookingId === booking.id;
                     const badgeClasses =
@@ -638,12 +639,12 @@ export default function AdminDashboard() {
                             {booking.name}
                           </button>
                         </td>
-                        <td className="px-3 py-2">{formatCurrency(booking.amount)}</td>
-                        <td className="hidden md:table-cell px-3 py-2">{formatDateShort(booking.date)}</td>
-                        <td className="hidden lg:table-cell px-3 py-2">{booking.time || "--"}</td>
-                        <td className="hidden lg:table-cell px-3 py-2">{booking.carName || "--"}</td>
-                        <td className="hidden xl:table-cell px-3 py-2">{booking.service}</td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 whitespace-nowrap">{formatCurrency(booking.amount)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{formatDateShort(booking.date)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{booking.time || "--"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{booking.carName || "--"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{booking.service}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">
                           <button
                             type="button"
                             onClick={(event) => {
@@ -658,9 +659,10 @@ export default function AdminDashboard() {
                       </tr>
                     );
                   })}
-                </tbody>
-              </table>
-            )}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -780,26 +782,27 @@ export default function AdminDashboard() {
 
         <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="inline-block min-w-full align-middle">
-            <div ref={expenseScrollRef} className="max-h-[60vh] overflow-auto">
-              {loading ? (
-                <div className="py-10 text-center text-sm font-semibold text-slate-500">
-                  Loading expenses...
-                </div>
-              ) : displayExpenses.length === 0 ? (
-                <div className="py-12 text-center text-sm text-slate-600">No expenses captured yet.</div>
-              ) : (
-                <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
-                  <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-semibold text-slate-700">Date</th>
-                      <th className="px-3 py-2 text-left font-semibold text-slate-700">Item</th>
-                      <th className="hidden md:table-cell px-3 py-2 text-left font-semibold text-slate-700">Supplier</th>
-                      <th className="hidden lg:table-cell px-3 py-2 text-left font-semibold text-slate-700">Category</th>
-                      <th className="px-3 py-2 text-left font-semibold text-slate-700">Amount</th>
-                      <th className="px-3 py-2 text-left font-semibold text-slate-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 text-slate-600">
+            <div className="overflow-x-auto">
+              <div ref={expenseScrollRef} className="max-h-[60vh] overflow-y-auto">
+                {loading ? (
+                  <div className="py-10 text-center text-sm font-semibold text-slate-500">
+                    Loading expenses...
+                  </div>
+                ) : displayExpenses.length === 0 ? (
+                  <div className="py-12 text-center text-sm text-slate-600">No expenses captured yet.</div>
+                ) : (
+                  <table className="w-full min-w-[720px] divide-y divide-slate-200 text-xs sm:text-sm">
+                    <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-700 whitespace-nowrap">Date</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-700 whitespace-nowrap">Item</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-700 whitespace-nowrap">Supplier</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-700 whitespace-nowrap">Category</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-700 whitespace-nowrap">Amount</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-700 whitespace-nowrap">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 text-slate-600">
                     {displayExpenses.map((expense) => {
                       const rowId = expense._id || `${expense.date}-${expense.productName}`;
                       const isSelected = selectedExpenseId === rowId;
@@ -827,7 +830,7 @@ export default function AdminDashboard() {
                           </td>
                           <td className="hidden md:table-cell px-3 py-2">{expense.supplier || "--"}</td>
                           <td className="hidden lg:table-cell px-3 py-2">{categoryLabel}</td>
-                          <td className="px-3 py-2">
+                          <td className="px-3 py-2 whitespace-nowrap">
                             {formatCurrency(expense.amount)}
                             {expense.taxIncluded && (
                               <span className="ml-2 text-[11px] text-slate-500">(tax incl.)</span>
@@ -848,9 +851,10 @@ export default function AdminDashboard() {
                         </tr>
                       );
                     })}
-                  </tbody>
-                </table>
-              )}
+                      </tbody>
+                  </table>
+                )}
+              </div>
             </div>
           </div>
         </div>
