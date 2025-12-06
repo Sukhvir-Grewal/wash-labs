@@ -1,8 +1,20 @@
 
-import { useState } from 'react';
-import { Line } from 'react-chartjs-2';
-import { Chart, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend } from 'chart.js';
-Chart.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
+import { useMemo, useState } from 'react';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import {
+  Chart,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
+
+Chart.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend, Filler);
 
 function groupByWeek(bookings) {
   // Returns { 'YYYY-WW': sum }
@@ -43,12 +55,28 @@ export default function RevenueChart({
   backgroundColor = 'rgba(37,99,235,0.2)',
   pointBackgroundColor = 'rgb(37,99,235)',
   accentColor = '#2563eb',
+  chartType = 'line',
 }) {
   const [interval, setInterval] = useState('date'); // 'date' | 'week' | 'month'
   const filtered = status === 'all' ? bookings : bookings.filter(b => b.status === status);
 
-  let labels = [], amounts = [];
-  if (interval === 'date') {
+  const timelineData = useMemo(() => {
+    const next = { labels: [], amounts: [] };
+    if (chartType === 'doughnut') {
+      // build service distribution, ignore timeline intervals
+      const serviceMap = {};
+      filtered.forEach((booking) => {
+        if (booking.service && booking.amount) {
+          serviceMap[booking.service] = (serviceMap[booking.service] || 0) + booking.amount;
+        }
+      });
+      const entries = Object.entries(serviceMap).sort((a, b) => b[1] - a[1]);
+      next.labels = entries.map(([service]) => service);
+      next.amounts = entries.map(([, total]) => total);
+      return next;
+    }
+
+    if (interval === 'date') {
     // Group by date
     const dateMap = {};
     filtered.forEach(b => {
@@ -58,7 +86,7 @@ export default function RevenueChart({
     });
     const rawDates = Object.keys(dateMap).sort();
     const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-    labels = rawDates.map(dateStr => {
+      next.labels = rawDates.map(dateStr => {
       const parts = dateStr.split("-");
       if (parts.length === 3) {
         const d = parts[2];
@@ -67,12 +95,15 @@ export default function RevenueChart({
       }
       return dateStr;
     });
-    amounts = rawDates.map(date => dateMap[date]);
-  } else if (interval === 'week') {
+      next.amounts = rawDates.map(date => dateMap[date]);
+      return next;
+    }
+
+    if (interval === 'week') {
     const weekMap = groupByWeek(filtered);
       const rawWeeks = Object.keys(weekMap).sort();
       // Format as 'monAbbr (startDay-endDay)' e.g. 'oct (15-21)'
-      labels = rawWeeks.map(wstr => {
+      next.labels = rawWeeks.map(wstr => {
         // wstr: 'YYYY-WW'
         const [year, w] = wstr.split('-W');
         if (year && w) {
@@ -92,38 +123,71 @@ export default function RevenueChart({
         }
         return wstr;
       });
-      amounts = rawWeeks.map(w => weekMap[w]);
-  } else if (interval === 'month') {
+      next.amounts = rawWeeks.map(w => weekMap[w]);
+      return next;
+    }
+
+    if (interval === 'month') {
     const monthMap = groupByMonth(filtered);
     const rawMonths = Object.keys(monthMap).sort();
     const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-    labels = rawMonths.map(mstr => {
+      next.labels = rawMonths.map(mstr => {
       const parts = mstr.split('-');
       if (parts.length === 2) {
         return `${months[parseInt(parts[1],10)-1]} ${parts[0]}`;
       }
       return mstr;
     });
-    amounts = rawMonths.map(m => monthMap[m]);
-  }
+      next.amounts = rawMonths.map(m => monthMap[m]);
+      return next;
+    }
 
-  const data = {
-    labels,
-    datasets: [
-      {
-        label: datasetLabel,
-        data: amounts,
-        fill: false,
-        borderColor: borderColor,
-        backgroundColor: backgroundColor,
-        tension: 0.2,
-        pointRadius: 4,
-        pointBackgroundColor: pointBackgroundColor,
-      },
-    ],
+    return next;
+  }, [filtered, interval, chartType]);
+
+  const labels = timelineData.labels;
+  const amounts = timelineData.amounts;
+
+  const timelineDataset = {
+    label: datasetLabel,
+    data: amounts,
+    borderColor,
+    backgroundColor: chartType === 'bar' ? 'rgba(37, 99, 235, 0.7)' : backgroundColor,
+    tension: 0.25,
+    pointRadius: chartType === 'bar' ? 0 : 4,
+    pointBackgroundColor,
+    borderWidth: chartType === 'bar' ? 0 : 2,
+    fill: chartType === 'area',
   };
 
-  const options = {
+  const chartData = {
+    labels,
+    datasets:
+      chartType === 'doughnut'
+        ? [
+            {
+              label: datasetLabel,
+              data: amounts,
+              backgroundColor: amounts.map((_, index) => {
+                const base = [
+                  '#2563eb',
+                  '#1d4ed8',
+                  '#38bdf8',
+                  '#0ea5e9',
+                  '#6366f1',
+                  '#3b82f6',
+                  '#60a5fa',
+                ];
+                return base[index % base.length];
+              }),
+              borderColor: '#ffffff',
+              borderWidth: 2,
+            },
+          ]
+        : [timelineDataset],
+  };
+
+  const commonTimelineOptions = {
     responsive: true,
     interaction: {
       mode: 'index',
@@ -158,6 +222,32 @@ export default function RevenueChart({
     },
   };
 
+  const doughnutOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'right',
+        labels: {
+          boxWidth: 12,
+          boxHeight: 12,
+          color: '#0f172a',
+          font: { size: 11 },
+        },
+      },
+      tooltip: {
+        enabled: true,
+        callbacks: {
+          label: ({ label, formattedValue }) => `${label}: $${Number(formattedValue).toLocaleString()}`,
+        },
+      },
+    },
+  };
+
+  const ChartComponent = chartType === 'bar' ? Bar : chartType === 'doughnut' ? Doughnut : Line;
+  const options = chartType === 'doughnut' ? doughnutOptions : commonTimelineOptions;
+
+  const showIntervalControls = chartType !== 'doughnut';
+
   const buttonBaseClass = 'px-3 py-1 rounded-full text-xs font-semibold border transition';
   const buttonStyle = (active) =>
     active
@@ -175,30 +265,32 @@ export default function RevenueChart({
 
   return (
     <div style={{ width: '100%', minHeight: 180 }}>
-      <div className="mb-3 flex justify-end gap-2">
-        <button
-          className={buttonBaseClass}
-          style={buttonStyle(interval === 'date')}
-          onClick={() => setInterval('date')}
-        >
-          Dates
-        </button>
-        <button
-          className={buttonBaseClass}
-          style={buttonStyle(interval === 'week')}
-          onClick={() => setInterval('week')}
-        >
-          Weeks
-        </button>
-        <button
-          className={buttonBaseClass}
-          style={buttonStyle(interval === 'month')}
-          onClick={() => setInterval('month')}
-        >
-          Months
-        </button>
-      </div>
-      <Line data={data} options={options} />
+      {showIntervalControls && (
+        <div className="mb-3 flex justify-end gap-2">
+          <button
+            className={buttonBaseClass}
+            style={buttonStyle(interval === 'date')}
+            onClick={() => setInterval('date')}
+          >
+            Dates
+          </button>
+          <button
+            className={buttonBaseClass}
+            style={buttonStyle(interval === 'week')}
+            onClick={() => setInterval('week')}
+          >
+            Weeks
+          </button>
+          <button
+            className={buttonBaseClass}
+            style={buttonStyle(interval === 'month')}
+            onClick={() => setInterval('month')}
+          >
+            Months
+          </button>
+        </div>
+      )}
+      <ChartComponent data={chartData} options={options} />
     </div>
   );
 }

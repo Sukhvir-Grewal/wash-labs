@@ -41,40 +41,7 @@ export default function DashboardSectionModal({
   const [services, setServices] = useState([]);
   const [revenueRange, setRevenueRange] = useState("6m");
   const [revenueStatusFilter, setRevenueStatusFilter] = useState("complete");
-  const [revenuePalette, setRevenuePalette] = useState("sky");
-
-  const revenuePalettes = useMemo(
-    () => ({
-      sky: {
-        label: "Skyline",
-        border: "rgb(37, 99, 235)",
-        background: "rgba(37, 99, 235, 0.16)",
-        point: "rgb(37, 99, 235)",
-        accent: "#2563eb",
-        accentSoft: "rgba(37, 99, 235, 0.18)",
-        preview: "linear-gradient(135deg, #93c5fd 0%, #2563eb 100%)",
-      },
-      coral: {
-        label: "Sunset",
-        border: "rgb(236, 72, 153)",
-        background: "rgba(236, 72, 153, 0.18)",
-        point: "rgb(219, 39, 119)",
-        accent: "#ec4899",
-        accentSoft: "rgba(236, 72, 153, 0.2)",
-        preview: "linear-gradient(135deg, #f472b6 0%, #fb7185 100%)",
-      },
-      emerald: {
-        label: "Evergreen",
-        border: "rgb(5, 150, 105)",
-        background: "rgba(5, 150, 105, 0.18)",
-        point: "rgb(4, 120, 87)",
-        accent: "#059669",
-        accentSoft: "rgba(5, 150, 105, 0.18)",
-        preview: "linear-gradient(135deg, #6ee7b7 0%, #059669 100%)",
-      },
-    }),
-    []
-  );
+  const [revenueChartType, setRevenueChartType] = useState("line");
   const fullScreenSections = useMemo(
     () => new Set(["services", "gallery", "revenue", "expenses", "profit", "pe"]),
     []
@@ -328,9 +295,8 @@ export default function DashboardSectionModal({
   );
 
   const renderRevenue = () => {
-    const palette = revenuePalettes[revenuePalette] || revenuePalettes.sky;
-    const accent = palette.accent;
-    const accentSoft = palette.accentSoft;
+    const accent = "#2563eb";
+    const accentSoft = "rgba(37, 99, 235, 0.18)";
     const rangeLabels = { "3m": "Last 3 months", "6m": "Last 6 months", "12m": "Last 12 months", all: "All-time" };
     const rangeLabel = rangeLabels[revenueRange] || "All-time";
     const statusLabel = revenueStatusFilter === "complete" ? "Completed bookings" : "All booking statuses";
@@ -446,23 +412,23 @@ export default function DashboardSectionModal({
               </button>
             ))}
             <span className="ml-4 text-xs font-semibold uppercase tracking-wide" style={{ color: "#475569" }}>
-              Palette
+              Chart
             </span>
             <div className="flex flex-wrap gap-2">
-              {Object.entries(revenuePalettes).map(([key, paletteOption]) => (
+              {[
+                { value: "line", label: "Line" },
+                { value: "area", label: "Area" },
+                { value: "bar", label: "Bar" },
+                { value: "doughnut", label: "Donut" },
+              ].map((entry) => (
                 <button
-                  key={key}
+                  key={entry.value}
                   type="button"
-                  onClick={() => setRevenuePalette(key)}
-                  className="rounded-full px-3 py-1.5 text-xs font-semibold text-white transition"
-                  style={{
-                    background: paletteOption.preview,
-                    border: revenuePalette === key ? `2px solid ${paletteOption.accent}` : "2px solid transparent",
-                    opacity: revenuePalette === key ? 1 : 0.8,
-                    boxShadow: revenuePalette === key ? `0 10px 28px ${paletteOption.accentSoft}` : "none",
-                  }}
+                  onClick={() => setRevenueChartType(entry.value)}
+                  className="rounded-full border px-3 py-1.5 text-xs font-semibold transition"
+                  style={rangeButtonStyle(revenueChartType === entry.value)}
                 >
-                  {paletteOption.label}
+                  {entry.label}
                 </button>
               ))}
             </div>
@@ -473,10 +439,11 @@ export default function DashboardSectionModal({
               bookings={filteredRevenueBookings}
               status="all"
               datasetLabel={`${statusLabel} (${rangeLabel.toLowerCase()})`}
-              borderColor={palette.border}
-              backgroundColor={palette.background}
-              pointBackgroundColor={palette.point}
+              borderColor="rgb(37, 99, 235)"
+              backgroundColor={revenueChartType === "area" ? "rgba(37, 99, 235, 0.16)" : "rgba(37, 99, 235, 0.12)"}
+              pointBackgroundColor="rgb(37, 99, 235)"
               accentColor={accent}
+              chartType={revenueChartType}
             />
           </div>
         </div>
