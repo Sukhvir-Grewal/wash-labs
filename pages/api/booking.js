@@ -72,6 +72,7 @@ export default async function handler(req, res) {
   const { service, vehicle, dateTime, location, userInfo, source: reqSource, status: reqStatus } = req.body;
   // New admin fields (optional)
   const vehicles = Array.isArray(req.body.vehicles) ? req.body.vehicles : null;
+  const carsInput = Array.isArray(req.body.cars) ? req.body.cars : null;
   const perCarTotals = Array.isArray(req.body.perCarTotals) ? req.body.perCarTotals : null;
   const baseSumRaw = typeof req.body.baseSum === 'number' ? req.body.baseSum : null;
   const travelExpenseRaw = Number(req.body.travelExpense || 0);
@@ -189,6 +190,82 @@ export default async function handler(req, res) {
     const formattedBaseSum = formatMoney(computedBaseSum);
     const formattedTravel = formatMoney(travelExpense);
     const formattedDiscount = formatMoney(discount);
+
+    const parseNumericAmount = (value) => {
+      if (typeof value === "number" && Number.isFinite(value)) return value;
+      if (typeof value === "string") {
+        const cleaned = value.replace(/[^0-9.-]/g, "").trim();
+        if (!cleaned) return null;
+        const parsed = Number(cleaned);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+      return null;
+    };
+
+    const normalizeAddOnList = (list) => {
+      if (!Array.isArray(list)) return [];
+      const dedup = new Map();
+      list.forEach((item) => {
+        if (!item) return;
+        if (Array.isArray(item)) {
+          normalizeAddOnList(item).forEach((nested) => {
+            if (!nested || !nested.name) return;
+            const key = nested.name.toLowerCase();
+            if (!dedup.has(key)) {
+              dedup.set(key, nested);
+            } else if (dedup.get(key).price == null && nested.price != null) {
+              dedup.set(key, nested);
+            }
+          });
+          return;
+        }
+        if (typeof item === "string") {
+          const name = item.trim();
+          if (!name) return;
+          const key = name.toLowerCase();
+          if (!dedup.has(key)) dedup.set(key, { name, price: null });
+          return;
+        }
+        if (typeof item === "object") {
+          const rawName = item.name ?? item.label ?? item.title ?? "";
+          const name = typeof rawName === "string" ? rawName.trim() : "";
+          if (!name) return;
+          const priceValue = parseNumericAmount(
+            item.price ?? item.amount ?? item.total ?? item.value ?? item.cost ?? null
+          );
+          const key = name.toLowerCase();
+          if (!dedup.has(key)) {
+            dedup.set(key, { name, price: priceValue });
+          } else if (dedup.get(key).price == null && priceValue != null) {
+            dedup.set(key, { name, price: priceValue });
+          }
+        }
+      });
+      return Array.from(dedup.values());
+    };
+
+    const serviceSelectedAddOns = normalizeAddOnList(service?.selectedAddOns);
+    const serviceMarkedAddOns = normalizeAddOnList(
+      Array.isArray(service?.addOns)
+        ? service.addOns.filter((addon) => addon?.selected || addon?.isSelected || addon?.checked)
+        : []
+    );
+    const vehicleSelectedAddOns = normalizeAddOnList(
+      Array.isArray(vehicles) ? vehicles.flatMap((v) => v?.addOns || []) : []
+    );
+    const carSelectedAddOns = normalizeAddOnList(
+      Array.isArray(carsInput) ? carsInput.flatMap((car) => car?.addOns || []) : []
+    );
+
+    const selectedAddOns =
+      (serviceSelectedAddOns.length && serviceSelectedAddOns) ||
+      (serviceMarkedAddOns.length && serviceMarkedAddOns) ||
+      (vehicleSelectedAddOns.length && vehicleSelectedAddOns) ||
+      carSelectedAddOns;
+
+    const hasNonZero = (val) => typeof val === "number" && Math.abs(val) >= 0.01;
+    const showTravelLine = hasNonZero(travelExpense);
+    const showDiscountLine = hasNonZero(discount);
 
   // Server-side availability check (avoid race conditions)
   // Skip availability check for admin bookings to allow overrides
@@ -446,12 +523,27 @@ export default async function handler(req, res) {
             '',
             'Booking Summary',
             `Service: ${service.title}`,
-            `Original total: ${formattedBaseSum}`,
-            `Travel expense: ${formattedTravel}`,
-            `Discount: ${formattedDiscount}`,
-            `Final Price: ${formattedTotalPrice}`,
-            `Business hours: 8:00 AM – 6:00 PM (Tues & Fri closed)`,
           ];
+          if (typeof computedBaseSum === 'number') {
+            userTextLines.push(`Subtotal: ${formattedBaseSum}`);
+          }
+          if (selectedAddOns.length) {
+            userTextLines.push('Add-ons:');
+            selectedAddOns.forEach((addon) => {
+              const priceText = typeof addon.price === 'number' ? formatMoney(addon.price) : '';
+              userTextLines.push(` - ${addon.name}${priceText ? ` — ${priceText}` : ''}`);
+            });
+          }
+          if (showTravelLine) {
+            userTextLines.push(`Travel expense: ${formattedTravel}`);
+          }
+          if (showDiscountLine) {
+            userTextLines.push(`Discount: ${formattedDiscount}`);
+          }
+          if (formattedTotalPrice !== 'Not specified') {
+            userTextLines.push(`Total: ${formattedTotalPrice}`);
+          }
+          userTextLines.push(`Business hours: 8:00 AM – 6:00 PM (Tues & Fri closed)`);
           if (vehicles) {
             userTextLines.push('Vehicles:');
             vehicles.forEach((v, i) => {
@@ -461,10 +553,73 @@ export default async function handler(req, res) {
           } else {
             userTextLines.push(`Vehicle: ${vehicleDisplay}`);
           }
-          if (hasValue(safeDate) || hasValue(safeTime)) userTextLines.push(`Date & Time: ${safeDate} at ${safeTime}${endTimeDisplay ? ` — Ends: ${endTimeDisplay}` : ''}`);
+          if (hasValue(safeDate) || hasValue(safeTime)) userTextLines.push(`Date & Time: ${safeDate} at ${safeTime}`);
           if (hasValue(location?.address)) userTextLines.push(`Location: ${location.address}`);
           userTextLines.push('', 'Need anything else?', `Phone: ${brand.phone}`, `Email: ${brand.email}`, `Website: ${baseUrl}`, '', '— Wash Labs, Halifax NS');
           const userText = userTextLines.filter(Boolean).join('\n');
+
+          const showSubtotalLine = typeof computedBaseSum === 'number';
+          const subtotalHtmlRow = showSubtotalLine
+            ? `<tr><td style="padding:4px 0;"><strong>Subtotal:</strong> ${escapeHtml(formattedBaseSum)}</td></tr>`
+            : '';
+          const addOnsHtmlRows = selectedAddOns.length
+            ? [
+                `<tr><td style="padding:4px 0;"><strong>Add-ons:</strong></td></tr>`,
+                ...selectedAddOns.map((addon) => {
+                  const priceSuffix =
+                    typeof addon.price === 'number'
+                      ? ` — ${escapeHtml(formatMoney(addon.price))}`
+                      : '';
+                  return `<tr><td style="padding:4px 0;padding-left:12px;">${escapeHtml(addon.name)}${priceSuffix}</td></tr>`;
+                }),
+              ].join('\n')
+            : '';
+          const travelHtmlRow = showTravelLine
+            ? `<tr><td style="padding:4px 0;"><strong>Travel expense:</strong> ${escapeHtml(formattedTravel)}</td></tr>`
+            : '';
+          const discountHtmlRow = showDiscountLine
+            ? `<tr><td style="padding:4px 0;"><strong>Discount:</strong> ${escapeHtml(formattedDiscount)}</td></tr>`
+            : '';
+          let totalHtmlRow = '';
+          if (formattedTotalPrice !== 'Not specified') {
+            const totalValueHtml = `<strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong>`;
+            totalHtmlRow = showDiscountLine && showSubtotalLine
+              ? `<tr><td style="padding:4px 0;"><strong>Total:</strong> <span style="text-decoration:line-through;color:#9ca3af;margin-right:8px;">${escapeHtml(formattedBaseSum)}</span> ${totalValueHtml}</td></tr>`
+              : `<tr><td style="padding:4px 0;"><strong>Total:</strong> ${totalValueHtml}</td></tr>`;
+          }
+          const vehiclesHtmlBlock = vehicles
+            ? [`<tr><td style="padding:4px 0;"><strong>Vehicles:</strong></td></tr>`,
+                ...vehicles.map((v, i) => {
+                  const lineTotal =
+                    typeof v.lineTotal === 'number'
+                      ? formatMoney(v.lineTotal)
+                      : Array.isArray(perCarTotals) && typeof perCarTotals[i] === 'number'
+                      ? formatMoney(perCarTotals[i])
+                      : 'N/A';
+                  return `<tr><td style="padding:4px 0;padding-left:12px;">${escapeHtml(v.name || 'N/A')} (${escapeHtml(v.type || '')}) — ${escapeHtml(lineTotal)}</td></tr>`;
+                }),
+              ].join('\n')
+            : `<tr><td style="padding:4px 0;"><strong>Vehicle:</strong> ${vehicleDisplay}</td></tr>`;
+          const dateTimeHtmlRow =
+            hasValue(safeDate) || hasValue(safeTime)
+              ? `<tr><td style="padding:4px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}</td></tr>`
+              : '';
+          const locationHtmlRow = hasValue(location?.address)
+            ? `<tr><td style="padding:4px 0;"><strong>Location:</strong> ${escapeHtml(location.address)}</td></tr>`
+            : '';
+          const bookingSummaryHtmlRows = [
+            `<tr><td style="padding:4px 0;"><strong>Service:</strong> ${safeService.title}</td></tr>`,
+            subtotalHtmlRow,
+            addOnsHtmlRows,
+            travelHtmlRow,
+            discountHtmlRow,
+            totalHtmlRow,
+            vehiclesHtmlBlock,
+            dateTimeHtmlRow,
+            locationHtmlRow,
+          ]
+            .filter(Boolean)
+            .join('\n');
 
           const userHtml = `
 <!doctype html>
@@ -505,15 +660,7 @@ export default async function handler(req, res) {
                 <p style="margin:0 0 14px 0;color:#334155;font-size:14px;">We’ve received your request and will follow up shortly.</p>
                 <h2 style="margin:0 0 8px 0;font-size:16px;color:#0f172a;">Booking Summary</h2>
                 <table cellpadding="0" cellspacing="0" style="font-size:14px;color:#0f172a;">
-                  <tr><td style="padding:4px 0;"><strong>Service:</strong> ${safeService.title}</td></tr>
-                  ${typeof computedBaseSum === 'number' ? `<tr><td style="padding:4px 0;"><strong>Original Total:</strong> ${escapeHtml(formattedBaseSum)}</td></tr>
-                  <tr><td style="padding:4px 0;"><strong>Travel expense:</strong> ${escapeHtml(formattedTravel)}</td></tr>
-                  <tr><td style="padding:4px 0;"><strong>Discount:</strong> ${escapeHtml(formattedDiscount)}</td></tr>
-                  <tr><td style="padding:4px 0;"><strong>Final Price:</strong> <span style="text-decoration:line-through;color:#9ca3af;margin-right:8px;">${escapeHtml(formattedBaseSum)}</span> <strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong></td></tr>` : `<tr><td style="padding:4px 0;"><strong>Final Price:</strong> <strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong></td></tr>`}
-                  ${(vehicles) ? `<tr><td style="padding:4px 0;"><strong>Vehicles:</strong></td></tr>` : `<tr><td style="padding:4px 0;"><strong>Vehicle:</strong> ${vehicleDisplay}</td></tr>`}
-                  ${vehicles ? vehicles.map(v=> `<tr><td style="padding:4px 0;padding-left:12px;">${escapeHtml(v.name||'N/A')} (${escapeHtml(v.type||'')}) — ${escapeHtml(typeof v.lineTotal==='number' ? formatMoney(v.lineTotal) : 'N/A')}</td></tr>`).join('') : ''}
-                  ${(hasValue(safeDate) || hasValue(safeTime)) ? `<tr><td style="padding:4px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}${safeEndTime ? ` — Ends: ${safeEndTime}` : ''}</td></tr>` : ''}
-                  ${hasValue(location?.address) ? `<tr><td style=\"padding:4px 0;\"><strong>Location:</strong> ${escapeHtml(location.address)}</td></tr>` : ''}
+                  ${bookingSummaryHtmlRows}
                 </table>
                 ${hasValue(safeNotes) ? `<div style="margin-top:12px;padding:12px;border-left:3px solid ${brand.color};background:#f8fbff;color:#334155;white-space:pre-wrap;"><strong>Your Notes:</strong>\n${safeNotes}</div>` : ''}
                 <p style="margin:16px 0 0 0;color:#475569;font-size:13px;">Sent on: <strong>${receivedAt}</strong></p>
