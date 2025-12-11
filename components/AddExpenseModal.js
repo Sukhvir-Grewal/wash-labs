@@ -3,6 +3,7 @@ import { useState } from 'react';
 const CATEGORIES = [
   { key: 'one-time', label: 'Equipment' },
   { key: 'chemicals', label: 'Chemicals' },
+  { key: 'vehicle-maintenance', label: 'Vehicle Maintenance' },
   { key: 'other', label: 'Other' },
 ];
 

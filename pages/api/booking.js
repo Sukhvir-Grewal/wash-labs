@@ -390,19 +390,37 @@ export default async function handler(req, res) {
 
         // Admin notification (branded + detailed)
         const adminSubject = `New Booking Request — ${safeService.title}`;
+        const mapsHrefRaw = hasValue(location?.address)
+          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.address)}`
+          : null;
+
         const adminTextLines = [
           'New booking request',
           '',
           `Service: ${service.title}`,
-          `Original total: ${formattedBaseSum}`,
-          `Travel expense: ${formattedTravel}`,
-          `Discount: ${formattedDiscount}`,
-          `Final Price: ${formattedTotalPrice}`,
-          `Business hours: 8:00 AM – 6:00 PM (Tues & Fri closed)`,
-          '',
-          // List vehicles if provided
-          vehicles ? `Vehicles:` : `Vehicle: ${vehicleDisplay}`,
         ];
+        if (typeof computedBaseSum === 'number') {
+          adminTextLines.push(`Subtotal: ${formattedBaseSum}`);
+        }
+        if (selectedAddOns.length) {
+          adminTextLines.push('Add-ons:');
+          selectedAddOns.forEach((addon) => {
+            const priceText = typeof addon.price === 'number' ? formatMoney(addon.price) : '';
+            adminTextLines.push(` - ${addon.name}${priceText ? ` — ${priceText}` : ''}`);
+          });
+        }
+        if (showTravelLine) {
+          adminTextLines.push(`Travel expense: ${formattedTravel}`);
+        }
+        if (showDiscountLine) {
+          adminTextLines.push(`Discount: ${formattedDiscount}`);
+        }
+        if (formattedTotalPrice !== 'Not specified') {
+          adminTextLines.push(`Total: ${formattedTotalPrice}`);
+        }
+        adminTextLines.push(`Business hours: 8:00 AM – 6:00 PM (Tues & Fri closed)`);
+        adminTextLines.push('');
+        // List vehicles if provided
         if (vehicles) {
           vehicles.forEach((v, i) => {
             const name = escapeHtml(v.name || `Vehicle ${i+1}`);
@@ -414,8 +432,11 @@ export default async function handler(req, res) {
           adminTextLines.push(`Vehicle: ${vehicleDisplay}`);
         }
         // Date/time and location
-        if (hasValue(safeDate) || hasValue(safeTime)) adminTextLines.push(`Date & Time: ${safeDate} at ${safeTime}${endTimeDisplay ? ` — Ends: ${endTimeDisplay}` : ''}`);
-        if (hasValue(location?.address)) adminTextLines.push(`Location: ${location?.address}`);
+        if (hasValue(safeDate) || hasValue(safeTime)) adminTextLines.push(`Date & Time: ${safeDate} at ${safeTime}`);
+        if (hasValue(location?.address)) {
+          adminTextLines.push(`Location: ${location.address}`);
+          if (mapsHrefRaw) adminTextLines.push(`Map: ${mapsHrefRaw}`);
+        }
         adminTextLines.push('', 'Client:');
         if (hasValue(userInfo.name)) adminTextLines.push(`Name: ${userInfo.name}`);
         if (hasValue(rawEmail)) adminTextLines.push(`Email: ${rawEmail}`);
@@ -424,6 +445,71 @@ export default async function handler(req, res) {
         adminTextLines.push('---', `Received: ${receivedAt}`, `Client IP: ${clientId}`, `User-Agent: ${userAgent}`, `Referrer: ${referer}`);
         // filter
         const adminText = adminTextLines.filter(Boolean).join('\n');
+
+        const locationLinkMarkup = mapsHrefRaw
+          ? `<a href="${escapeHtml(mapsHrefRaw)}" style="color:${brand.color};text-decoration:none;">${escapeHtml(location.address)}</a>`
+          : escapeHtml(location?.address || "");
+        const adminSubtotalRow = typeof computedBaseSum === 'number'
+          ? `<tr><td style="padding:6px 0;"><strong>Subtotal:</strong> ${escapeHtml(formattedBaseSum)}</td></tr>`
+          : '';
+        const adminAddOnsRows = selectedAddOns.length
+          ? [
+              `<tr><td style="padding:6px 0;"><strong>Add-ons:</strong></td></tr>`,
+              ...selectedAddOns.map((addon) => {
+                const priceSuffix =
+                  typeof addon.price === 'number'
+                    ? ` — ${escapeHtml(formatMoney(addon.price))}`
+                    : '';
+                return `<tr><td style="padding:6px 0;padding-left:16px;">${escapeHtml(addon.name)}${priceSuffix}</td></tr>`;
+              }),
+            ].join('\n')
+          : '';
+        const adminTravelRow = showTravelLine
+          ? `<tr><td style="padding:6px 0;"><strong>Travel expense:</strong> ${escapeHtml(formattedTravel)}</td></tr>`
+          : '';
+        const adminDiscountRow = showDiscountLine
+          ? `<tr><td style="padding:6px 0;"><strong>Discount:</strong> ${escapeHtml(formattedDiscount)}</td></tr>`
+          : '';
+        let adminTotalRow = '';
+        if (formattedTotalPrice !== 'Not specified') {
+          const totalValueHtml = `<strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong>`;
+          adminTotalRow = showDiscountLine && typeof computedBaseSum === 'number'
+            ? `<tr><td style="padding:6px 0;"><strong>Total:</strong> <span style="text-decoration:line-through;color:#9ca3af;margin-right:8px;">${escapeHtml(formattedBaseSum)}</span> ${totalValueHtml}</td></tr>`
+            : `<tr><td style="padding:6px 0;"><strong>Total:</strong> ${totalValueHtml}</td></tr>`;
+        }
+        const adminVehiclesHtmlBlock = vehicles
+          ? [`<tr><td style="padding:6px 0;"><strong>Vehicles:</strong></td></tr>`,
+              ...vehicles.map((v, i) => {
+                const lineTotal =
+                  typeof v.lineTotal === 'number'
+                    ? formatMoney(v.lineTotal)
+                    : Array.isArray(perCarTotals) && typeof perCarTotals[i] === 'number'
+                    ? formatMoney(perCarTotals[i])
+                    : 'N/A';
+                return `<tr><td style="padding:6px 0;padding-left:16px;">${escapeHtml(v.name || 'N/A')} (${escapeHtml(v.type || '')}) — ${escapeHtml(lineTotal)}</td></tr>`;
+              }),
+            ].join('\n')
+          : `<tr><td style="padding:6px 0;"><strong>Vehicle:</strong> ${vehicleDisplay}</td></tr>`;
+        const adminDateTimeRow =
+          hasValue(safeDate) || hasValue(safeTime)
+            ? `<tr><td style="padding:6px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}</td></tr>`
+            : '';
+        const adminLocationRow = hasValue(location?.address)
+          ? `<tr><td style="padding:6px 0;"><strong>Location:</strong> ${locationLinkMarkup}</td></tr>`
+          : '';
+        const adminBookingSummaryHtmlRows = [
+          `<tr><td style="padding:6px 0;"><strong>Service:</strong> ${safeService.title}</td></tr>`,
+          adminSubtotalRow,
+          adminAddOnsRows,
+          adminTravelRow,
+          adminDiscountRow,
+          adminTotalRow,
+          adminVehiclesHtmlBlock,
+          adminDateTimeRow,
+          adminLocationRow,
+        ]
+          .filter(Boolean)
+          .join('\n');
 
         const adminHtml = `
 <!doctype html>
@@ -465,15 +551,7 @@ export default async function handler(req, res) {
             <tr>
               <td style="padding:8px 24px 0 24px;">
                 <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:#0f172a;">
-                  <tr><td style="padding:6px 0;"><strong>Service:</strong> ${safeService.title}</td></tr>
-                  ${typeof computedBaseSum === 'number' ? `<tr><td style="padding:6px 0;"><strong>Original Total:</strong> ${escapeHtml(formattedBaseSum)}</td></tr>
-                  <tr><td style="padding:6px 0;"><strong>Travel expense:</strong> ${escapeHtml(formattedTravel)}</td></tr>
-                  <tr><td style="padding:6px 0;"><strong>Discount:</strong> ${escapeHtml(formattedDiscount)}</td></tr>
-                  <tr><td style="padding:6px 0;"><strong>Final Price:</strong> <span style="text-decoration:line-through;color:#9ca3af;margin-right:8px;">${escapeHtml(formattedBaseSum)}</span> <strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong></td></tr>` : `<tr><td style="padding:6px 0;"><strong>Final Price:</strong> <strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong></td></tr>`}
-                  ${(vehicles) ? `<tr><td style="padding:6px 0;"><strong>Vehicles:</strong></td></tr>` : `<tr><td style="padding:6px 0;"><strong>Vehicle:</strong> ${vehicleDisplay}</td></tr>`}
-                  ${vehicles ? vehicles.map(v=> `<tr><td style="padding:4px 0;padding-left:12px;">${escapeHtml(v.name||'N/A')} (${escapeHtml(v.type||'')}) — ${escapeHtml(typeof v.lineTotal==='number' ? formatMoney(v.lineTotal) : 'N/A')}</td></tr>`).join('') : ''}
-                  ${(hasValue(safeDate) || hasValue(safeTime)) ? `<tr><td style="padding:6px 0;"><strong>Date &amp; Time:</strong> ${safeDate} at ${safeTime}${safeEndTime ? ` — Ends: ${safeEndTime}` : ''}</td></tr>` : ''}
-                  ${hasValue(location?.address) ? `<tr><td style="padding:6px 0;"><strong>Location:</strong> ${escapeHtml(location.address)}</td></tr>` : ''}
+                  ${adminBookingSummaryHtmlRows}
                 </table>
               </td>
             </tr>

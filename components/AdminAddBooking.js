@@ -30,6 +30,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
     location: "",
     discount: 0,
     travelExpense: 0,
+    tip: 0,
   });
 
   const [locationSuggestions, setLocationSuggestions] = useState([]);
@@ -102,7 +103,11 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
           calculatePrice(car.service || "", car.addOns || [], car.type, Boolean(car.revivePlan))
         );
         const base = perCarTotals.reduce((sum, value) => sum + value, 0);
-        updated.amount = base + Number(updated.travelExpense || 0) - Number(updated.discount || 0);
+        updated.amount =
+          base +
+          Number(updated.travelExpense || 0) -
+          Number(updated.discount || 0) +
+          Number(updated.tip || 0);
       }
       return updated;
     });
@@ -134,9 +139,10 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
         amount:
           Array.isArray(editBooking.cars) && editBooking.cars.length
             ? (Array.isArray(editBooking.perCarTotals)
-                ? editBooking.perCarTotals.reduce((sum, value) => sum + value, 0)
-                : 0) + Number(editBooking.travelExpense || 0) - Number(editBooking.discount || 0)
+              ? editBooking.perCarTotals.reduce((sum, value) => sum + value, 0)
+              : 0) + Number(editBooking.travelExpense || 0) - Number(editBooking.discount || 0) + Number(editBooking.tip || 0)
             : editBooking.amount || 0,
+        tip: Number(editBooking.tip || 0),
       });
       setOverrideAmount(false);
     } else {
@@ -160,6 +166,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
         location: "",
         discount: 0,
         travelExpense: 0,
+        tip: 0,
       });
       setOverrideAmount(false);
     }
@@ -242,9 +249,10 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
     const baseSum = perCarTotals.reduce((sum, value) => sum + value, 0);
     const travel = Number(newBooking.travelExpense || 0);
     const discount = Number(newBooking.discount || 0);
+    const tip = Number(newBooking.tip || 0);
     const computedAmount = overrideAmount
       ? Number(newBooking.amount || 0)
-      : baseSum + travel - discount;
+      : baseSum + travel - discount + tip;
 
     const payload = {
       ...newBooking,
@@ -259,6 +267,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
       baseSum,
       discount,
       travelExpense: travel,
+      tip,
       perCarTotals,
     };
 
@@ -308,6 +317,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
           perCarTotals,
           baseSum,
           travelExpense: travel,
+          tip,
           discount,
           dateTime: {
             date: newBooking.date || "N/A",
@@ -363,6 +373,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
         location: "",
         discount: 0,
         travelExpense: 0,
+        tip: 0,
       });
     } catch (err) {
       setSubmitStatus("error");
@@ -386,7 +397,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
   const computedDiscount = Number(newBooking.discount || 0);
   const computedEstimate = overrideAmount
     ? Number(newBooking.amount || 0)
-    : computedBaseSum + computedTravel - computedDiscount;
+    : computedBaseSum + computedTravel - computedDiscount + Number(newBooking.tip || 0);
 
   return (
     <div className="fixed inset-0 z-[120] overflow-y-auto bg-white">
@@ -576,7 +587,10 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                                       );
                                       const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                                       copy.amount =
-                                        base + Number(copy.travelExpense || 0) - Number(copy.discount || 0);
+                                        base +
+                                        Number(copy.travelExpense || 0) -
+                                        Number(copy.discount || 0) +
+                                        Number(copy.tip || 0);
                                     }
                                     return copy;
                                   })
@@ -624,7 +638,10 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                                   );
                                   const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                                   copy.amount =
-                                    base + Number(copy.travelExpense || 0) - Number(copy.discount || 0);
+                                    base +
+                                    Number(copy.travelExpense || 0) -
+                                    Number(copy.discount || 0) +
+                                    Number(copy.tip || 0);
                                 }
                                 return copy;
                               })
@@ -659,7 +676,10 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                                   );
                                   const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                                   copy.amount =
-                                    base + Number(copy.travelExpense || 0) - Number(copy.discount || 0);
+                                    base +
+                                    Number(copy.travelExpense || 0) -
+                                    Number(copy.discount || 0) +
+                                    Number(copy.tip || 0);
                                 }
                                 return copy;
                               })
@@ -709,7 +729,10 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                                         );
                                         const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                                         copy.amount =
-                                          base + Number(copy.travelExpense || 0) - Number(copy.discount || 0);
+                                          base +
+                                          Number(copy.travelExpense || 0) -
+                                          Number(copy.discount || 0) +
+                                          Number(copy.tip || 0);
                                       }
                                       return copy;
                                     })
@@ -742,7 +765,10 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                                           );
                                           const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                                           copy.amount =
-                                            base + Number(copy.travelExpense || 0) - Number(copy.discount || 0);
+                                            base +
+                                            Number(copy.travelExpense || 0) -
+                                            Number(copy.discount || 0) +
+                                            Number(copy.tip || 0);
                                         }
                                         return copy;
                                       })
@@ -801,7 +827,10 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                                           );
                                           const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                                           copy.amount =
-                                            base + Number(copy.travelExpense || 0) - Number(copy.discount || 0);
+                                            base +
+                                            Number(copy.travelExpense || 0) -
+                                            Number(copy.discount || 0) +
+                                            Number(copy.tip || 0);
                                         }
                                         return copy;
                                       })
@@ -850,7 +879,10 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                           );
                           const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                           copy.amount =
-                            base + Number(copy.travelExpense || 0) - Number(copy.discount || 0);
+                            base +
+                            Number(copy.travelExpense || 0) -
+                            Number(copy.discount || 0) +
+                            Number(copy.tip || 0);
                         }
                         return copy;
                       })
@@ -905,9 +937,40 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                   readOnly={!overrideAmount}
                   min={0}
                 />
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-wide text-slate-600">Tip ($)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={newBooking.tip}
+                    onChange={(e) =>
+                      setNewBooking((prev) => {
+                        const updated = { ...prev, tip: Number(e.target.value || 0) };
+                        if (!overrideAmount) {
+                          const perCarTotals = (updated.cars || []).map((car) =>
+                            calculatePrice(
+                              car.service || "",
+                              car.addOns || [],
+                              car.type,
+                              Boolean(car.revivePlan)
+                            )
+                          );
+                          const base = perCarTotals.reduce((sum, value) => sum + value, 0);
+                          updated.amount =
+                            base +
+                            Number(updated.travelExpense || 0) -
+                            Number(updated.discount || 0) +
+                            Number(updated.tip || 0);
+                        }
+                        return updated;
+                      })
+                    }
+                    className={baseFieldClass}
+                  />
+                </div>
                 {!overrideAmount && (
                   <p className="text-xs text-slate-500">
-                    Amount auto-calculates from selected services, vehicle types, travel, and discounts.
+                    Amount auto-calculates from selected services, vehicle types, travel, discounts, and tips.
                   </p>
                 )}
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -931,7 +994,10 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                             );
                             const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                             updated.amount =
-                              base + Number(updated.travelExpense || 0) - Number(updated.discount || 0);
+                              base +
+                              Number(updated.travelExpense || 0) -
+                              Number(updated.discount || 0) +
+                              Number(updated.tip || 0);
                           }
                           return updated;
                         })
@@ -959,7 +1025,10 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
                             );
                             const base = perCarTotals.reduce((sum, value) => sum + value, 0);
                             updated.amount =
-                              base + Number(updated.travelExpense || 0) - Number(updated.discount || 0);
+                              base +
+                              Number(updated.travelExpense || 0) -
+                              Number(updated.discount || 0) +
+                              Number(updated.tip || 0);
                           }
                           return updated;
                         })

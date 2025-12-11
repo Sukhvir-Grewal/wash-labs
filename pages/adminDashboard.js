@@ -52,6 +52,8 @@ export default function AdminDashboard() {
   const [editingBooking, setEditingBooking] = useState(null);
   const [detailBooking, setDetailBooking] = useState(null);
   const [confirmDeleteBooking, setConfirmDeleteBooking] = useState(false);
+  const [sendingInvoice, setSendingInvoice] = useState(false);
+  const [invoiceFeedback, setInvoiceFeedback] = useState(null);
 
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedBookingId, setSelectedBookingId] = useState(null);
@@ -488,6 +490,11 @@ export default function AdminDashboard() {
     setSelectedExpenseId(null);
   }, [expenseFilter, priceFilter, dateFilter, dateOrder]);
 
+  useEffect(() => {
+    setInvoiceFeedback(null);
+    setSendingInvoice(false);
+  }, [detailBooking]);
+
   const handleAddFromChild = useCallback(async () => {
     await bootstrap();
     setBookingModalOpen(false);
@@ -503,6 +510,35 @@ export default function AdminDashboard() {
     setDetailBooking(booking);
     setConfirmDeleteBooking(false);
   };
+
+  const handleSendInvoice = useCallback(async (booking) => {
+    if (!booking) return;
+    const bookingId = booking.id || booking._id;
+    if (!bookingId) {
+      setInvoiceFeedback({ type: "error", message: "Booking ID is missing." });
+      return;
+    }
+    setSendingInvoice(true);
+    setInvoiceFeedback(null);
+    try {
+      const resp = await fetch("/api/send-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || data.success === false) {
+        throw new Error(data.message || "Failed to send invoice");
+      }
+      setInvoiceFeedback({ type: "success", message: data.message || "Invoice sent." });
+    } catch (error) {
+      setInvoiceFeedback({
+        type: "error",
+        message: error.message || "Unable to send invoice right now.",
+      });
+    }
+    setSendingInvoice(false);
+  }, []);
 
   const handleExpenseDeleteRequest = (expense) => {
     setExpenseToDelete(expense);
@@ -632,7 +668,7 @@ export default function AdminDashboard() {
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
-                              handleEditBooking(booking);
+                              handleShowDetail(booking);
                             }}
                             className="truncate text-left text-sm font-semibold text-slate-900 underline-offset-4 hover:underline"
                           >
@@ -1181,6 +1217,17 @@ export default function AdminDashboard() {
                 Close
               </button>
             </div>
+            {invoiceFeedback && (
+              <div
+                className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
+                  invoiceFeedback.type === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-rose-200 bg-rose-50 text-rose-700"
+                }`}
+              >
+                {invoiceFeedback.message}
+              </div>
+            )}
             <div className="mt-6 grid gap-3 text-sm text-slate-600">
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Client</span>
@@ -1237,6 +1284,30 @@ export default function AdminDashboard() {
             <div className="mt-8 flex items-center justify-end gap-3">
               {!confirmDeleteBooking ? (
                 <>
+                  <button
+                    type="button"
+                    onClick={() => handleSendInvoice(detailBooking)}
+                    disabled={sendingInvoice}
+                    className="rounded-full bg-gradient-to-r from-blue-500 to-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_32px_-22px_rgba(59,130,246,0.8)] transition hover:shadow-[0_18px_36px_-18px_rgba(14,165,233,0.85)] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {sendingInvoice
+                      ? "Sending..."
+                      : invoiceFeedback?.type === "success"
+                      ? "Resend invoice"
+                      : "Send invoice"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!detailBooking) return;
+                      handleEditBooking(detailBooking);
+                      setDetailBooking(null);
+                      setConfirmDeleteBooking(false);
+                    }}
+                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                  >
+                    Edit booking
+                  </button>
                   <button
                     type="button"
                     onClick={() => setConfirmDeleteBooking(true)}
