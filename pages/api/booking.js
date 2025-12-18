@@ -55,6 +55,11 @@ const formatDisplayTime = (time24h) => {
   return `${displayHour}:${mStr} ${period}`;
 };
 
+const stripEndsSuffix = (label) => {
+  if (!label) return null;
+  return String(label).replace(/\s*[\-–—]\s*Ends:?[^]*$/i, "").trim() || null;
+};
+
 export default async function handler(req, res) {
     if (req.method !== "POST") {
         return res.status(405).json({ message: "Method not allowed" });
@@ -109,9 +114,10 @@ export default async function handler(req, res) {
             ? escapeHtml(String(vehicle.year))
             : "";
     const vehicleDisplay = [safeVehicleYear || null, safeVehicleName]
-        .filter(Boolean)
-        .join(" ");
-    const safeDate = escapeHtml(dateTime?.date || "N/A");
+      .filter(Boolean)
+      .join(" ");
+    const plainDate = hasValue(dateTime?.date) ? String(dateTime.date).trim() : "N/A";
+    const safeDate = escapeHtml(plainDate);
     const timeCandidates = [dateTime?.timeValue, dateTime?.time];
     let normalizedTime24 = null;
     for (const candidate of timeCandidates) {
@@ -141,8 +147,10 @@ export default async function handler(req, res) {
     }
     const canonicalStartUtc = normalizedTime24 ? zonedDateToUtc(dateTime.date, normalizedTime24, SERVICE_TIME_ZONE) : null;
     const normalizedDisplay = normalizedTime24 ? formatDisplayTime(normalizedTime24) : null;
-    const displayTime = normalizedDisplay || dateTime?.time;
-    const safeTime = escapeHtml(displayTime || "N/A");
+    const cleanedTimeLabel = stripEndsSuffix(dateTime?.time);
+    const displayTime = normalizedDisplay || cleanedTimeLabel;
+    const plainTime = displayTime || "N/A";
+    const safeTime = escapeHtml(plainTime);
     // compute end time string if possible (use service.durationMinutes when available, else try DB)
     let endTimeDisplay = null;
     try {
@@ -264,8 +272,8 @@ export default async function handler(req, res) {
       carSelectedAddOns;
 
     const hasNonZero = (val) => typeof val === "number" && Math.abs(val) >= 0.01;
-    const showTravelLine = hasNonZero(travelExpense);
-    const showDiscountLine = hasNonZero(discount);
+    const showTravelLine = hasNonZero(travelExpense) && travelExpense > 0;
+    const showDiscountLine = hasNonZero(discount) && discount > 0;
 
   // Server-side availability check (avoid race conditions)
   // Skip availability check for admin bookings to allow overrides
@@ -432,7 +440,7 @@ export default async function handler(req, res) {
           adminTextLines.push(`Vehicle: ${vehicleDisplay}`);
         }
         // Date/time and location
-        if (hasValue(safeDate) || hasValue(safeTime)) adminTextLines.push(`Date & Time: ${safeDate} at ${safeTime}`);
+        if (hasValue(plainDate) || hasValue(plainTime)) adminTextLines.push(`Date & Time: ${plainDate} at ${plainTime}`);
         if (hasValue(location?.address)) {
           adminTextLines.push(`Location: ${location.address}`);
           if (mapsHrefRaw) adminTextLines.push(`Map: ${mapsHrefRaw}`);
@@ -631,7 +639,7 @@ export default async function handler(req, res) {
           } else {
             userTextLines.push(`Vehicle: ${vehicleDisplay}`);
           }
-          if (hasValue(safeDate) || hasValue(safeTime)) userTextLines.push(`Date & Time: ${safeDate} at ${safeTime}`);
+          if (hasValue(plainDate) || hasValue(plainTime)) userTextLines.push(`Date & Time: ${plainDate} at ${plainTime}`);
           if (hasValue(location?.address)) userTextLines.push(`Location: ${location.address}`);
           userTextLines.push('', 'Need anything else?', `Phone: ${brand.phone}`, `Email: ${brand.email}`, `Website: ${baseUrl}`, '', '— Wash Labs, Halifax NS');
           const userText = userTextLines.filter(Boolean).join('\n');
@@ -911,7 +919,7 @@ export default async function handler(req, res) {
             calendarDescription += `\nPhone: ${userInfo.phone || ''}`;
             calendarDescription += `\nEmail: ${userInfo.email || ''}`;
             if (userInfo.message) calendarDescription += `\nNotes: ${userInfo.message}`;
-            calendarDescription += `\nFinal Price: ${formattedTotalPrice}`;
+            calendarDescription += `\nTotal: ${formattedTotalPrice}`;
 
             await addBookingToCalendar({
               summary: `${service.title} for ${userInfo.name}`,
