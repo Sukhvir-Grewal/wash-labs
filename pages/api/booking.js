@@ -82,6 +82,7 @@ export default async function handler(req, res) {
   const baseSumRaw = typeof req.body.baseSum === 'number' ? req.body.baseSum : null;
   const travelExpenseRaw = Number(req.body.travelExpense || 0);
   const discountRaw = Number(req.body.discount || 0);
+  const tipRaw = Number(req.body.tip || 0);
 
     if (!service || !vehicle || !dateTime || !userInfo) {
         return res.status(400).json({ message: "Missing booking details" });
@@ -188,16 +189,18 @@ export default async function handler(req, res) {
     const computedBaseSum = baseSumRaw ?? (Array.isArray(perCarTotals) ? perCarTotals.reduce((s,v)=>s+Number(v||0),0) : (typeof service.basePrice === 'number' ? service.basePrice : null));
     const travelExpense = Number(travelExpenseRaw || 0);
     const discount = Number(discountRaw || 0);
+    const tip = Number(tipRaw || 0);
     // If service.totalPrice is provided (client may set it), prefer that as final amount; otherwise compute
     const finalAmount = typeof service.totalPrice === 'number'
       ? service.totalPrice
-      : (typeof computedBaseSum === 'number' ? Math.max(0, computedBaseSum + travelExpense - discount) : null);
+      : (typeof computedBaseSum === 'number' ? Math.max(0, computedBaseSum + travelExpense - discount + tip) : null);
 
     const formatMoney = (n) => (typeof n === 'number' ? `$${n.toFixed(2)}` : 'Not specified');
     const formattedTotalPrice = formatMoney(finalAmount);
     const formattedBaseSum = formatMoney(computedBaseSum);
     const formattedTravel = formatMoney(travelExpense);
     const formattedDiscount = formatMoney(discount);
+    const formattedTip = formatMoney(tip);
 
     const parseNumericAmount = (value) => {
       if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -274,6 +277,7 @@ export default async function handler(req, res) {
     const hasNonZero = (val) => typeof val === "number" && Math.abs(val) >= 0.01;
     const showTravelLine = hasNonZero(travelExpense) && travelExpense > 0;
     const showDiscountLine = hasNonZero(discount) && discount > 0;
+    const showTipLine = hasNonZero(tip) && tip > 0;
 
   // Server-side availability check (avoid race conditions)
   // Skip availability check for admin bookings to allow overrides
@@ -423,6 +427,9 @@ export default async function handler(req, res) {
         if (showDiscountLine) {
           adminTextLines.push(`Discount: ${formattedDiscount}`);
         }
+        if (showTipLine) {
+          adminTextLines.push(`Tip: ${formattedTip}`);
+        }
         if (formattedTotalPrice !== 'Not specified') {
           adminTextLines.push(`Total: ${formattedTotalPrice}`);
         }
@@ -478,6 +485,9 @@ export default async function handler(req, res) {
         const adminDiscountRow = showDiscountLine
           ? `<tr><td style="padding:6px 0;"><strong>Discount:</strong> ${escapeHtml(formattedDiscount)}</td></tr>`
           : '';
+        const adminTipRow = showTipLine
+          ? `<tr><td style="padding:6px 0;"><strong>Tip:</strong> ${escapeHtml(formattedTip)}</td></tr>`
+          : '';
         let adminTotalRow = '';
         if (formattedTotalPrice !== 'Not specified') {
           const totalValueHtml = `<strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong>`;
@@ -511,6 +521,7 @@ export default async function handler(req, res) {
           adminAddOnsRows,
           adminTravelRow,
           adminDiscountRow,
+          adminTipRow,
           adminTotalRow,
           adminVehiclesHtmlBlock,
           adminDateTimeRow,
@@ -626,6 +637,9 @@ export default async function handler(req, res) {
           if (showDiscountLine) {
             userTextLines.push(`Discount: ${formattedDiscount}`);
           }
+          if (showTipLine) {
+            userTextLines.push(`Tip: ${formattedTip}`);
+          }
           if (formattedTotalPrice !== 'Not specified') {
             userTextLines.push(`Total: ${formattedTotalPrice}`);
           }
@@ -666,6 +680,9 @@ export default async function handler(req, res) {
           const discountHtmlRow = showDiscountLine
             ? `<tr><td style="padding:4px 0;"><strong>Discount:</strong> ${escapeHtml(formattedDiscount)}</td></tr>`
             : '';
+          const tipHtmlRow = showTipLine
+            ? `<tr><td style="padding:4px 0;"><strong>Tip:</strong> ${escapeHtml(formattedTip)}</td></tr>`
+            : '';
           let totalHtmlRow = '';
           if (formattedTotalPrice !== 'Not specified') {
             const totalValueHtml = `<strong style="color:${brand.color};">${escapeHtml(formattedTotalPrice)}</strong>`;
@@ -699,6 +716,7 @@ export default async function handler(req, res) {
             addOnsHtmlRows,
             travelHtmlRow,
             discountHtmlRow,
+            tipHtmlRow,
             totalHtmlRow,
             vehiclesHtmlBlock,
             dateTimeHtmlRow,
@@ -816,6 +834,7 @@ export default async function handler(req, res) {
           baseSum: typeof computedBaseSum === 'number' ? computedBaseSum : undefined,
           travelExpense: travelExpense || 0,
           discount: discount || 0,
+          tip: tip || 0,
           vehicles: vehicles || (vehicle ? [{ name: vehicleDisplay, type: vehicle?.type || '', lineTotal: typeof finalAmount === 'number' ? finalAmount : undefined }] : []),
           perCarTotals: perCarTotals || undefined,
           status: reqStatus === 'complete' ? 'complete' : 'pending',
@@ -919,6 +938,9 @@ export default async function handler(req, res) {
             calendarDescription += `\nPhone: ${userInfo.phone || ''}`;
             calendarDescription += `\nEmail: ${userInfo.email || ''}`;
             if (userInfo.message) calendarDescription += `\nNotes: ${userInfo.message}`;
+            if (showTravelLine) calendarDescription += `\nTravel: ${formattedTravel}`;
+            if (showDiscountLine) calendarDescription += `\nDiscount: ${formattedDiscount}`;
+            if (showTipLine) calendarDescription += `\nTip: ${formattedTip}`;
             calendarDescription += `\nTotal: ${formattedTotalPrice}`;
 
             await addBookingToCalendar({
