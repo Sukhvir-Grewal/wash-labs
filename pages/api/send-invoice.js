@@ -12,10 +12,68 @@ export const currencyFormatter = new Intl.NumberFormat("en-CA", {
 });
 
 const MIN_INVOICE_NUMBER = 120261;
+let interFontWarningLogged = false;
 
 export const formatCurrency = (value) => {
   const numeric = typeof value === "number" ? value : Number(value);
   return currencyFormatter.format(Number.isFinite(numeric) ? numeric : 0);
+};
+
+const resolveExistingFontPath = (root, candidates) => {
+  for (const candidate of candidates) {
+    const candidatePath = path.join(root, candidate);
+    if (fs.existsSync(candidatePath)) return candidatePath;
+  }
+  return null;
+};
+
+const registerInterFonts = (doc) => {
+  const searchRoots = [
+    path.join(process.cwd(), "public", "fonts"),
+    path.join(process.cwd(), "public"),
+    path.join(process.cwd(), "fonts"),
+  ];
+
+  for (const root of searchRoots) {
+    const regularPath = resolveExistingFontPath(root, [
+      "Inter-Regular.ttf",
+      "Inter-Regular.otf",
+      "Inter-Regular-400.ttf",
+      "Inter-Regular-400.otf",
+    ]);
+    const boldPath = resolveExistingFontPath(root, [
+      "Inter-Bold.ttf",
+      "Inter-Bold.otf",
+      "Inter-Bold-700.ttf",
+      "Inter-Bold-700.otf",
+      "Inter-700.ttf",
+      "Inter-700.otf",
+    ]);
+    if (regularPath && boldPath) {
+      try {
+        doc.registerFont("Inter-Regular", regularPath);
+        doc.registerFont("Inter-Bold", boldPath);
+        return { regular: "Inter-Regular", bold: "Inter-Bold" };
+      } catch (error) {
+        if (!interFontWarningLogged) {
+          console.warn(
+            "[send-invoice] Unable to register Inter font files. Falling back to Helvetica.",
+            error,
+          );
+          interFontWarningLogged = true;
+        }
+      }
+    }
+  }
+
+  if (!interFontWarningLogged) {
+    console.warn(
+      "[send-invoice] Inter font files not found in public/fonts. Falling back to Helvetica.",
+    );
+    interFontWarningLogged = true;
+  }
+
+  return { regular: "Helvetica", bold: "Helvetica-Bold" };
 };
 
 const normalizeInvoiceNumberValue = (value) => {
@@ -102,6 +160,9 @@ const ensureInvoiceNumber = async (bookingId, existingValue) => {
 export const buildInvoicePdf = (booking, brand, meta) =>
   new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: 48 });
+    const fonts = registerInterFonts(doc);
+    const pickFont = (weight) =>
+      weight === "bold" ? fonts.bold : fonts.regular;
     const buffers = [];
 
     doc.on("data", (chunk) => buffers.push(chunk));
@@ -304,11 +365,11 @@ export const buildInvoicePdf = (booking, brand, meta) =>
 
     doc
       .fillColor(neutral)
-      .font("Helvetica-Bold")
+      .font(fonts.bold)
       .fontSize(24)
       .text("INVOICE", margin, margin);
     doc
-      .font("Helvetica")
+      .font(pickFont())
       .fontSize(11)
       .fillColor(subtext)
       .text(`#${meta.invoiceNumber}`, margin, doc.y + 6);
@@ -325,12 +386,12 @@ export const buildInvoicePdf = (booking, brand, meta) =>
         title === "Issued" || title.startsWith("Billed") || title === "From";
       doc
         .fillColor(neutral)
-        .font("Helvetica-Bold")
+        .font(pickFont("bold"))
         .fontSize(10)
         .text(title, x, columnTop);
       doc
         .fillColor(subtext)
-        .font("Helvetica")
+        .font(pickFont())
         .fontSize(10)
         .text(sanitizedLines.join("\n"), x, columnTop + 14, {
           width,
@@ -402,7 +463,7 @@ export const buildInvoicePdf = (booking, brand, meta) =>
     const totalX = pageWidth - margin - 80;
     const rowHeight = 24;
 
-    doc.fillColor(neutral).font("Helvetica-Bold").fontSize(9);
+    doc.fillColor(neutral).font(pickFont("bold")).fontSize(9);
     doc.text("Service", descX, tableTop, { width: qtyX - descX - 8 });
     doc.text("Qty", qtyX, tableTop, { width: 50, align: "right" });
     doc.text("Rate", rateX, tableTop, { width: 80, align: "right" });
@@ -427,7 +488,7 @@ export const buildInvoicePdf = (booking, brand, meta) =>
       if (item.emphasis === "service") {
         doc
           .fillColor(neutral)
-          .font("Helvetica-Bold")
+          .font(pickFont("bold"))
           .fontSize(10)
           .text(item.description, descX + 4, rowY, {
             width: descriptionWidth,
@@ -436,7 +497,7 @@ export const buildInvoicePdf = (booking, brand, meta) =>
         if (item.secondaryDescription) {
           doc
             .fillColor(subtext)
-            .font("Helvetica")
+            .font(pickFont())
             .fontSize(10)
             .text(` ${item.secondaryDescription}`, {
               width: descriptionWidth,
@@ -453,14 +514,14 @@ export const buildInvoicePdf = (booking, brand, meta) =>
 
         doc
           .fillColor(neutral)
-          .font("Helvetica")
+          .font(pickFont())
           .fontSize(10)
           .text(addOnMain, descX + 4, rowY, {
             width: descriptionWidth,
             continued: Boolean(addOnTag),
           });
         if (addOnTag) {
-          doc.fillColor(subtext).font("Helvetica").fontSize(10).text(addOnTag, {
+          doc.fillColor(subtext).font(pickFont()).fontSize(10).text(addOnTag, {
             width: descriptionWidth,
           });
         }
@@ -471,7 +532,7 @@ export const buildInvoicePdf = (booking, brand, meta) =>
       });
       doc
         .fillColor(neutral)
-        .font("Helvetica")
+        .font(pickFont())
         .fontSize(10)
         .text(formatAmount(item.rate, item.rateLabel), rateX, rowY, {
           width: 80,
@@ -479,7 +540,7 @@ export const buildInvoicePdf = (booking, brand, meta) =>
         });
       doc
         .fillColor(subtext)
-        .font("Helvetica")
+        .font(pickFont())
         .fontSize(10)
         .text(formatAmount(item.total, item.totalLabel), totalX, rowY, {
           width: 80,
@@ -528,14 +589,14 @@ export const buildInvoicePdf = (booking, brand, meta) =>
       }
 
       const valueText = formatAmount(row.value);
-      doc.font(row.bold ? "Helvetica-Bold" : "Helvetica");
+      doc.font(pickFont(row.bold ? "bold" : undefined));
       doc.fillColor(neutral).text(row.label, summaryLeft, summaryY, {
         width: summaryValueX - summaryLeft - 4,
         align: "left",
       });
       doc
         .fillColor(row.bold ? neutral : subtext)
-        .font(row.bold ? "Helvetica-Bold" : "Helvetica")
+        .font(pickFont(row.bold ? "bold" : undefined))
         .text(valueText, summaryValueX, summaryY, {
           width: summaryRight - summaryValueX,
           align: "right",
@@ -562,7 +623,7 @@ export const buildInvoicePdf = (booking, brand, meta) =>
       .stroke();
     doc
       .fillColor(subtext)
-      .font("Helvetica")
+      .font(pickFont())
       .fontSize(10)
       .text("Thank you for your business!", margin, footerTop + 12, {
         width: usableWidth,
