@@ -10,7 +10,7 @@ const VehicleSchema = new Schema(
     addOns: { type: [Schema.Types.Mixed], default: undefined },
     revivePlan: { type: Boolean },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const BookingSchema = new Schema(
@@ -25,6 +25,7 @@ const BookingSchema = new Schema(
     timeZone: { type: String, trim: true },
     amount: { type: Number },
     baseSum: { type: Number },
+    invoiceNumber: { type: Number },
     travelExpense: { type: Number },
     discount: { type: Number },
     vehicles: { type: [VehicleSchema], default: undefined },
@@ -41,10 +42,11 @@ const BookingSchema = new Schema(
   {
     collection: "bookings",
     minimize: false,
-  }
+  },
 );
 
-const BookingModel = mongoose.models.Booking || mongoose.model("Booking", BookingSchema);
+const BookingModel =
+  mongoose.models.Booking || mongoose.model("Booking", BookingSchema);
 
 export default BookingModel;
 export { BookingSchema };

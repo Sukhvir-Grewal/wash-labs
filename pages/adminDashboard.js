@@ -54,6 +54,9 @@ export default function AdminDashboard() {
   const [confirmDeleteBooking, setConfirmDeleteBooking] = useState(false);
   const [sendingInvoice, setSendingInvoice] = useState(false);
   const [invoiceFeedback, setInvoiceFeedback] = useState(null);
+  const [invoiceTypeModalOpen, setInvoiceTypeModalOpen] = useState(false);
+  const [invoiceModalBooking, setInvoiceModalBooking] = useState(null);
+  const [invoiceModalError, setInvoiceModalError] = useState("");
 
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedBookingId, setSelectedBookingId] = useState(null);
@@ -493,6 +496,11 @@ export default function AdminDashboard() {
   useEffect(() => {
     setInvoiceFeedback(null);
     setSendingInvoice(false);
+    setInvoiceModalError("");
+    if (!detailBooking) {
+      setInvoiceTypeModalOpen(false);
+      setInvoiceModalBooking(null);
+    }
   }, [detailBooking]);
 
   const handleAddFromChild = useCallback(async () => {
@@ -511,34 +519,66 @@ export default function AdminDashboard() {
     setConfirmDeleteBooking(false);
   };
 
-  const handleSendInvoice = useCallback(async (booking) => {
+  const handleSendInvoice = useCallback((booking) => {
     if (!booking) return;
     const bookingId = booking.id || booking._id;
     if (!bookingId) {
       setInvoiceFeedback({ type: "error", message: "Booking ID is missing." });
       return;
     }
-    setSendingInvoice(true);
-    setInvoiceFeedback(null);
-    try {
-      const resp = await fetch("/api/send-invoice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId }),
-      });
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok || data.success === false) {
-        throw new Error(data.message || "Failed to send invoice");
-      }
-      setInvoiceFeedback({ type: "success", message: data.message || "Invoice sent." });
-    } catch (error) {
-      setInvoiceFeedback({
-        type: "error",
-        message: error.message || "Unable to send invoice right now.",
-      });
-    }
     setSendingInvoice(false);
+    setInvoiceFeedback(null);
+    setInvoiceModalError("");
+    setInvoiceModalBooking(booking);
+    setInvoiceTypeModalOpen(true);
   }, []);
+
+  const handleInvoiceTypeSelect = useCallback(
+    async (type) => {
+      if (!invoiceModalBooking) return;
+      const bookingId = invoiceModalBooking.id || invoiceModalBooking._id;
+      if (!bookingId) {
+        const message = "Booking ID is missing.";
+        setInvoiceFeedback({ type: "error", message });
+        setInvoiceModalError(message);
+        return;
+      }
+
+      const normalizedType = type === "paid" ? "paid" : "due";
+      setSendingInvoice(true);
+      setInvoiceFeedback(null);
+      setInvoiceModalError("");
+
+      try {
+        const resp = await fetch("/api/send-invoice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingId, invoiceType: normalizedType }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || data.success === false) {
+          throw new Error(data.message || "Failed to send invoice");
+        }
+        setInvoiceFeedback({ type: "success", message: data.message || "Invoice sent." });
+        setInvoiceTypeModalOpen(false);
+        setInvoiceModalBooking(null);
+      } catch (error) {
+        const message = error.message || "Unable to send invoice right now.";
+        setInvoiceFeedback({ type: "error", message });
+        setInvoiceModalError(message);
+      }
+
+      setSendingInvoice(false);
+    },
+    [invoiceModalBooking]
+  );
+
+  const handleCloseInvoiceModal = useCallback(() => {
+    if (sendingInvoice) return;
+    setInvoiceTypeModalOpen(false);
+    setInvoiceModalBooking(null);
+    setInvoiceModalError("");
+  }, [sendingInvoice]);
 
   const handleExpenseDeleteRequest = (expense) => {
     setExpenseToDelete(expense);
@@ -1155,7 +1195,10 @@ export default function AdminDashboard() {
       />
 
       {expenseDeleteModalOpen && expenseToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm">
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm"
+          style={{ zIndex: 50 }}
+        >
           <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-6 shadow-xl">
             <h3 className="text-lg font-semibold" style={{ color: "#111827" }}>
               Delete expense
@@ -1195,7 +1238,10 @@ export default function AdminDashboard() {
       )}
 
       {detailBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm">
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm"
+          style={{ zIndex: 50 }}
+        >
           <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -1287,11 +1333,13 @@ export default function AdminDashboard() {
                   <button
                     type="button"
                     onClick={() => handleSendInvoice(detailBooking)}
-                    disabled={sendingInvoice}
+                    disabled={sendingInvoice || invoiceTypeModalOpen}
                     className="rounded-full bg-gradient-to-r from-blue-500 to-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_32px_-22px_rgba(59,130,246,0.8)] transition hover:shadow-[0_18px_36px_-18px_rgba(14,165,233,0.85)] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {sendingInvoice
                       ? "Sending..."
+                      : invoiceTypeModalOpen
+                      ? "Choose invoice type"
                       : invoiceFeedback?.type === "success"
                       ? "Resend invoice"
                       : "Send invoice"}
@@ -1345,6 +1393,69 @@ export default function AdminDashboard() {
                 </>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {invoiceTypeModalOpen && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm"
+          style={{ zIndex: 60 }}
+        >
+          <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Invoice Type</h3>
+                <p className="mt-1 text-sm text-slate-600">Choose which version to send.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseInvoiceModal}
+                disabled={sendingInvoice}
+                className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Close
+              </button>
+            </div>
+
+            {invoiceModalError && (
+              <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {invoiceModalError}
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => handleInvoiceTypeSelect("due")}
+                disabled={sendingInvoice}
+                className="grow rounded-full bg-gradient-to-r from-blue-500 to-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_32px_-22px_rgba(59,130,246,0.7)] transition hover:shadow-[0_18px_36px_-18px_rgba(14,165,233,0.8)] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {sendingInvoice ? "Sending..." : "Send Due"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleInvoiceTypeSelect("paid")}
+                disabled={sendingInvoice}
+                className="grow rounded-full bg-gradient-to-r from-emerald-500 to-lime-500 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_32px_-22px_rgba(34,197,94,0.6)] transition hover:shadow-[0_18px_36px_-18px_rgba(101,163,13,0.7)] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {sendingInvoice ? "Sending..." : "Send Paid"}
+              </button>
+            </div>
+
+            {!sendingInvoice && (
+              <button
+                type="button"
+                onClick={handleCloseInvoiceModal}
+                className="mt-4 w-full rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+            )}
+
+            {sendingInvoice && (
+              <p className="mt-4 text-center text-xs text-slate-500">Sending invoice...</p>
+            )}
           </div>
         </div>
       )}
