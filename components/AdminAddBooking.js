@@ -117,32 +117,62 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
     if (!open) return;
 
     if (editBooking) {
+      const fallbackService = editBooking.service || serviceOptions[0]?.title || "";
+
+      const normalizeCars = (items = []) =>
+        items.map((item, index) => ({
+          ...item,
+          name: item.name || item.carName || `Vehicle ${index + 1}`,
+          type: item.type || item.carType || carTypeOptions[0].label,
+          service: item.service || item.serviceTitle || fallbackService,
+          addOns: Array.isArray(item.addOns) ? item.addOns : [],
+          revivePlan: Boolean(item.revivePlan || item.plan === "revive"),
+        }));
+
+      const hasCarsArray = Array.isArray(editBooking.cars) && editBooking.cars.length > 0;
+      const hasVehiclesArray = !hasCarsArray && Array.isArray(editBooking.vehicles) && editBooking.vehicles.length > 0;
+
+      const normalizedCars = hasCarsArray
+        ? normalizeCars(editBooking.cars)
+        : hasVehiclesArray
+          ? normalizeCars(editBooking.vehicles)
+          : [
+              {
+                name: editBooking.carName || "",
+                type: editBooking.carType || carTypeOptions[0].label,
+                service: fallbackService,
+                addOns: [],
+                revivePlan: Boolean(editBooking.revivePlan),
+              },
+            ];
+
+      const computedTotals = normalizedCars.map((car) =>
+        calculatePrice(
+          car.service || fallbackService,
+          car.addOns || [],
+          car.type,
+          Boolean(car.revivePlan),
+        )
+      );
+
+      const storedTotals =
+        Array.isArray(editBooking.perCarTotals) &&
+        editBooking.perCarTotals.length === normalizedCars.length
+          ? editBooking.perCarTotals.map((value) => Number(value) || 0)
+          : computedTotals;
+
+      const travel = Number(editBooking.travelExpense || 0);
+      const discount = Number(editBooking.discount || 0);
+      const tipValue = Number(editBooking.tip || 0);
+      const baseTotal = storedTotals.reduce((sum, value) => sum + Number(value || 0), 0);
+      const recalculatedAmount = baseTotal + travel - discount + tipValue;
+
       setNewBooking({
         ...editBooking,
-        cars:
-          Array.isArray(editBooking.cars) && editBooking.cars.length
-            ? editBooking.cars.map((c) => ({
-                ...c,
-                service: c.service || "",
-                addOns: Array.isArray(c.addOns) ? c.addOns : [],
-                revivePlan: Boolean(c.revivePlan),
-              }))
-            : [
-                {
-                  name: editBooking.carName || "",
-                  type: editBooking.carType || carTypeOptions[0].label,
-                  service: editBooking.service || "",
-                  addOns: [],
-                  revivePlan: Boolean(editBooking.revivePlan),
-                },
-              ],
-        amount:
-          Array.isArray(editBooking.cars) && editBooking.cars.length
-            ? (Array.isArray(editBooking.perCarTotals)
-              ? editBooking.perCarTotals.reduce((sum, value) => sum + value, 0)
-              : 0) + Number(editBooking.travelExpense || 0) - Number(editBooking.discount || 0) + Number(editBooking.tip || 0)
-            : editBooking.amount || 0,
-        tip: Number(editBooking.tip || 0),
+        cars: normalizedCars,
+        perCarTotals: storedTotals,
+        amount: Number.isFinite(recalculatedAmount) ? recalculatedAmount : editBooking.amount || 0,
+        tip: tipValue,
       });
       setOverrideAmount(false);
     } else {
@@ -254,10 +284,24 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
       ? Number(newBooking.amount || 0)
       : baseSum + travel - discount + tip;
 
+    const vehiclesPayload = cars.map((car, index) => ({
+      name: car.name || `Vehicle ${index + 1}`,
+      type: car.type || "",
+      service: car.service || "",
+      addOns: Array.isArray(car.addOns) ? car.addOns : [],
+      revivePlan: Boolean(car.revivePlan),
+      plan: Boolean(car.revivePlan) ? "revive" : "base",
+      lineTotal:
+        perCarTotals && typeof perCarTotals[index] === "number"
+          ? perCarTotals[index]
+          : undefined,
+    }));
+
     const payload = {
       ...newBooking,
       name: newBooking.name.trim() || "N/A",
       cars,
+      vehicles: vehiclesPayload,
       phone: newBooking.phone.trim() || "N/A",
       email: newBooking.email.trim() || "N/A",
       location: newBooking.location.trim() || "N/A",
@@ -300,20 +344,7 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
               "N/A",
             revivePlan: Boolean(Array.isArray(newBooking.cars) && newBooking.cars[0]?.revivePlan),
           },
-          vehicles: Array.isArray(newBooking.cars)
-            ? newBooking.cars.map((car, index) => ({
-                name: car.name || `Vehicle ${index + 1}`,
-                type: car.type || "",
-                service: car.service || "",
-                addOns: Array.isArray(car.addOns) ? car.addOns : [],
-                revivePlan: Boolean(car.revivePlan),
-                plan: Boolean(car.revivePlan) ? "revive" : "base",
-                lineTotal:
-                  perCarTotals && typeof perCarTotals[index] === "number"
-                    ? perCarTotals[index]
-                    : undefined,
-              }))
-            : undefined,
+          vehicles: vehiclesPayload,
           perCarTotals,
           baseSum,
           travelExpense: travel,

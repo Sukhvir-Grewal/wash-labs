@@ -48,9 +48,5 @@ next-env.d.ts
 google_oauth_test.js
 scripts/testCustomers.js
 
-# Local-only invoice preview helpers
-pages/api/invoice-preview.js
-pages/invoice-preview.js
-
 # Generated sample invoices
 invoice #*.pdf

@@ -37,6 +37,12 @@ const expenseCategoryLabels = {
   other: "Other",
 };
 
+const VEHICLE_PRICE_OPTIONS = [
+  { key: "sedan", label: "Sedan", adjustment: 0 },
+  { key: "suv", label: "SUV", adjustment: 20 },
+  { key: "truck", label: "Truck", adjustment: 40 },
+];
+
 export default function DashboardSectionModal({
   section,
   config,
@@ -49,6 +55,7 @@ export default function DashboardSectionModal({
   const [servicesLoading, setServicesLoading] = useState(false);
   const [servicesError, setServicesError] = useState("");
   const [services, setServices] = useState([]);
+  const [serviceVehicleSelection, setServiceVehicleSelection] = useState({});
   const [revenueRange, setRevenueRange] = useState("6m");
   const [revenueStatusFilter, setRevenueStatusFilter] = useState("complete");
   const [revenueChartType, setRevenueChartType] = useState("line");
@@ -224,16 +231,43 @@ export default function DashboardSectionModal({
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
-              {services.map((service) => {
+              {services.map((service, index) => {
                 const durationLabel = service.durationMinutes
                   ? `${service.durationMinutes} min`
                   : service.duration
                   ? `${service.duration} hr`
                   : "--";
                 const addOns = Array.isArray(service.addOns) ? service.addOns : [];
+                const coerceNumber = (value) => {
+                  if (typeof value === "number") {
+                    return Number.isFinite(value) ? value : null;
+                  }
+                  const numeric = Number(value);
+                  return Number.isFinite(numeric) ? numeric : null;
+                };
+                const basePriceValue = coerceNumber(service.basePrice);
+                const revivePriceValue = coerceNumber(service.revivePrice);
+                const serviceKey =
+                  service.id || service._id?.toString?.() || `${service.title || "service"}-${index}`;
+                const selectedVehicleKey =
+                  serviceVehicleSelection[serviceKey] || VEHICLE_PRICE_OPTIONS[0].key;
+                const selectedVehicleOption =
+                  VEHICLE_PRICE_OPTIONS.find((option) => option.key === selectedVehicleKey) ||
+                  VEHICLE_PRICE_OPTIONS[0];
+                const standardPriceValue =
+                  basePriceValue != null
+                    ? basePriceValue + selectedVehicleOption.adjustment
+                    : null;
+                const revivePriceValueAdjusted =
+                  revivePriceValue != null
+                    ? revivePriceValue + selectedVehicleOption.adjustment
+                    : null;
+                const formatCurrency = (value) =>
+                  value != null ? `$${value.toFixed(2)}` : "--";
+
                 return (
                   <div
-                    key={service._id || service.title}
+                    key={service._id || service.title || index}
                     className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_48px_-36px_rgba(15,23,42,0.3)] transition hover:-translate-y-1 hover:border-sky-200 hover:shadow-[0_30px_60px_-40px_rgba(56,189,248,0.35)]"
                   >
                     <div className="relative flex items-start justify-between gap-4">
@@ -245,12 +279,51 @@ export default function DashboardSectionModal({
                         {service.description && (
                           <p className="text-sm line-clamp-3" style={{ color: "#1f2937" }}>{service.description}</p>
                         )}
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          {VEHICLE_PRICE_OPTIONS.map((option) => {
+                            const isActive = option.key === selectedVehicleOption.key;
+                            const optionPriceLabel =
+                              basePriceValue != null
+                                ? formatCurrency(basePriceValue + option.adjustment)
+                                : "--";
+                            const baseClasses =
+                              "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition";
+                            const activeClasses =
+                              "border-sky-400 bg-sky-50 text-sky-900 shadow-[0_12px_24px_-18px_rgba(56,189,248,0.5)]";
+                            const inactiveClasses =
+                              "border-slate-200 bg-slate-100 text-slate-600 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700";
+                            return (
+                              <button
+                                key={`${serviceKey}-${option.key}`}
+                                type="button"
+                                onClick={() =>
+                                  setServiceVehicleSelection((prev) => ({
+                                    ...prev,
+                                    [serviceKey]: option.key,
+                                  }))
+                                }
+                                className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses}`}
+                                aria-pressed={isActive}
+                              >
+                                <span>{option.label}</span>
+                                <span className="text-[11px] font-normal text-slate-500">
+                                  {optionPriceLabel}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                       <div className="text-right">
                         <span className="text-[11px] uppercase tracking-[0.18em]" style={{ color: "#475569" }}>Base</span>
                         <div className="text-3xl font-semibold text-slate-900">
-                          ${Number(service.basePrice || 0).toFixed(2)}
+                          {formatCurrency(standardPriceValue)}
                         </div>
+                        {revivePriceValueAdjusted != null && (
+                          <div className="mt-1 text-sm font-semibold text-sky-600">
+                            Revive {formatCurrency(revivePriceValueAdjusted)}
+                          </div>
+                        )}
                         <div className="mt-2 inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
                           {durationLabel}
                         </div>
@@ -277,7 +350,7 @@ export default function DashboardSectionModal({
                                 className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs text-slate-700"
                               >
                                 <span style={{ color: "#0f172a" }}>{addon.name}</span>
-                                <span style={{ color: "#475569" }}>${Number(addon.price || 0).toFixed(2)}</span>
+                                <span style={{ color: "#475569" }}>{formatCurrency(coerceNumber(addon.price))}</span>
                               </span>
                             ))
                           ) : (

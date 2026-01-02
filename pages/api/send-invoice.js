@@ -92,13 +92,16 @@ const ensureInvoiceNumber = async (bookingId, existingValue) => {
 
   const countersCollection = mongoose.connection.collection("counters");
 
+  await countersCollection.updateOne(
+    { _id: "invoiceSequence" },
+    { $setOnInsert: { value: MIN_INVOICE_NUMBER - 1 } },
+    { upsert: true },
+  );
+
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const sequenceResult = await countersCollection.findOneAndUpdate(
       { _id: "invoiceSequence" },
-      {
-        $setOnInsert: { value: MIN_INVOICE_NUMBER - 1 },
-        $inc: { value: 1 },
-      },
+      { $inc: { value: 1 } },
       { upsert: true, returnDocument: "after" },
     );
 

@@ -27,9 +27,22 @@ export default function PdfCanvasViewer({ src, scale = 1.25 }) {
 
         const arrayBuffer = await response.arrayBuffer();
         const pdfjsModule = await import("pdfjs-dist/legacy/build/pdf");
-        const { getDocument } = pdfjsModule;
+        const { getDocument, GlobalWorkerOptions } = pdfjsModule;
 
-        const pdf = await getDocument({ data: arrayBuffer, disableWorker: true }).promise;
+        let pdf;
+        try {
+          const workerModule = await import(
+            /* webpackChunkName: "pdf-worker" */ "pdfjs-dist/legacy/build/pdf.worker?url"
+          );
+          if (GlobalWorkerOptions && workerModule?.default) {
+            GlobalWorkerOptions.workerSrc = workerModule.default;
+            pdf = await getDocument({ data: arrayBuffer }).promise;
+          } else {
+            pdf = await getDocument({ data: arrayBuffer, disableWorker: true }).promise;
+          }
+        } catch (workerError) {
+          pdf = await getDocument({ data: arrayBuffer, disableWorker: true }).promise;
+        }
         if (cancelled) return;
 
         for (let pageIndex = 1; pageIndex <= pdf.numPages; pageIndex += 1) {
