@@ -1623,10 +1623,16 @@ export default function AdminDashboard() {
           <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900">
+                <h3
+                  className="text-lg font-semibold"
+                  style={{ color: "#000000" }}
+                >
                   Invoice Actions
                 </h3>
-                <p className="mt-1 text-sm text-slate-600">
+                <p
+                  className="mt-1 text-sm"
+                  style={{ color: "#6b7280" }}
+                >
                   Preview details or send the invoice to the client.
                 </p>
               </div>
@@ -1635,8 +1641,9 @@ export default function AdminDashboard() {
                 onClick={handleCloseInvoiceModal}
                 disabled={sendingInvoice}
                 className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label="Close"
               >
-                Close
+                ×
               </button>
             </div>
 
@@ -1674,16 +1681,6 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </div>
-
-            {!sendingInvoice && (
-              <button
-                type="button"
-                onClick={handleCloseInvoiceModal}
-                className="mt-4 w-full rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
-              >
-                Cancel
-              </button>
-            )}
 
             {sendingInvoice && (
               <p className="mt-4 text-center text-xs text-slate-500">
