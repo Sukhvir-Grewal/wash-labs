@@ -59,7 +59,7 @@ export default function RevenueChart({
   accentColor = '#2563eb',
   chartType = 'line',
 }) {
-  const [interval, setInterval] = useState('date'); // 'date' | 'week' | 'month'
+  const [interval, setInterval] = useState('week'); // 'date' | 'week' | 'month'
   const filtered = status === 'all' ? bookings : bookings.filter(b => b.status === status);
 
   const timelineData = useMemo(() => {
@@ -162,6 +162,8 @@ export default function RevenueChart({
     pointBackgroundColor,
     borderWidth: chartType === 'bar' ? 0 : 2,
     fill: chartType === 'area',
+    pointHoverRadius: chartType === 'bar' ? 0 : 6,
+    pointHitRadius: chartType === 'bar' ? 0 : 12,
   };
 
   const chartData = {
@@ -191,6 +193,14 @@ export default function RevenueChart({
         : [timelineDataset],
   };
 
+  const formatTooltipAmount = (value) => {
+    const numeric = Number(value) || 0;
+    if (Math.abs(numeric) >= 1000) {
+      return `$${numeric.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    }
+    return `$${numeric.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   const commonTimelineOptions = {
     responsive: true,
     interaction: {
@@ -209,6 +219,10 @@ export default function RevenueChart({
         bodyColor: '#f8fafc',
         borderColor: '#0f172a',
         borderWidth: 1,
+        callbacks: {
+          title: (items) => items?.[0]?.label ?? '',
+          label: (ctx) => `Revenue · ${formatTooltipAmount(ctx.parsed?.y ?? ctx.raw ?? 0)}`,
+        },
       },
     },
     scales: {

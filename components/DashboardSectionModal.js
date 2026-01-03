@@ -373,7 +373,6 @@ export default function DashboardSectionModal({
 
   const renderRevenue = () => {
     const accent = "#2563eb";
-    const accentSoft = "rgba(37, 99, 235, 0.18)";
     const rangeLabels = { "3m": "Last 3 months", "6m": "Last 6 months", "12m": "Last 12 months", all: "All-time" };
     const rangeLabel = rangeLabels[revenueRange] || "All-time";
     const statusLabel = revenueStatusFilter === "complete" ? "Completed bookings" : "All booking statuses";
@@ -427,22 +426,53 @@ export default function DashboardSectionModal({
     const monthsDescriptor = monthsObserved ? `${monthsObserved} month${monthsObserved === 1 ? "" : "s"}` : "No activity yet";
     const hasRevenueData = filteredMonthlyRevenue.length > 0;
 
-    const rangeButtonStyle = (active) =>
-      active
-        ? {
-            backgroundColor: accent,
-            borderColor: accent,
-            color: "#ffffff",
-            boxShadow: `0 10px 24px ${accentSoft}`,
-          }
-        : {
-            backgroundColor: "#ffffff",
-            borderColor: accentSoft,
-            color: accent,
-          };
+    const summaryCards = [
+      {
+        label: "Revenue collected",
+        primary: formatCurrency(revenueSum, 0),
+        secondary: monthGrowthLabel,
+        secondaryColor: monthGrowthColor,
+        caption: latestMonth ? `Latest: ${latestMonth.label}` : "Awaiting first month",
+      },
+      {
+        label: "Avg monthly revenue",
+        primary: formatCurrency(avgMonthlyRevenue, 0),
+        secondary: monthsDescriptor,
+        secondaryColor: "#475569",
+        caption: `Scope: ${rangeLabel.toLowerCase()}`,
+      },
+      {
+        label: "Avg ticket value",
+        primary: formatCurrency(avgTicketValue, avgTicketValue < 1000 ? 2 : 0),
+        secondary: rangeBookingsCount ? `${rangeBookingsCount} booking${rangeBookingsCount === 1 ? "" : "s"}` : "No bookings yet",
+        secondaryColor: "#475569",
+        caption: topService ? `Top: ${topServiceName}` : "Awaiting bookings",
+      },
+      {
+        label: "Top performer",
+        primary: topServiceName,
+        secondary: topServiceRevenueLabel,
+        secondaryColor: accent,
+        caption: topServiceCountLabel,
+      },
+    ];
+
+    const controlChip = (active) =>
+      `rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+        active
+          ? "bg-blue-600 text-white border-blue-600 shadow-[0_8px_18px_rgba(37,99,235,0.22)]"
+          : "bg-white text-blue-600 border-blue-100 hover:border-blue-200"
+      }`;
+
+    const selectClass =
+      "sm:hidden w-full rounded-xl border border-blue-100 bg-white px-3 py-2 text-sm font-semibold text-blue-700";
+
+    const topServices = rangeServiceBreakdown.slice(0, 6);
+    const maxServiceRevenue = topServices.reduce((max, entry) => Math.max(max, entry.revenue || 0), 0);
+    const monthlyRows = filteredMonthlyRevenue.slice(0, 8);
 
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div className="rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.18)]">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-xl">
@@ -450,213 +480,216 @@ export default function DashboardSectionModal({
                 Revenue Performance
               </h3>
               <p className="text-sm leading-6" style={{ color: "#2563eb" }}>
-                Track cash flow trends, compare booking momentum, and surface top-performing services at a glance.
+                See headline figures first, then drill into trends, service mix, and monthly pacing.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { value: "3m", label: "3M" },
-                { value: "6m", label: "6M" },
-                { value: "12m", label: "12M" },
-                { value: "all", label: "All" },
-              ].map((entry) => (
-                <button
-                  key={entry.value}
-                  type="button"
-                  onClick={() => setRevenueRange(entry.value)}
-                  className="rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition"
-                  style={rangeButtonStyle(revenueRange === entry.value)}
-                >
-                  {entry.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {[
-              { value: "complete", label: "Completed" },
-              { value: "all", label: "All Statuses" },
-            ].map((entry) => (
-              <button
-                key={entry.value}
-                type="button"
-                onClick={() => setRevenueStatusFilter(entry.value)}
-                className="rounded-full border px-4 py-1.5 text-xs font-semibold transition"
-                style={rangeButtonStyle(revenueStatusFilter === entry.value)}
+            <div className="w-full max-w-xs sm:hidden">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide" style={{ color: "#475569" }}>
+                Range
+              </label>
+              <select
+                className={selectClass}
+                value={revenueRange}
+                onChange={(event) => setRevenueRange(event.target.value)}
               >
-                {entry.label}
-              </button>
-            ))}
-            <span className="ml-4 text-xs font-semibold uppercase tracking-wide" style={{ color: "#475569" }}>
-              Chart
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { value: "line", label: "Line" },
-                { value: "area", label: "Area" },
-                { value: "bar", label: "Bar" },
-                { value: "doughnut", label: "Donut" },
-              ].map((entry) => (
-                <button
-                  key={entry.value}
-                  type="button"
-                  onClick={() => setRevenueChartType(entry.value)}
-                  className="rounded-full border px-3 py-1.5 text-xs font-semibold transition"
-                  style={rangeButtonStyle(revenueChartType === entry.value)}
-                >
-                  {entry.label}
-                </button>
-              ))}
+                <option value="3m">Last 3 months</option>
+                <option value="6m">Last 6 months</option>
+                <option value="12m">Last 12 months</option>
+                <option value="all">All-time</option>
+              </select>
             </div>
           </div>
 
-          <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <RevenueChart
-              bookings={filteredRevenueBookings}
-              status="all"
-              datasetLabel={`${statusLabel} (${rangeLabel.toLowerCase()})`}
-              borderColor="rgb(37, 99, 235)"
-              backgroundColor={revenueChartType === "area" ? "rgba(37, 99, 235, 0.16)" : "rgba(37, 99, 235, 0.12)"}
-              pointBackgroundColor="rgb(37, 99, 235)"
-              accentColor={accent}
-              chartType={revenueChartType}
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#475569" }}>
-              Revenue ({rangeLabel})
-            </p>
-            <h4 className="mt-2 text-2xl font-semibold" style={{ color: "#0f172a" }}>
-              {formatCurrency(revenueSum, 0)}
-            </h4>
-            <p className="mt-1 text-xs font-medium" style={{ color: monthGrowthColor }}>
-              {monthGrowthLabel}
-            </p>
-            <p className="mt-2 text-xs" style={{ color: "#64748b" }}>
-              Latest month: {latestMonth ? latestMonth.label : "—"}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#475569" }}>
-              Avg Monthly Revenue
-            </p>
-            <h4 className="mt-2 text-2xl font-semibold" style={{ color: "#0f172a" }}>
-              {formatCurrency(avgMonthlyRevenue, 0)}
-            </h4>
-            <p className="mt-2 text-xs" style={{ color: "#64748b" }}>
-              Across {monthsDescriptor}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#475569" }}>
-              Avg Ticket Value
-            </p>
-            <h4 className="mt-2 text-2xl font-semibold" style={{ color: "#0f172a" }}>
-              {formatCurrency(avgTicketValue, avgTicketValue < 1000 ? 2 : 0)}
-            </h4>
-            <p className="mt-2 text-xs" style={{ color: "#64748b" }}>
-              {rangeBookingsCount ? `${rangeBookingsCount} booking${rangeBookingsCount === 1 ? "" : "s"}` : "No bookings yet"}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#475569" }}>
-              Top Performer
-            </p>
-            <h4 className="mt-2 text-lg font-semibold" style={{ color: "#0f172a" }}>
-              {topServiceName}
-            </h4>
-            <p className="mt-1 text-sm font-medium" style={{ color: accent }}>
-              {topServiceRevenueLabel}
-            </p>
-            <p className="mt-2 text-xs" style={{ color: "#64748b" }}>
-              {topServiceCountLabel}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm">
-            <h3 className="text-lg font-semibold" style={{ color: "#0f172a" }}>
-              Top Services
-            </h3>
-            <p className="text-sm" style={{ color: "#2563eb" }}>
-              Revenue contribution based on {statusLabel.toLowerCase()} within {rangeLabel.toLowerCase()}.
-            </p>
-            {rangeServiceBreakdown.length ? (
-              <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="bg-slate-50 text-slate-500">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold">Service</th>
-                      <th className="px-4 py-3 text-left font-semibold">Bookings</th>
-                      <th className="px-4 py-3 text-left font-semibold">Revenue</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 bg-white">
-                    {rangeServiceBreakdown.slice(0, 6).map((service) => (
-                      <tr key={service.serviceName} className="hover:bg-slate-50/80">
-                        <td className="px-4 py-3" style={{ color: "#0f172a" }}>
-                          {service.serviceName}
-                        </td>
-                        <td className="px-4 py-3" style={{ color: "#475569" }}>
-                          {service.count}
-                        </td>
-                        <td className="px-4 py-3" style={{ color: "#0f172a" }}>
-                          {formatCurrencyAuto(service.revenue)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {summaryCards.map((card) => (
+              <div key={card.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#475569" }}>
+                  {card.label}
+                </p>
+                <div className="mt-2 text-2xl font-semibold" style={{ color: "#0f172a" }}>
+                  {card.primary}
+                </div>
+                <p className="mt-1 text-xs font-semibold" style={{ color: card.secondaryColor }}>
+                  {card.secondary}
+                </p>
+                <p className="mt-1 text-xs" style={{ color: "#64748b" }}>
+                  {card.caption}
+                </p>
               </div>
-            ) : (
-              <div className="mt-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-6 text-center text-sm" style={{ color: "#475569" }}>
-                No booking data available for this range.
-              </div>
-            )}
+            ))}
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm">
-            <h3 className="text-lg font-semibold" style={{ color: "#0f172a" }}>
-              Monthly Revenue
-            </h3>
-            <p className="text-sm" style={{ color: "#2563eb" }}>
-              {statusLabel} grouped by month for {rangeLabel.toLowerCase()}.
-            </p>
-            {hasRevenueData ? (
-              <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="bg-slate-50 text-slate-500">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold">Month</th>
-                      <th className="px-4 py-3 text-left font-semibold">Revenue</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 bg-white">
-                    {filteredMonthlyRevenue.map((row) => (
-                      <tr key={row.key} className="hover:bg-slate-50/80">
-                        <td className="px-4 py-3" style={{ color: "#475569" }}>
-                          {row.label}
-                        </td>
-                        <td className="px-4 py-3" style={{ color: "#0f172a" }}>
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="hidden flex-wrap items-center justify-between gap-3 sm:flex">
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: "3m", label: "3M" },
+                  { value: "6m", label: "6M" },
+                  { value: "12m", label: "12M" },
+                  { value: "all", label: "All" },
+                ].map((entry) => (
+                  <button
+                    key={entry.value}
+                    type="button"
+                    onClick={() => setRevenueRange(entry.value)}
+                    className={controlChip(revenueRange === entry.value)}
+                  >
+                    {entry.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {[
+                  { value: "complete", label: "Completed" },
+                  { value: "all", label: "All status" },
+                ].map((entry) => (
+                  <button
+                    key={entry.value}
+                    type="button"
+                    onClick={() => setRevenueStatusFilter(entry.value)}
+                    className={controlChip(revenueStatusFilter === entry.value)}
+                  >
+                    {entry.label}
+                  </button>
+                ))}
+                <span className="ml-1 text-xs font-semibold uppercase tracking-wide" style={{ color: "#475569" }}>
+                  Chart
+                </span>
+                {[
+                  { value: "line", label: "Line" },
+                  { value: "area", label: "Area" },
+                  { value: "bar", label: "Bar" },
+                  { value: "doughnut", label: "Donut" },
+                ].map((entry) => (
+                  <button
+                    key={entry.value}
+                    type="button"
+                    onClick={() => setRevenueChartType(entry.value)}
+                    className={controlChip(revenueChartType === entry.value)}
+                  >
+                    {entry.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="sm:hidden">
+              <label className="mt-4 block text-xs font-semibold uppercase tracking-wide" style={{ color: "#475569" }}>
+                Status
+              </label>
+              <select
+                className={`${selectClass} mt-1`}
+                value={revenueStatusFilter}
+                onChange={(event) => setRevenueStatusFilter(event.target.value)}
+              >
+                <option value="complete">Completed</option>
+                <option value="all">All status</option>
+              </select>
+              <label className="mt-4 block text-xs font-semibold uppercase tracking-wide" style={{ color: "#475569" }}>
+                Chart type
+              </label>
+              <select
+                className={`${selectClass} mt-1`}
+                value={revenueChartType}
+                onChange={(event) => setRevenueChartType(event.target.value)}
+              >
+                <option value="line">Line</option>
+                <option value="area">Area</option>
+                <option value="bar">Bar</option>
+                <option value="doughnut">Donut</option>
+              </select>
+            </div>
+
+            <div className="mt-6 h-[320px] sm:h-[320px] lg:h-[360px]">
+              <RevenueChart
+                bookings={filteredRevenueBookings}
+                status="all"
+                datasetLabel={`${statusLabel} (${rangeLabel.toLowerCase()})`}
+                borderColor="rgb(37, 99, 235)"
+                backgroundColor={revenueChartType === "area" ? "rgba(37, 99, 235, 0.16)" : "rgba(37, 99, 235, 0.12)"}
+                pointBackgroundColor="rgb(37, 99, 235)"
+                accentColor={accent}
+                chartType={revenueChartType}
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <div className="rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm">
+              <h3 className="text-lg font-semibold" style={{ color: "#0f172a" }}>
+                Top services
+              </h3>
+              <p className="text-sm" style={{ color: "#2563eb" }}>
+                Ranked by revenue share from {statusLabel.toLowerCase()} within {rangeLabel.toLowerCase()}.
+              </p>
+              {topServices.length ? (
+                <ul className="mt-5 space-y-4">
+                  {topServices.map((service) => {
+                    const share = revenueSum ? (service.revenue / revenueSum) * 100 : 0;
+                    const width = maxServiceRevenue ? Math.max((service.revenue / maxServiceRevenue) * 100, 4) : 0;
+                    return (
+                      <li key={service.serviceName} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-center justify-between text-sm font-semibold" style={{ color: "#0f172a" }}>
+                          <span>{service.serviceName}</span>
+                          <span>{formatCurrencyAuto(service.revenue)}</span>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between text-xs" style={{ color: "#475569" }}>
+                          <span>{service.count} booking{service.count === 1 ? "" : "s"}</span>
+                          <span>{share ? `${share.toFixed(0)}% revenue` : "—"}</span>
+                        </div>
+                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${width}%`, backgroundColor: accent }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <div className="mt-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-6 text-center text-sm" style={{ color: "#475569" }}>
+                  No booking data available for this range.
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm">
+              <h3 className="text-lg font-semibold" style={{ color: "#0f172a" }}>
+                Monthly pacing
+              </h3>
+              <p className="text-sm" style={{ color: "#2563eb" }}>
+                {statusLabel} grouped by month across {rangeLabel.toLowerCase()}.
+              </p>
+              {hasRevenueData ? (
+                <ul className="mt-5 space-y-3">
+                  {monthlyRows.map((row) => {
+                    const isTop = topRevenueMonth && row.key === topRevenueMonth.key;
+                    return (
+                      <li key={row.key} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                        <div>
+                          <p className="text-sm font-semibold" style={{ color: isTop ? accent : "#0f172a" }}>
+                            {row.label}
+                          </p>
+                          <p className="text-xs" style={{ color: "#64748b" }}>
+                            {isTop ? "Highest month" : "In range"}
+                          </p>
+                        </div>
+                        <span className="text-sm font-semibold" style={{ color: "#0f172a" }}>
                           {formatCurrencyAuto(row.total)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <div className="mt-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-6 text-center text-sm" style={{ color: "#475569" }}>
+                  No revenue recorded yet for this selection.
+                </div>
+              )}
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium" style={{ color: "#475569" }}>
+                Top month: <span style={{ color: "#0f172a" }}>{topMonthLabel}</span> · {topMonthValue}
               </div>
-            ) : (
-              <div className="mt-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-6 text-center text-sm" style={{ color: "#475569" }}>
-                No revenue recorded yet for this selection.
-              </div>
-            )}
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium" style={{ color: "#475569" }}>
-              Top month: <span style={{ color: "#0f172a" }}>{topMonthLabel}</span> · {topMonthValue}
             </div>
           </div>
         </div>
