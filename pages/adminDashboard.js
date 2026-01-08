@@ -12,6 +12,11 @@ import AddExpenseModal from "../components/AddExpenseModal";
 import DashboardSectionModal from "../components/DashboardSectionModal";
 import { isAuthenticated } from "../lib/auth";
 import { useSessionRefresh } from "../lib/useSessionRefresh";
+import {
+  isCompletedBookingStatus,
+  normalizeBookingStatus,
+  resolveBookingRevenue,
+} from "../lib/bookingUtils";
 
 /**
  * Server-side authentication check
@@ -48,6 +53,7 @@ export default function AdminDashboard() {
   const [bookings, setBookings] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deletingBooking, setDeletingBooking] = useState(false);
 
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
@@ -133,21 +139,20 @@ export default function AdminDashboard() {
   };
 
   const metrics = useMemo(() => {
-    const completed = bookings.filter(
-      (booking) => booking.status === "complete",
-    );
-    const pending = bookings.filter((booking) => booking.status === "pending");
+    const completed = bookings.filter((booking) => isCompletedBookingStatus(booking.status));
+    const pending = bookings.filter((booking) => normalizeBookingStatus(booking.status) === "pending");
     const totalRevenue = completed.reduce(
-      (sum, booking) => sum + (Number(booking.amount || 0) || 0),
+      (sum, booking) => sum + resolveBookingRevenue(booking),
       0,
     );
     const pendingRevenue = pending.reduce(
-      (sum, booking) => sum + (Number(booking.amount || 0) || 0),
+      (sum, booking) => sum + resolveBookingRevenue(booking),
       0,
     );
-    const totalBookingAmount = completed
-      .concat(pending)
-      .reduce((sum, booking) => sum + (Number(booking.amount || 0) || 0), 0);
+    const totalBookingAmount = bookings.reduce(
+      (sum, booking) => sum + resolveBookingRevenue(booking),
+      0,
+    );
     return {
       totalRevenue,
       pendingRevenue,
@@ -406,31 +411,62 @@ export default function AdminDashboard() {
   })();
 
   const computeTimestamp = (booking) => {
-    const dateOk =
-      booking.date && /^\d{4}-\d{2}-\d{2}$/.test(booking.date)
-        ? booking.date
-        : "1970-01-01";
-    const timeOk =
-      booking.time && /^\d{2}:\d{2}$/.test(booking.time)
-        ? booking.time
-        : "00:00";
-    return new Date(`${dateOk}T${timeOk}:00`).getTime();
+    if (!booking || !booking.date) {
+      return 0;
+    }
+
+    const tryBuild = (timeStr) => {
+      if (!timeStr) return Number.NaN;
+      return new Date(`${booking.date}T${timeStr}`).getTime();
+    };
+
+    if (typeof booking.timeValue === "string" && /^\d{2}:\d{2}$/.test(booking.timeValue)) {
+      const ts = tryBuild(`${booking.timeValue}:00`);
+      if (!Number.isNaN(ts)) return ts;
+    }
+
+    if (typeof booking.timeISO === "string") {
+      const iso = new Date(booking.timeISO);
+      if (!Number.isNaN(iso.getTime())) return iso.getTime();
+    }
+
+    if (typeof booking.time === "string") {
+      const trimmed = booking.time.trim();
+      const primarySegment = trimmed.split(/[-–]/)[0]?.trim() || trimmed;
+      const match = primarySegment.match(
+        /^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i,
+      );
+      if (match) {
+        let hours = Number(match[1]);
+        const minutes = Number(match[2] ?? "0");
+        const meridiem = match[3].toUpperCase();
+        if (meridiem === "PM" && hours < 12) hours += 12;
+        if (meridiem === "AM" && hours === 12) hours = 0;
+        const hh = hours.toString().padStart(2, "0");
+        const mm = minutes.toString().padStart(2, "0");
+        const ts = tryBuild(`${hh}:${mm}:00`);
+        if (!Number.isNaN(ts)) return ts;
+      }
+    }
+
+    const fallback = new Date(`${booking.date}T12:00:00`);
+    return Number.isNaN(fallback.getTime()) ? 0 : fallback.getTime();
   };
 
   const getDisplayBookings = useCallback(() => {
     const list = [...bookings];
     if (statusFilter === "pending") {
       return list
-        .filter((booking) => booking.status === "pending")
+        .filter((booking) => normalizeBookingStatus(booking.status) === "pending")
         .sort((a, b) => computeTimestamp(a) - computeTimestamp(b));
     }
     if (statusFilter === "complete") {
       return list
-        .filter((booking) => booking.status === "complete")
+        .filter((booking) => isCompletedBookingStatus(booking.status))
         .sort((a, b) => computeTimestamp(b) - computeTimestamp(a));
     }
-    const pending = list.filter((booking) => booking.status === "pending");
-    const others = list.filter((booking) => booking.status !== "pending");
+    const pending = list.filter((booking) => normalizeBookingStatus(booking.status) === "pending");
+    const others = list.filter((booking) => normalizeBookingStatus(booking.status) !== "pending");
     if (!pending.length) {
       return others.sort((a, b) => computeTimestamp(b) - computeTimestamp(a));
     }
@@ -453,14 +489,14 @@ export default function AdminDashboard() {
   );
 
   const pendingBookings = useMemo(() => {
-    const pending = bookings.filter((booking) => booking.status === "pending");
+    const pending = bookings.filter((booking) => normalizeBookingStatus(booking.status) === "pending");
     return pending.sort((a, b) => computeTimestamp(a) - computeTimestamp(b));
   }, [bookings]);
 
   const pendingRevenueTotal = useMemo(
     () =>
       pendingBookings.reduce(
-        (sum, booking) => sum + (Number(booking.amount || 0) || 0),
+        (sum, booking) => sum + resolveBookingRevenue(booking),
         0,
       ),
     [pendingBookings],
@@ -493,18 +529,16 @@ export default function AdminDashboard() {
     const now = new Date();
     const updates = [];
     for (const booking of bookingsList) {
-      if (booking.status === "pending" && booking.date && booking.time) {
-        const dt = new Date(`${booking.date}T${booking.time}:00`);
-        if (dt < now) {
-          updates.push(
-            fetch(
-              `/api/update-booking-status?id=${booking.id}&status=complete`,
-              {
-                method: "PATCH",
-              },
-            ),
-          );
-        }
+      if (normalizeBookingStatus(booking.status) !== "pending" || !booking.date) {
+        continue;
+      }
+      const endOfDay = new Date(`${booking.date}T23:59:59`);
+      if (!Number.isNaN(endOfDay.getTime()) && endOfDay < now) {
+        updates.push(
+          fetch(`/api/update-booking-status?id=${booking.id}&status=complete`, {
+            method: "PATCH",
+          }),
+        );
       }
     }
     if (updates.length) {
@@ -681,19 +715,25 @@ export default function AdminDashboard() {
 
   const handleBookingDelete = useCallback(async () => {
     if (!detailBooking?.id) return;
+    setDeletingBooking(true);
     setLoading(true);
     try {
-      await fetch(`/api/delete-booking?id=${detailBooking.id}`, {
+      const resp = await fetch(`/api/delete-booking?id=${detailBooking.id}`, {
         method: "DELETE",
       });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || data?.success === false) {
+        throw new Error(data?.error || "Failed to delete booking");
+      }
       const bookingsFromDb = await refreshBookings();
       setBookings(bookingsFromDb);
+      setConfirmDeleteBooking(false);
+      setDetailBooking(null);
     } catch (error) {
       setBookings([]);
     }
     setLoading(false);
-    setConfirmDeleteBooking(false);
-    setDetailBooking(null);
+    setDeletingBooking(false);
   }, [detailBooking, refreshBookings]);
 
   const renderBookingManager = () => (
@@ -780,10 +820,11 @@ export default function AdminDashboard() {
                   <tbody className="divide-y divide-slate-200 text-slate-600">
                     {displayBookings.map((booking) => {
                       const isSelected = selectedBookingId === booking.id;
+                      const normalizedStatus = normalizeBookingStatus(booking.status);
                       const badgeClasses =
-                        booking.status === "complete"
+                        normalizedStatus === "complete" || normalizedStatus === "completed" || normalizedStatus === "paid"
                           ? "bg-emerald-100 text-emerald-700"
-                          : booking.status === "pending"
+                          : normalizedStatus === "pending"
                             ? "bg-amber-100 text-amber-700"
                             : "bg-slate-100 text-slate-600";
                       return (
@@ -818,7 +859,7 @@ export default function AdminDashboard() {
                             </button>
                           </td>
                           <td className="px-3 py-2 whitespace-nowrap">
-                            {formatCurrency(booking.amount)}
+                            {formatCurrency(resolveBookingRevenue(booking))}
                           </td>
                           <td className="px-3 py-2 whitespace-nowrap">
                             {formatDateShort(booking.date)}
@@ -1322,7 +1363,7 @@ export default function AdminDashboard() {
                               {booking.carName || "--"}
                             </td>
                             <td className="px-2 py-2">
-                              {formatCurrency(booking.amount)}
+                              {formatCurrency(resolveBookingRevenue(booking))}
                             </td>
                             <td className="px-2 py-2">
                               <button
@@ -1515,7 +1556,7 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Amount</span>
                 <span className="font-semibold text-slate-900">
-                  {formatCurrency(detailBooking.amount)}
+                  {formatCurrency(resolveBookingRevenue(detailBooking))}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -1597,16 +1638,44 @@ export default function AdminDashboard() {
                   <button
                     type="button"
                     onClick={() => setConfirmDeleteBooking(false)}
-                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                    disabled={deletingBooking}
+                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={handleBookingDelete}
-                    className="rounded-full bg-gradient-to-br from-rose-500 to-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_28px_-18px_rgba(244,63,94,0.8)] transition hover:shadow-[0_18px_28px_-14px_rgba(252,88,107,0.9)]"
+                    disabled={deletingBooking}
+                    className="rounded-full bg-gradient-to-br from-rose-500 to-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_28px_-18px_rgba(244,63,94,0.8)] transition hover:shadow-[0_18px_28px_-14px_rgba(252,88,107,0.9)] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Confirm delete
+                    {deletingBooking ? (
+                      <span className="flex items-center gap-2">
+                        <svg
+                          className="h-4 w-4 animate-spin text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                          />
+                        </svg>
+                        Deleting...
+                      </span>
+                    ) : (
+                      "Confirm delete"
+                    )}
                   </button>
                 </>
               )}

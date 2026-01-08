@@ -17,10 +17,25 @@ async function handler(req, res) {
   }
   let client;
   try {
-    client = await MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+    client = new MongoClient(uri);
+    await client.connect();
     const db = client.db(dbName);
     const collection = db.collection("bookings");
-    const result = await collection.deleteOne({ _id: new ObjectId(id) });
+
+    let filter;
+    if (ObjectId.isValid(id)) {
+      filter = { _id: new ObjectId(id) };
+    } else {
+      filter = { id };
+    }
+
+    let result = await collection.deleteOne(filter);
+
+    // Fallback: some historical records store the id string separately
+    if (result.deletedCount === 0 && filter._id) {
+      result = await collection.deleteOne({ id });
+    }
+
     if (result.deletedCount === 1) {
       res.status(200).json({ success: true });
     } else {

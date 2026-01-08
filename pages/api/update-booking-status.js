@@ -17,13 +17,24 @@ async function handler(req, res) {
   }
   let client;
   try {
-    client = await MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+    client = new MongoClient(uri);
+    await client.connect();
     const db = client.db(dbName);
     const collection = db.collection("bookings");
-    const result = await collection.updateOne(
-      { _id: new ObjectId(id) },
-      { $set: { status } }
-    );
+
+    let filter;
+    if (ObjectId.isValid(id)) {
+      filter = { _id: new ObjectId(id) };
+    } else {
+      filter = { id };
+    }
+
+    let result = await collection.updateOne(filter, { $set: { status } });
+
+    if (result.matchedCount === 0 && filter._id) {
+      result = await collection.updateOne({ id }, { $set: { status } });
+    }
+
     if (result.matchedCount === 1) {
       res.status(200).json({ success: true });
     } else {

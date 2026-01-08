@@ -13,14 +13,37 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
+import {
+  normalizeBookingStatus,
+  isCompletedBookingStatus,
+  resolveBookingRevenue,
+} from '../lib/bookingUtils';
 
 Chart.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend, Filler);
+
+const getResolvedAmount = (booking) => {
+  const resolved = booking?.__resolvedAmount;
+  const value = resolved != null ? resolved : resolveBookingRevenue(booking);
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const bookingMatchesStatus = (booking, targetStatus) => {
+  const normalized = booking?.__normalizedStatus || normalizeBookingStatus(booking?.status);
+  if (!targetStatus || targetStatus === 'all') {
+    return true;
+  }
+  if (targetStatus === 'complete') {
+    return isCompletedBookingStatus(normalized);
+  }
+  return normalized === targetStatus;
+};
 
 function groupByWeek(bookings) {
   // Returns { 'YYYY-WW': sum }
   const weekMap = {};
   bookings.forEach(b => {
-    const amount = Number(b.amount);
+    const amount = getResolvedAmount(b);
     if (b.date && !Number.isNaN(amount)) {
       const d = new Date(b.date);
       const year = d.getFullYear();
@@ -37,7 +60,7 @@ function groupByMonth(bookings) {
   // Returns { 'YYYY-MM': sum }
   const monthMap = {};
   bookings.forEach(b => {
-    const amount = Number(b.amount);
+    const amount = getResolvedAmount(b);
     if (b.date && !Number.isNaN(amount)) {
       const parts = b.date.split('-');
       if (parts.length === 3) {
@@ -60,7 +83,8 @@ export default function RevenueChart({
   chartType = 'line',
 }) {
   const [interval, setInterval] = useState('week'); // 'date' | 'week' | 'month'
-  const filtered = status === 'all' ? bookings : bookings.filter(b => b.status === status);
+  const statusKey = normalizeBookingStatus(status);
+  const filtered = bookings.filter((booking) => bookingMatchesStatus(booking, statusKey));
 
   const timelineData = useMemo(() => {
     const next = { labels: [], amounts: [] };
@@ -68,7 +92,7 @@ export default function RevenueChart({
       // build service distribution, ignore timeline intervals
       const serviceMap = {};
       filtered.forEach((booking) => {
-        const amount = Number(booking.amount);
+        const amount = getResolvedAmount(booking);
         if (booking.service && !Number.isNaN(amount)) {
           serviceMap[booking.service] = (serviceMap[booking.service] || 0) + amount;
         }
@@ -80,39 +104,38 @@ export default function RevenueChart({
     }
 
     if (interval === 'date') {
-    // Group by date
-    const dateMap = {};
-    filtered.forEach(b => {
-        const amount = Number(b.amount);
-        if (b.date && !Number.isNaN(amount)) {
-          dateMap[b.date] = (dateMap[b.date] || 0) + amount;
-      }
-    });
-    const rawDates = Object.keys(dateMap).sort();
-    const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-      next.labels = rawDates.map(dateStr => {
-      const parts = dateStr.split("-");
-      if (parts.length === 3) {
-        const d = parts[2];
-        const m = months[parseInt(parts[1], 10) - 1];
-        return `${d}${m}`;
-      }
-      return dateStr;
-    });
-      next.amounts = rawDates.map(date => Number(dateMap[date]) || 0);
+      // Group by date
+      const dateMap = {};
+      filtered.forEach((booking) => {
+        const amount = getResolvedAmount(booking);
+        if (booking.date && !Number.isNaN(amount)) {
+          dateMap[booking.date] = (dateMap[booking.date] || 0) + amount;
+        }
+      });
+      const rawDates = Object.keys(dateMap).sort();
+      const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      next.labels = rawDates.map((dateStr) => {
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+          const day = parts[2];
+          const monthLabel = months[parseInt(parts[1], 10) - 1];
+          return `${day}${monthLabel}`;
+        }
+        return dateStr;
+      });
+      next.amounts = rawDates.map((date) => Number(dateMap[date]) || 0);
       return next;
     }
 
     if (interval === 'week') {
-    const weekMap = groupByWeek(filtered);
+      const weekMap = groupByWeek(filtered);
       const rawWeeks = Object.keys(weekMap).sort();
       // Format as 'monAbbr (startDay-endDay)' e.g. 'oct (15-21)'
-      next.labels = rawWeeks.map(wstr => {
-        // wstr: 'YYYY-WW'
-        const [year, w] = wstr.split('-W');
-        if (year && w) {
-          // Get start/end date of week
-          const weekNum = parseInt(w, 10);
+      next.labels = rawWeeks.map((weekKey) => {
+        // weekKey: 'YYYY-WW'
+        const [year, weekFragment] = weekKey.split('-W');
+        if (year && weekFragment) {
+          const weekNum = parseInt(weekFragment, 10);
           const jan1 = new Date(Number(year), 0, 1);
           const start = new Date(jan1.getTime() + (weekNum - 1) * 7 * 86400000);
           // Adjust to week start (Monday)
@@ -121,28 +144,28 @@ export default function RevenueChart({
           weekStart.setDate(start.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
           const weekEnd = new Date(weekStart);
           weekEnd.setDate(weekStart.getDate() + 6);
-          const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-          const mAbbr = months[weekStart.getMonth()];
-          return `${mAbbr} (${weekStart.getDate()}-${weekEnd.getDate()})`;
+          const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+          const monthLabel = months[weekStart.getMonth()];
+          return `${monthLabel} (${weekStart.getDate()}-${weekEnd.getDate()})`;
         }
-        return wstr;
+        return weekKey;
       });
-      next.amounts = rawWeeks.map(w => Number(weekMap[w]) || 0);
+      next.amounts = rawWeeks.map((weekKey) => Number(weekMap[weekKey]) || 0);
       return next;
     }
 
     if (interval === 'month') {
-    const monthMap = groupByMonth(filtered);
-    const rawMonths = Object.keys(monthMap).sort();
-    const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-      next.labels = rawMonths.map(mstr => {
-      const parts = mstr.split('-');
-      if (parts.length === 2) {
-        return `${months[parseInt(parts[1],10)-1]} ${parts[0]}`;
-      }
-      return mstr;
-    });
-      next.amounts = rawMonths.map(m => Number(monthMap[m]) || 0);
+      const monthMap = groupByMonth(filtered);
+      const rawMonths = Object.keys(monthMap).sort();
+      const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      next.labels = rawMonths.map((monthKey) => {
+        const parts = monthKey.split('-');
+        if (parts.length === 2) {
+          return `${months[parseInt(parts[1], 10) - 1]} ${parts[0]}`;
+        }
+        return monthKey;
+      });
+      next.amounts = rawMonths.map((monthKey) => Number(monthMap[monthKey]) || 0);
       return next;
     }
 

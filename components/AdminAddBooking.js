@@ -297,11 +297,19 @@ export default function AdminAddBooking({ open, onClose, onAdd, editBooking, onE
           : undefined,
     }));
 
+    // Extract selected add-ons from all vehicles
+    const allSelectedAddOns = cars.flatMap((car) => car.addOns || []);
+    // Deduplicate by name
+    const uniqueSelectedAddOns = Array.from(
+      new Map(allSelectedAddOns.map((addon) => [addon.label || addon.name, addon])).values()
+    );
+
     const payload = {
       ...newBooking,
       name: newBooking.name.trim() || "N/A",
       cars,
       vehicles: vehiclesPayload,
+      selectedAddOns: uniqueSelectedAddOns,
       phone: newBooking.phone.trim() || "N/A",
       email: newBooking.email.trim() || "N/A",
       location: newBooking.location.trim() || "N/A",

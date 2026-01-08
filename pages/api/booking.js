@@ -185,23 +185,6 @@ export default async function handler(req, res) {
     )}`.trim();
     const safeNotes = escapeHtml(userInfo?.message || "");
 
-    // Determine server-trusted pricing breakdown
-    const computedBaseSum = baseSumRaw ?? (Array.isArray(perCarTotals) ? perCarTotals.reduce((s,v)=>s+Number(v||0),0) : (typeof service.basePrice === 'number' ? service.basePrice : null));
-    const travelExpense = Number(travelExpenseRaw || 0);
-    const discount = Number(discountRaw || 0);
-    const tip = Number(tipRaw || 0);
-    // If service.totalPrice is provided (client may set it), prefer that as final amount; otherwise compute
-    const finalAmount = typeof service.totalPrice === 'number'
-      ? service.totalPrice
-      : (typeof computedBaseSum === 'number' ? Math.max(0, computedBaseSum + travelExpense - discount + tip) : null);
-
-    const formatMoney = (n) => (typeof n === 'number' ? `$${n.toFixed(2)}` : 'Not specified');
-    const formattedTotalPrice = formatMoney(finalAmount);
-    const formattedBaseSum = formatMoney(computedBaseSum);
-    const formattedTravel = formatMoney(travelExpense);
-    const formattedDiscount = formatMoney(discount);
-    const formattedTip = formatMoney(tip);
-
     const parseNumericAmount = (value) => {
       if (typeof value === "number" && Number.isFinite(value)) return value;
       if (typeof value === "string") {
@@ -273,6 +256,38 @@ export default async function handler(req, res) {
       (serviceMarkedAddOns.length && serviceMarkedAddOns) ||
       (vehicleSelectedAddOns.length && vehicleSelectedAddOns) ||
       carSelectedAddOns;
+
+    // Determine server-trusted pricing breakdown
+    const computedBaseSum = baseSumRaw ?? (Array.isArray(perCarTotals) ? perCarTotals.reduce((s,v)=>s+Number(v||0),0) : (typeof service.basePrice === 'number' ? service.basePrice : null));
+    const travelExpense = Number(travelExpenseRaw || 0);
+    const discount = Number(discountRaw || 0);
+    const tip = Number(tipRaw || 0);
+    
+    // Calculate add-ons total from selectedAddOns
+    let addOnsTotal = 0;
+    if (Array.isArray(selectedAddOns)) {
+      addOnsTotal = selectedAddOns.reduce((sum, addon) => {
+        const price = typeof addon.price === 'number' ? addon.price : 0;
+        return sum + price;
+      }, 0);
+    }
+
+    // If the client already sent a baseSum/perCarTotals, those totals include add-ons.
+    // Avoid double-counting add-ons by only adding them when we computed baseSum from service base price.
+    const baseIncludesAddOns = baseSumRaw != null || (Array.isArray(perCarTotals) && perCarTotals.length > 0);
+    const addOnsContribution = baseIncludesAddOns ? 0 : addOnsTotal;
+
+    // Compute final amount: baseSum (+ addOns when not already included) + travel - discount + tip
+    const finalAmount = typeof computedBaseSum === 'number'
+      ? Math.max(0, computedBaseSum + addOnsContribution + travelExpense - discount + tip)
+      : null;
+
+    const formatMoney = (n) => (typeof n === 'number' ? `$${n.toFixed(2)}` : 'Not specified');
+    const formattedTotalPrice = formatMoney(finalAmount);
+    const formattedBaseSum = formatMoney(computedBaseSum);
+    const formattedTravel = formatMoney(travelExpense);
+    const formattedDiscount = formatMoney(discount);
+    const formattedTip = formatMoney(tip);
 
     const hasNonZero = (val) => typeof val === "number" && Math.abs(val) >= 0.01;
     const showTravelLine = hasNonZero(travelExpense) && travelExpense > 0;
@@ -841,7 +856,7 @@ export default async function handler(req, res) {
           phone: phoneForMatching || userInfo.phone,
           email: rawEmail?.trim() || userInfo.email,
           location: location?.address || "",
-          addOns: Array.isArray(service?.addOns) ? service.addOns : [],
+          selectedAddOns: selectedAddOns || [],
           carType: vehicle?.type || "",
           createdAt: new Date().toISOString(),
           source: reqSource || "online",

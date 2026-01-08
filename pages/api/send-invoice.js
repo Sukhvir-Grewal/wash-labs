@@ -290,14 +290,12 @@ export const buildInvoicePdf = (booking, brand, meta) =>
     }
 
     const aggregateAddOnCollections = [];
-    if (Array.isArray(booking.addOns))
-      aggregateAddOnCollections.push(booking.addOns);
     if (Array.isArray(booking.selectedAddOns))
       aggregateAddOnCollections.push(booking.selectedAddOns);
+    if (Array.isArray(booking.addOns))
+      aggregateAddOnCollections.push(booking.addOns);
     if (Array.isArray(booking.service?.selectedAddOns))
       aggregateAddOnCollections.push(booking.service.selectedAddOns);
-    if (Array.isArray(booking.service?.addOns))
-      aggregateAddOnCollections.push(booking.service.addOns);
 
     aggregateAddOnCollections.forEach((collection) => {
       collection.forEach((entry) => addAddOn(entry, { increment: false }));

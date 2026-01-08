@@ -16,6 +16,11 @@ import ProfitsCard from "./ProfitsCard";
 import PerformanceEfficiencyCard from "./PerformanceEfficiencyCard";
 import StatusCalendar from "./StatusCalendar";
 import GalleryManager from "./GalleryManager";
+import {
+  normalizeBookingStatus,
+  isCompletedBookingStatus,
+  resolveBookingRevenue,
+} from "../lib/bookingUtils";
 
 const iconMap = {
   services: FiGrid,
@@ -61,12 +66,14 @@ export default function DashboardSectionModal({
   const [revenueChartType, setRevenueChartType] = useState("line");
   const fullScreenSections = useMemo(
     () => new Set(["services", "gallery", "revenue", "expenses", "profit", "pe"]),
-    []
+    [],
   );
   const isFullScreenLayout = fullScreenSections.has(section);
 
   useEffect(() => {
-    if (section !== "services" || services.length || servicesLoading) return;
+    if (section !== "services" || services.length || servicesLoading) {
+      return;
+    }
     (async () => {
       try {
         setServicesLoading(true);
@@ -78,71 +85,57 @@ export default function DashboardSectionModal({
         } else {
           throw new Error(data?.error || "Unable to load services");
         }
-      } catch (err) {
-        setServicesError(err?.message || "Unable to load services");
+      } catch (error) {
+        setServicesError(error?.message || "Unable to load services");
       } finally {
         setServicesLoading(false);
       }
     })();
   }, [section, services.length, servicesLoading]);
 
-  const monthlyRevenue = useMemo(() => {
-    const map = new Map();
-    bookings
-      .filter((b) => b.status === "complete" && b.date)
-      .forEach((booking) => {
-        const key = booking.date.slice(0, 7);
-        const amount = Number(booking.amount || 0) || 0;
-        map.set(key, (map.get(key) || 0) + amount);
-      });
-    const rows = Array.from(map.entries())
-      .map(([key, total]) => ({ key, total, label: monthFormatter.format(new Date(`${key}-01`)) }))
-      .sort((a, b) => (a.key < b.key ? 1 : -1));
-    return rows;
-  }, [bookings]);
+  const normalizedBookings = useMemo(
+    () =>
+      bookings.map((booking) => ({
+        ...booking,
+        __normalizedStatus: normalizeBookingStatus(booking.status),
+        __resolvedAmount: resolveBookingRevenue(booking),
+      })),
+    [bookings],
+  );
 
-  const filteredMonthlyRevenue = useMemo(() => {
-    if (!monthlyRevenue.length) {
-      return [];
-    }
-    if (revenueRange === "all") {
-      return monthlyRevenue;
-    }
-    const monthsLimit = { "3m": 3, "6m": 6, "12m": 12 }[revenueRange];
-    if (!monthsLimit) {
-      return monthlyRevenue;
-    }
-    const now = new Date();
-    return monthlyRevenue.filter((row) => {
-      const parts = row.key?.split("-") || [];
-      if (parts.length !== 2) {
-        return false;
-      }
-      const monthDate = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
-      if (Number.isNaN(monthDate.getTime())) {
-        return false;
-      }
-      const diffMonths = (now.getFullYear() - monthDate.getFullYear()) * 12 + now.getMonth() - monthDate.getMonth();
-      return diffMonths <= monthsLimit - 1;
-    });
-  }, [monthlyRevenue, revenueRange]);
-
-  const serviceBreakdown = useMemo(() => {
+  const groupBookingsByMonth = (list = []) => {
     const map = new Map();
-    bookings.forEach((booking) => {
-      const key = booking.service || "Unknown";
-      map.set(key, {
-        count: (map.get(key)?.count || 0) + 1,
-        revenue: (map.get(key)?.revenue || 0) + (Number(booking.amount || 0) || 0),
-      });
+    list.forEach((booking) => {
+      if (!booking?.date) {
+        return;
+      }
+      const key = booking.date.slice(0, 7);
+      if (!key) {
+        return;
+      }
+      const amount = Number(booking.__resolvedAmount ?? resolveBookingRevenue(booking) ?? 0) || 0;
+      map.set(key, (map.get(key) || 0) + amount);
     });
     return Array.from(map.entries())
-      .map(([serviceName, stats]) => ({ serviceName, ...stats }))
-      .sort((a, b) => b.revenue - a.revenue || b.count - a.count);
-  }, [bookings]);
+      .map(([key, total]) => ({
+        key,
+        total,
+        label: monthFormatter.format(new Date(`${key}-01`)),
+      }))
+      .sort((a, b) => (a.key < b.key ? 1 : -1));
+  };
 
   const filteredRevenueBookings = useMemo(() => {
-    const statusFiltered = revenueStatusFilter === "all" ? bookings : bookings.filter((booking) => booking.status === revenueStatusFilter);
+    const target = normalizeBookingStatus(revenueStatusFilter);
+    const statusFiltered = normalizedBookings.filter((booking) => {
+      if (target === "all") {
+        return true;
+      }
+      if (target === "complete") {
+        return isCompletedBookingStatus(booking.__normalizedStatus);
+      }
+      return booking.__normalizedStatus === target;
+    });
     if (revenueRange === "all") {
       return statusFiltered;
     }
@@ -159,18 +152,27 @@ export default function DashboardSectionModal({
       if (Number.isNaN(bookingDate.getTime())) {
         return false;
       }
-      const diffMonths = (now.getFullYear() - bookingDate.getFullYear()) * 12 + now.getMonth() - bookingDate.getMonth();
+      const diffMonths =
+        (now.getFullYear() - bookingDate.getFullYear()) * 12 + now.getMonth() - bookingDate.getMonth();
       return diffMonths <= monthsLimit - 1;
     });
-  }, [bookings, revenueRange, revenueStatusFilter]);
+  }, [normalizedBookings, revenueRange, revenueStatusFilter]);
+
+  const filteredMonthlyRevenue = useMemo(
+    () => groupBookingsByMonth(filteredRevenueBookings),
+    [filteredRevenueBookings],
+  );
 
   const rangeServiceBreakdown = useMemo(() => {
     const map = new Map();
     filteredRevenueBookings.forEach((booking) => {
       const key = booking.service || "Unknown";
+      const amount = Number(
+        booking.__resolvedAmount ?? resolveBookingRevenue(booking) ?? 0,
+      ) || 0;
       map.set(key, {
         count: (map.get(key)?.count || 0) + 1,
-        revenue: (map.get(key)?.revenue || 0) + (Number(booking.amount || 0) || 0),
+        revenue: (map.get(key)?.revenue || 0) + amount,
       });
     });
     return Array.from(map.entries())
@@ -194,7 +196,7 @@ export default function DashboardSectionModal({
 
   const totalExpenses = useMemo(
     () => expenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0),
-    [expenses]
+    [expenses],
   );
 
   if (!active) {
@@ -375,7 +377,7 @@ export default function DashboardSectionModal({
     const accent = "#2563eb";
     const rangeLabels = { "3m": "Last 3 months", "6m": "Last 6 months", "12m": "Last 12 months", all: "All-time" };
     const rangeLabel = rangeLabels[revenueRange] || "All-time";
-    const statusLabel = revenueStatusFilter === "complete" ? "Completed bookings" : "All booking statuses";
+    const statusLabel = revenueStatusFilter === "complete" ? "Completed & paid bookings" : "All booking statuses";
 
     const formatCurrency = (value, decimals = 0) =>
       new Intl.NumberFormat("en-US", {
