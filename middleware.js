@@ -1,12 +1,31 @@
 import { NextResponse } from 'next/server';
 
 /**
- * Next.js Middleware to protect admin routes
- * This runs on ALL requests before they reach pages/api
+ * Next.js Middleware
+ * - Maintenance mode: temporarily rewrite all routes to /maintenance (except static assets)
+ * - Admin route protection (original behavior)
  */
 export function middleware(request) {
   const { pathname } = request.nextUrl;
+
+  // 1) Maintenance mode — TEMPORARY toggle
+  const MAINTENANCE = true; // set to false or remove when done
+  if (MAINTENANCE) {
+    const isAsset = pathname.startsWith('/_next')
+      || pathname.startsWith('/favicon')
+      || pathname.startsWith('/site.webmanifest')
+      || pathname.startsWith('/images')
+      || pathname.startsWith('/videos');
+    const isMaintenancePage = pathname === '/maintenance';
+
+    if (!isAsset && !isMaintenancePage) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/maintenance';
+      return NextResponse.rewrite(url);
+    }
+  }
   
+  // 2) Admin protection (kept as-is)
   // Define protected admin routes
   const isAdminPage = pathname.startsWith('/admin') || pathname === '/admin-services' || pathname === '/adminDashboard';
   const isAdminApi = pathname.startsWith('/api/admin') || 
@@ -46,7 +65,6 @@ export function middleware(request) {
     }
     
     // If token exists, allow the request to continue
-    // The actual session verification happens in getServerSideProps or API routes
     return NextResponse.next();
   }
   
@@ -54,22 +72,8 @@ export function middleware(request) {
 }
 
 /**
- * Configure which routes this middleware runs on
+ * Run on all routes while maintenance is enabled
  */
 export const config = {
-  matcher: [
-    // Admin pages
-    '/admin/:path*',
-    '/adminDashboard',
-    '/admin-services',
-    // Admin API routes
-    '/api/admin/:path*',
-    '/api/get-bookings',
-    '/api/update-booking/:path*',
-    '/api/delete-booking',
-    '/api/expenses',
-    '/api/update-booking-status',
-    '/api/analytics-:path*',
-    '/api/services',
-  ],
+  matcher: ['/:path*'],
 };
