@@ -305,7 +305,7 @@ export default function Services() {
                     )}
                     {!loading && services.length === 0 && (
                         <div className="col-span-full text-center text-blue-700">
-                          Services are temporarily unavailable. Please call <a className=\"underline\" href=\"tel:+17828275010\">+1 (782) 827-5010</a> to book.
+                          Services are temporarily unavailable. Please call <a className="underline" href="tel:+17828275010">+1 (782) 827-5010</a> to book.
                         </div>
                     )}
                     {!loading && services.map((service) => {
