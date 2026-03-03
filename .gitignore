@@ -50,3 +50,4 @@ scripts/testCustomers.js
 
 # Generated sample invoices
 invoice #*.pdf
+\n# Ignore generated invoices\ninvoice*.pdf\n
