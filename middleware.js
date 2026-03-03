@@ -8,8 +8,8 @@ import { NextResponse } from 'next/server';
 export function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // 1) Maintenance mode — TEMPORARY toggle
-  const MAINTENANCE = false; // set to true to enable the maintenance page
+  // 1) Maintenance mode — TEMPORARY toggle (driven by env var)
+  const MAINTENANCE = String(process.env.NEXT_PUBLIC_MAINTENANCE || '0') === '1';
   if (MAINTENANCE) {
     const isAsset = pathname.startsWith('/_next')
       || pathname.startsWith('/favicon')

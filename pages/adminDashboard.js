@@ -23,14 +23,16 @@ import {
  * Redirect to login if not authenticated
  */
 export async function getServerSideProps(context) {
-  console.log("[adminDashboard] getServerSideProps called");
-  console.log("[adminDashboard] Cookies:", context.req.headers.cookie);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log("[adminDashboard] getServerSideProps called");
+    console.log("[adminDashboard] Cookies:", context.req.headers.cookie);
+  }
 
   const authenticated = isAuthenticated(context.req);
-  console.log("[adminDashboard] Authenticated:", authenticated);
+  if (process.env.NODE_ENV !== 'production') console.log("[adminDashboard] Authenticated:", authenticated);
 
   if (!authenticated) {
-    console.log("[adminDashboard] Not authenticated, redirecting to /admin");
+    if (process.env.NODE_ENV !== 'production') console.log("[adminDashboard] Not authenticated, redirecting to /admin");
     return {
       redirect: {
         destination: "/admin",
@@ -39,9 +41,11 @@ export async function getServerSideProps(context) {
     };
   }
 
-  console.log(
-    "[adminDashboard] Authentication successful, rendering dashboard",
-  );
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(
+      "[adminDashboard] Authentication successful, rendering dashboard",
+    );
+  }
   return {
     props: {},
   };
