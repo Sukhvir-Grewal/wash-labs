@@ -9,7 +9,7 @@ export function middleware(request) {
   const { pathname } = request.nextUrl;
 
   // 1) Maintenance mode — TEMPORARY toggle
-  const MAINTENANCE = true; // set to false or remove when done
+  const MAINTENANCE = false; // set to true to enable the maintenance page
   if (MAINTENANCE) {
     const isAsset = pathname.startsWith('/_next')
       || pathname.startsWith('/favicon')
